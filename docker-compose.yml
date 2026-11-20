@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lazuri
+      POSTGRES_USER: lazuri
+      POSTGRES_PASSWORD: lazuri
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lazuri -d lazuri"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DATABASE_URL: postgres://lazuri:lazuri@db:5432/lazuri
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Har 15 soniyada: to'lanmagan bronlar muddatini tugatish (joylar qaytadi), tugagan sayohatlarni yopish,
+  # adminlarga Telegram xabarlarini yuborish
+  scheduler:
+    build: .
+    command: >
+      sh -c "while true; do python manage.py process_bookings; python manage.py send_notifications; sleep 15; done"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DATABASE_URL: postgres://lazuri:lazuri@db:5432/lazuri
+    volumes:
+      - .:/app
+    depends_on:
+      web:
+        condition: service_started
+
+volumes:
+  pgdata:
