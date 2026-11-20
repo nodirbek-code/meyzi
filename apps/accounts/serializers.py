@@ -15,17 +15,29 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
+            "email_verified",
             "first_name",
             "last_name",
             "full_name",
             "phone",
+            "phone_verified",
             "role",
             "language",
             "country",
             "avatar",
             "date_joined",
         ]
-        read_only_fields = ["id", "email", "role", "date_joined", "full_name"]
+        # email/telefon — faqat tasdiqlash kodi orqali o'zgaradi
+        read_only_fields = [
+            "id",
+            "email",
+            "email_verified",
+            "phone",
+            "phone_verified",
+            "role",
+            "date_joined",
+            "full_name",
+        ]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -36,7 +48,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["email", "password", "first_name", "last_name", "phone", "role", "language", "country"]
+        fields = ["email", "password", "first_name", "last_name", "role", "language", "country"]
 
     def validate_email(self, value):
         value = value.lower()
@@ -87,3 +99,45 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
+
+
+# ---------- Tasdiqlash kodlari ----------
+
+
+class EmailSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class CodeSerializer(serializers.Serializer):
+    code = serializers.CharField(min_length=6, max_length=6)
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(min_length=6, max_length=6)
+    new_password = serializers.CharField(write_only=True)
+
+
+class PhoneSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=30, help_text="+998 90 123 45 67")
+
+    def validate_phone(self, value):
+        from .phones import normalize_phone
+
+        return normalize_phone(value)
+
+
+class PhoneVerifySerializer(PhoneSerializer):
+    code = serializers.CharField(min_length=6, max_length=6)
+    first_name = serializers.CharField(required=False, allow_blank=True, default="", max_length=100)
+
+
+class PhoneChangeVerifySerializer(PhoneSerializer):
+    code = serializers.CharField(min_length=6, max_length=6)
+
+
+class AuthResponseSerializer(serializers.Serializer):
+    user = UserSerializer()
+    access = serializers.CharField()
+    refresh = serializers.CharField()
+    is_new = serializers.BooleanField(required=False)

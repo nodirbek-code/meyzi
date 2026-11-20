@@ -12,6 +12,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import User
 from apps.notifications import services as notify
+from apps.notifications import user_events
 from apps.tours.policies import refund_ratio
 
 from .models import Hotel, HotelBooking, HotelMember, HotelReview, RoomType
@@ -53,6 +54,7 @@ def approve_hotel(hotel: Hotel) -> Hotel:
     hotel.status = Hotel.Status.APPROVED
     hotel.moderation_note = ""
     hotel.save(update_fields=["status", "moderation_note", "updated_at"])
+    user_events.hotel_status(hotel)
     return hotel
 
 
@@ -200,6 +202,7 @@ def mark_paid(booking: HotelBooking, *, now: datetime | None = None) -> HotelBoo
     booking.confirmed_at = now
     booking.expires_at = None
     booking.save(update_fields=["status", "confirmed_at", "expires_at", "updated_at"])
+    user_events.hotel_booking_confirmed(booking)
     return booking
 
 
@@ -229,6 +232,7 @@ def cancel(booking: HotelBooking, *, by: str, reason: str = "", now: datetime | 
     booking.cancel_reason = reason
     booking.save()
     notify.hotel_booking_cancelled(booking)
+    user_events.hotel_booking_cancelled(booking)
     return booking
 
 

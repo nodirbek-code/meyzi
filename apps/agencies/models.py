@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.core.files import image_rule
 from apps.core.models import TimeStampedModel
 
 
@@ -20,7 +21,7 @@ class Agency(TimeStampedModel):
 
     name = models.CharField("nomi", max_length=200)
     slug = models.SlugField("slug", max_length=220, unique=True)
-    logo = models.ImageField("logotip", upload_to="agencies/", blank=True)
+    logo = models.ImageField("logotip", upload_to="agencies/", blank=True, validators=[image_rule])
     description = models.TextField("tavsif", blank=True)
     phone = models.CharField("telefon", max_length=30, blank=True)
     email = models.EmailField("email", blank=True)

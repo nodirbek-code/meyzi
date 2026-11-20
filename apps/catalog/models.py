@@ -1,6 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.core.files import FileRule, image_rule
 from apps.core.models import TimeStampedModel
 
 LAT_VALIDATORS = [MinValueValidator(-90), MaxValueValidator(90)]
@@ -15,7 +16,9 @@ class Destination(TimeStampedModel):
     region = models.CharField("viloyat", max_length=120, blank=True)
     short_description = models.CharField("qisqa tavsif", max_length=300, blank=True)
     description = models.TextField("tavsif", blank=True)
-    cover_image = models.ImageField("muqova rasmi", upload_to="destinations/", blank=True)
+    cover_image = models.ImageField(
+        "muqova rasmi", upload_to="destinations/", blank=True, validators=[image_rule]
+    )
     latitude = models.DecimalField(
         "kenglik", max_digits=9, decimal_places=6, null=True, blank=True, validators=LAT_VALIDATORS
     )
@@ -75,8 +78,10 @@ class Place(TimeStampedModel):
     visit_duration_minutes = models.PositiveIntegerField(
         "tavsiya etilgan tashrif davomiyligi (daqiqa)", default=60
     )
-    cover_image = models.ImageField("muqova rasmi", upload_to="places/", blank=True)
-    audio_guide = models.FileField("audio-gid", upload_to="audio/", blank=True)
+    cover_image = models.ImageField("muqova rasmi", upload_to="places/", blank=True, validators=[image_rule])
+    audio_guide = models.FileField(
+        "audio-gid", upload_to="audio/", blank=True, validators=[FileRule(30, ("mp3", "m4a", "ogg"), "Audio")]
+    )
     is_featured = models.BooleanField("tavsiya etiladi", default=False)
     is_published = models.BooleanField("e'lon qilingan", default=True)
 
@@ -96,7 +101,7 @@ class Place(TimeStampedModel):
 
 class PlaceImage(models.Model):
     place = models.ForeignKey(Place, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField("rasm", upload_to="places/gallery/")
+    image = models.ImageField("rasm", upload_to="places/gallery/", validators=[image_rule])
     caption = models.CharField("izoh", max_length=200, blank=True)
     sort_order = models.PositiveIntegerField("tartib", default=0)
 

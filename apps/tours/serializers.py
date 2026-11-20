@@ -331,3 +331,20 @@ class CabinetMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = TourMedia
         fields = ["id", "kind", "file", "caption", "is_cover", "sort_order"]
+
+    def validate(self, attrs):
+        from apps.core.files import image_rule, video_rule
+
+        kind = attrs.get("kind", getattr(self.instance, "kind", TourMedia.Kind.IMAGE))
+        f = attrs.get("file")
+        if f is not None:
+            rule = video_rule if kind == TourMedia.Kind.VIDEO else image_rule
+            try:
+                rule(f)
+            except Exception as exc:  # django ValidationError → DRF
+                raise serializers.ValidationError(
+                    {"file": list(getattr(exc, "messages", [str(exc)]))}
+                ) from None
+        if kind == TourMedia.Kind.VIDEO and attrs.get("is_cover"):
+            raise serializers.ValidationError({"is_cover": "Muqova faqat rasm bo'lishi mumkin."})
+        return attrs

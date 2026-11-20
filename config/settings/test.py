@@ -20,3 +20,10 @@ REST_FRAMEWORK = {
 # Testlar hech qachon haqiqiy Telegram'ga yozmasin (.env da token bo'lsa ham)
 TELEGRAM_BOT_TOKEN = ""
 TELEGRAM_ADMIN_CHAT_IDS = []
+SMS_BACKEND = "locmem"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+# whitenoise testlarda kerak emas (staticfiles/ yo'q — ogohlantirish beradi)
+MIDDLEWARE = [m for m in MIDDLEWARE if "whitenoise" not in m]  # noqa: F405

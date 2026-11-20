@@ -1,6 +1,8 @@
 from django.contrib import admin, messages
 from rest_framework.exceptions import ValidationError
 
+from apps.notifications import user_events
+
 from . import services
 from .models import Hotel, HotelBooking, HotelImage, HotelMember, HotelReview, RoomType
 
@@ -51,12 +53,22 @@ class HotelAdmin(admin.ModelAdmin):
 
     @admin.action(description="❌ Rad etish (sababni «moderator izohi» ga yozing)")
     def reject(self, request, queryset):
-        n = queryset.update(status=Hotel.Status.REJECTED)
+        n = 0
+        for h in queryset:
+            h.status = Hotel.Status.REJECTED
+            h.save(update_fields=["status", "updated_at"])
+            user_events.hotel_status(h)
+            n += 1
         self.message_user(request, f"{n} ta ariza rad etildi.")
 
     @admin.action(description="⛔ To'xtatish")
     def suspend(self, request, queryset):
-        n = queryset.update(status=Hotel.Status.SUSPENDED)
+        n = 0
+        for h in queryset:
+            h.status = Hotel.Status.SUSPENDED
+            h.save(update_fields=["status", "updated_at"])
+            user_events.hotel_status(h)
+            n += 1
         self.message_user(request, f"{n} ta mehmonxona to'xtatildi.", messages.WARNING)
 
 

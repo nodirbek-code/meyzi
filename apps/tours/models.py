@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 
 from apps.catalog.models import LAT_VALIDATORS, LNG_VALIDATORS
+from apps.core.files import media_rule
 from apps.core.models import TimeStampedModel
 
 
@@ -120,7 +121,7 @@ class TourMedia(models.Model):
 
     tour = models.ForeignKey(Tour, on_delete=models.CASCADE, related_name="media")
     kind = models.CharField("turi", max_length=10, choices=Kind.choices, default=Kind.IMAGE)
-    file = models.FileField("fayl", upload_to="tours/")
+    file = models.FileField("fayl", upload_to="tours/", validators=[media_rule])
     caption = models.CharField("izoh", max_length=200, blank=True)
     is_cover = models.BooleanField("muqova", default=False)
     sort_order = models.PositiveIntegerField("tartib", default=0)

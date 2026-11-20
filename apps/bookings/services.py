@@ -16,6 +16,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.agencies.models import Agency
 from apps.notifications import services as notify
+from apps.notifications import user_events
 from apps.tours.models import Departure, Tour
 from apps.tours.policies import refund_ratio
 
@@ -121,6 +122,7 @@ def create_booking(
     Traveler.objects.bulk_create(Traveler(booking=booking, **t) for t in travelers)
     Departure.objects.filter(pk=departure.pk).update(seats_booked=F("seats_booked") + seats)
     notify.booking_created(booking)
+    user_events.tour_booking_created(booking)
     return booking
 
 
@@ -171,6 +173,7 @@ def confirm_booking(booking: Booking, *, now: datetime | None = None) -> Booking
     booking.confirmed_at = now
     booking.expires_at = None
     booking.save(update_fields=["status", "confirmed_at", "expires_at", "updated_at"])
+    user_events.tour_booking_confirmed(booking)
     return booking
 
 
@@ -211,6 +214,7 @@ def cancel_booking(
     _release_seats(booking)
     if notify_admins:
         notify.booking_cancelled(booking)
+    user_events.tour_booking_cancelled(booking)
     return booking
 
 

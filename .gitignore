@@ -13,3 +13,6 @@ htmlcov/
 .idea/
 .vscode/
 .claude/settings.local.json
+private_media/
+.env.prod
+backups/

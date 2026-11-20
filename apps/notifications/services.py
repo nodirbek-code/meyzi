@@ -10,11 +10,13 @@ import logging
 from html import escape
 
 from django.conf import settings
+from django.core.mail import send_mail
+from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
 
-from . import telegram
-from .models import TelegramMessage
+from . import sms, telegram
+from .models import TelegramMessage, UserMessage
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +85,62 @@ def send_pending(limit: int = 50) -> tuple[int, int]:
                 error="",
             )
             sent += 1
+    return sent, failed
+
+
+# ---------- Foydalanuvchilarga: email / SMS ----------
+
+
+def _deliver(msg: UserMessage) -> bool:
+    try:
+        if msg.channel == UserMessage.Channel.EMAIL:
+            send_mail(
+                msg.subject, msg.body, settings.DEFAULT_FROM_EMAIL, [msg.recipient], fail_silently=False
+            )
+        else:
+            sms.send(msg.recipient, msg.body)
+    except Exception as exc:  # noqa: BLE001 — har qanday transport xatosi qayta urinishga
+        UserMessage.objects.filter(pk=msg.pk).update(
+            status=UserMessage.Status.FAILED, attempts=F("attempts") + 1, error=str(exc)[:1000]
+        )
+        return False
+    UserMessage.objects.filter(pk=msg.pk).update(
+        status=UserMessage.Status.SENT, attempts=F("attempts") + 1, sent_at=timezone.now(), error=""
+    )
+    return True
+
+
+def queue_email(recipient: str, subject: str, body: str, *, event: str, immediate: bool = False):
+    if not recipient:
+        return None
+    msg = UserMessage.objects.create(
+        channel=UserMessage.Channel.EMAIL, event=event, recipient=recipient, subject=subject[:200], body=body
+    )
+    if immediate:
+        transaction.on_commit(lambda: _deliver(msg))
+    return msg
+
+
+def queue_sms(phone: str, text: str, *, event: str, immediate: bool = False):
+    if not phone or not sms.is_enabled():
+        return None
+    msg = UserMessage.objects.create(channel=UserMessage.Channel.SMS, event=event, recipient=phone, body=text)
+    if immediate:
+        transaction.on_commit(lambda: _deliver(msg))
+    return msg
+
+
+def send_pending_user_messages(limit: int = 100) -> tuple[int, int]:
+    qs = UserMessage.objects.filter(
+        Q(status=UserMessage.Status.PENDING)
+        | Q(status=UserMessage.Status.FAILED, attempts__lt=UserMessage.MAX_ATTEMPTS)
+    ).order_by("created_at")[:limit]
+    sent = failed = 0
+    for msg in qs:
+        if _deliver(msg):
+            sent += 1
+        else:
+            failed += 1
     return sent, failed
 
 

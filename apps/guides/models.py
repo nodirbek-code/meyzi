@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.core.files import document_rule, image_rule, private_storage
 from apps.core.models import TimeStampedModel
 
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -59,7 +60,7 @@ class GuideProfile(TimeStampedModel):
     )
     slug = models.SlugField("slug", max_length=120, unique=True)
     display_name = models.CharField("ism (ko'rinadigan)", max_length=150)
-    photo = models.ImageField("rasm", upload_to="guides/", blank=True)
+    photo = models.ImageField("rasm", upload_to="guides/", blank=True, validators=[image_rule])
     bio = models.TextField("o'zi haqida", blank=True)
     phone = models.CharField("telefon", max_length=30)
     languages = models.JSONField("tillar", default=list, help_text="SpokenLanguage kodlari")
@@ -70,7 +71,13 @@ class GuideProfile(TimeStampedModel):
     experience_years = models.PositiveSmallIntegerField("tajriba (yil)", default=0)
 
     certificate_number = models.CharField("sertifikat raqami", max_length=100, blank=True)
-    certificate_file = models.FileField("sertifikat (fayl)", upload_to="guides/certificates/", blank=True)
+    certificate_file = models.FileField(
+        "sertifikat (fayl)",
+        upload_to="guides/certificates/",
+        blank=True,
+        storage=private_storage,
+        validators=[document_rule],
+    )
     is_certified = models.BooleanField("sertifikat tasdiqlangan", default=False)
 
     price_half_day_uzs = models.PositiveIntegerField("yarim kun (4 soat), so'm")

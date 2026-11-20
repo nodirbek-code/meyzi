@@ -6,6 +6,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.catalog.models import LAT_VALIDATORS, LNG_VALIDATORS
+from apps.core.files import image_rule
 from apps.core.models import TimeStampedModel
 from apps.tours.models import CancellationPolicy
 
@@ -120,7 +121,7 @@ class HotelMember(TimeStampedModel):
 
 class HotelImage(models.Model):
     hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField("rasm", upload_to="hotels/")
+    image = models.ImageField("rasm", upload_to="hotels/", validators=[image_rule])
     caption = models.CharField("izoh", max_length=200, blank=True)
     is_cover = models.BooleanField("muqova", default=False)
     sort_order = models.PositiveIntegerField("tartib", default=0)
@@ -146,7 +147,7 @@ class RoomType(TimeStampedModel):
     price_per_night_uzs = models.PositiveIntegerField("1 kecha narxi (so'm)")
     total_rooms = models.PositiveSmallIntegerField("xonalar soni", validators=[MinValueValidator(1)])
     amenities = models.JSONField("qulayliklar", default=list, blank=True)
-    image = models.ImageField("rasm", upload_to="hotels/rooms/", blank=True)
+    image = models.ImageField("rasm", upload_to="hotels/rooms/", blank=True, validators=[image_rule])
     is_active = models.BooleanField("sotuvda", default=True)
 
     class Meta:

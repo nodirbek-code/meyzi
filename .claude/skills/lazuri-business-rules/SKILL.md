@@ -110,6 +110,18 @@ Servislardan `notify.<hodisa>(...)` chaqiriladi → `TelegramMessage` (outbox) �
 Yangi hodisa qo'shsangiz — `services.py` ga funksiya va test (`tests/test_notifications.py` dagi `tg` fixture).
 Test sozlamalari tokenni majburan bo'shatadi.
 
+## Autentifikatsiya va bildirishnomalar (amalda)
+
+- Kirish: email + parol yoki telefon + SMS kod (`+998XXXXXXXXX`, akkaunt avtomatik yaratiladi, parolsiz).
+  `User.email` ham `phone` ham ixtiyoriy (kamida bittasi), ikkalasi unique. Email/telefon faqat kod orqali o'zgaradi.
+- Kodlar (`apps/accounts/otp.py`): 6 raqam, HMAC-xesh, 10 daq, 5 urinish, 60 s qayta yuborish, soatiga 5.
+  Kod tekshiruvchi view'lar `transaction.non_atomic_requests` (urinishlar orqaga qaytmasin) — yangi kod view'i ham shunday bo'lsin.
+- Foydalanuvchi xabarlari: `apps/notifications/user_events.py` → `UserMessage` outbox (email/SMS) → scheduler.
+  Shoshilinch — SMS ham (gidga yangi so'rov, tasdiqlash, provayder bekor qilishi). SMS faqat `phone_verified` foydalanuvchiga
+  yoki tashkilot telefoniga. SMS provayderi yo'q (`SMS_BACKEND=console`) — protokolni taxmin qilib yozmang.
+- Yopiq fayllar: `apps.core.files.private_storage` (sertifikatlar), URL — `/admin/private/...` faqat staff.
+  Yangi fayl maydoniga doim `image_rule`/`video_rule`/`document_rule` validatori.
+
 ## Tillar va "Tez kunda" imkoniyatlar (foydalanuvchi qarori, 2026-11-20)
 
 - Tillar boshlanishiga **faqat 3 ta: uz, ru, en** (`settings.LANGUAGES`, `User.Language`). Boshqa til qo'shmang.

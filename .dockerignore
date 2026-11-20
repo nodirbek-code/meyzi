@@ -8,3 +8,6 @@ __pycache__
 .pytest_cache
 .ruff_cache
 .idea
+private_media
+.env.prod
+backups/

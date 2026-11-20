@@ -12,6 +12,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import User
 from apps.notifications import services as notify
+from apps.notifications import user_events
 
 from . import policies
 from .models import GuideBooking, GuideProfile, GuideReview, GuideUnavailableDate
@@ -52,6 +53,7 @@ def approve_profile(profile: GuideProfile) -> GuideProfile:
     profile.approved_at = profile.approved_at or timezone.now()
     profile.moderation_note = ""
     profile.save()
+    user_events.guide_profile_status(profile)
     return profile
 
 
@@ -60,6 +62,7 @@ def suspend_profile(profile: GuideProfile, reason: str) -> GuideProfile:
     profile.moderation_note = reason
     profile.save(update_fields=["status", "moderation_note", "updated_at"])
     notify.guide_suspended(profile, reason)
+    user_events.guide_profile_status(profile)
     return profile
 
 
@@ -202,6 +205,7 @@ def request_booking(
         respond_by=min(now + timedelta(hours=settings.LAZURI_GUIDE_RESPONSE_HOURS), starts_at),
     )
     notify.guide_booking_created(booking)
+    user_events.guide_request_created(booking)
     return booking
 
 
@@ -220,6 +224,7 @@ def accept(booking: GuideBooking, *, now: datetime | None = None) -> GuideBookin
     booking.status = GuideBooking.Status.ACCEPTED
     booking.accepted_at = now
     booking.save(update_fields=["status", "accepted_at", "updated_at"])
+    user_events.guide_request_answered(booking)
     return booking
 
 
@@ -233,6 +238,7 @@ def decline(booking: GuideBooking, *, reason: str) -> GuideBooking:
     booking.status = GuideBooking.Status.DECLINED
     booking.decline_reason = reason
     booking.save(update_fields=["status", "decline_reason", "updated_at"])
+    user_events.guide_request_answered(booking)
     return booking
 
 
@@ -248,6 +254,7 @@ def mark_paid(booking: GuideBooking, *, now: datetime | None = None) -> GuideBoo
     booking.status = GuideBooking.Status.CONFIRMED
     booking.confirmed_at = now
     booking.save(update_fields=["status", "confirmed_at", "updated_at"])
+    user_events.guide_booking_confirmed(booking)
     return booking
 
 
@@ -286,6 +293,7 @@ def cancel(booking: GuideBooking, *, by: str, reason: str = "", now: datetime | 
     booking.cancel_reason = reason
     booking.save()
     notify.guide_booking_cancelled(booking)
+    user_events.guide_booking_cancelled(booking)
     return booking
 
 
@@ -332,6 +340,7 @@ def report_guide_no_show(booking: GuideBooking, *, now: datetime | None = None) 
             guide, f"{guide.no_show_count} marta kelmay qoldi. Qayta faollashtirish — intervyu orqali."
         )
     notify.guide_booking_cancelled(booking)
+    user_events.guide_booking_cancelled(booking)
     return booking
 
 
@@ -340,9 +349,14 @@ def report_guide_no_show(booking: GuideBooking, *, now: datetime | None = None) 
 
 def expire_requests(*, now: datetime | None = None) -> int:
     now = now or timezone.now()
-    return GuideBooking.objects.filter(status=GuideBooking.Status.REQUESTED, respond_by__lte=now).update(
-        status=GuideBooking.Status.EXPIRED, updated_at=now
-    )
+    count = 0
+    qs = GuideBooking.objects.filter(status=GuideBooking.Status.REQUESTED, respond_by__lte=now)
+    for booking in qs.select_related("guide", "user"):
+        booking.status = GuideBooking.Status.EXPIRED
+        booking.save(update_fields=["status", "updated_at"])
+        user_events.guide_request_answered(booking)  # turistga: gid javob bermadi
+        count += 1
+    return count
 
 
 def complete_finished(*, now: datetime | None = None) -> int:

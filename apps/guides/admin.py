@@ -1,6 +1,8 @@
 from django.contrib import admin, messages
 from rest_framework.exceptions import ValidationError
 
+from apps.notifications import user_events
+
 from . import services
 from .models import GuideBooking, GuideProfile, GuideReview, GuideUnavailableDate
 
@@ -21,7 +23,16 @@ class GuideProfileAdmin(admin.ModelAdmin):
     search_fields = ["display_name", "phone", "user__email", "certificate_number"]
     autocomplete_fields = ["user"]
     filter_horizontal = ["destinations"]
-    readonly_fields = ["rating", "reviews_count", "approved_at"]
+    readonly_fields = ["rating", "reviews_count", "approved_at", "certificate_link"]
+
+    @admin.display(description="Sertifikatni ochish")
+    def certificate_link(self, obj):
+        from django.utils.html import format_html
+
+        if not obj.certificate_file:
+            return "—"
+        return format_html('<a href="{}" target="_blank">yuklab olish</a>', obj.certificate_file.url)
+
     actions = ["approve", "reject", "suspend"]
 
     @admin.action(description="✅ Tasdiqlash")
@@ -32,7 +43,12 @@ class GuideProfileAdmin(admin.ModelAdmin):
 
     @admin.action(description="❌ Rad etish")
     def reject(self, request, queryset):
-        n = queryset.update(status=GuideProfile.Status.REJECTED)
+        n = 0
+        for p in queryset:
+            p.status = GuideProfile.Status.REJECTED
+            p.save(update_fields=["status", "updated_at"])
+            user_events.guide_profile_status(p)
+            n += 1
         self.message_user(
             request, f"{n} ta ariza rad etildi. Sababni gid sahifasida «moderator izohi» ga yozing."
         )

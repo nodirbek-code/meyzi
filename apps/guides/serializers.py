@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.catalog.models import Destination
 from apps.catalog.serializers import DestinationShortSerializer
+from apps.core.files import document_rule
 
 from .models import (
     GuideBooking,
@@ -52,7 +53,13 @@ class GuideDetailSerializer(GuideCardSerializer):
 
 
 class MyGuideProfileSerializer(serializers.ModelSerializer):
-    """Gid o'z profilini yaratadi/tahrirlaydi. Holat, komissiya, sertifikat tasdig'i — faqat admin."""
+    """Gid o'z profilini yaratadi/tahrirlaydi. Holat, komissiya, sertifikat tasdig'i — faqat admin.
+
+    Sertifikat fayli yopiq saqlanadi va hech kimga qaytarilmaydi (faqat `has_certificate_file`).
+    """
+
+    certificate_file = serializers.FileField(write_only=True, required=False, validators=[document_rule])
+    has_certificate_file = serializers.SerializerMethodField()
 
     languages = _ChoiceList(SpokenLanguage.choices, min_length=1)
     specializations = _ChoiceList(Specialization.choices, required=False)
@@ -75,6 +82,7 @@ class MyGuideProfileSerializer(serializers.ModelSerializer):
             "experience_years",
             "certificate_number",
             "certificate_file",
+            "has_certificate_file",
             "is_certified",
             "price_half_day_uzs",
             "price_full_day_uzs",
@@ -100,6 +108,9 @@ class MyGuideProfileSerializer(serializers.ModelSerializer):
             "warnings_count",
             "no_show_count",
         ]
+
+    def get_has_certificate_file(self, profile) -> bool:
+        return bool(profile.certificate_file)
 
     def validate_destinations(self, value):
         if not value:

@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from apps.core.files import image_rule
 from apps.core.models import TimeStampedModel
 
 
@@ -16,7 +17,7 @@ class Article(TimeStampedModel):
     slug = models.SlugField("slug", max_length=220, unique=True)
     excerpt = models.CharField("qisqa mazmun", max_length=400, blank=True)
     body = models.TextField("matn", help_text="Markdown yoki oddiy matn")
-    cover = models.ImageField("muqova", upload_to="articles/", blank=True)
+    cover = models.ImageField("muqova", upload_to="articles/", blank=True, validators=[image_rule])
     destination = models.ForeignKey(
         "catalog.Destination",
         on_delete=models.SET_NULL,

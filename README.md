@@ -128,6 +128,12 @@ python manage.py runserver
 | `TELEGRAM_BOT_TOKEN` | bo'sh | Admin bildirishnomalari uchun bot tokeni (@BotFather). Bo'sh — o'chiq |
 | `TELEGRAM_ADMIN_CHAT_IDS` | bo'sh | Xabar oladigan admin chatlari, vergul bilan |
 | `LAZURI_SITE_URL` | `http://localhost:8000` | Telegram xabaridagi admin panel havolalari uchun |
+| `EMAIL_URL` | `consolemail://` | Email: konsol (dev) yoki `smtp+tls://login:parol@smtp.server:587` |
+| `DEFAULT_FROM_EMAIL` | `LAZURI <no-reply@lazuri.uz>` | Jo'natuvchi |
+| `SMS_BACKEND` | `console` | `console` (kod server logida) / `disabled`. Provayder (Eskiz, Playmobile) shartnomadan keyin ulanadi |
+| `PRIVATE_MEDIA_ROOT` | `private_media/` | Yopiq fayllar (gid sertifikatlari) — veb orqali berilmaydi |
+| `SENTRY_DSN` | bo'sh | Xatolarni kuzatish (faqat prod) |
+| `CSRF_TRUSTED_ORIGINS` | bo'sh | Prod: `https://api.lazuri.uz` |
 
 Kalit yaratish:
 
@@ -238,6 +244,17 @@ Barcha endpoint'lar `/api/v1/` ostida. To'liq va interaktiv ro'yxat — `/api/do
 | GET | `/api/v1/auth/me/` | ✅ | Joriy foydalanuvchi |
 | PATCH | `/api/v1/auth/me/` | ✅ | Profilni tahrirlash (`email` va `role` o'zgarmaydi) |
 | POST | `/api/v1/auth/me/password/` | ✅ | `old_password` + `new_password` |
+| POST | `/api/v1/auth/password/forgot/` | — | `{"email"}` → emailga 6 raqamli kod (javob doim bir xil) |
+| POST | `/api/v1/auth/password/reset/` | — | `{"email", "code", "new_password"}` → barcha qurilmalardan chiqariladi |
+| POST | `/api/v1/auth/email/send-code/` · `email/verify/` | ✅ | Emailni tasdiqlash (`{"code"}`); ro'yxatdan o'tganda kod avtomatik yuboriladi |
+| POST | `/api/v1/auth/phone/request-code/` | — | `{"phone": "90 123 45 67"}` → SMS kod |
+| POST | `/api/v1/auth/phone/verify/` | — | `{"phone", "code", "first_name"?}` → tokenlar; akkaunt bo'lmasa yaratiladi (`is_new: true`) |
+| POST | `/api/v1/auth/me/phone/request-code/` · `me/phone/verify/` | ✅ | Akkauntga telefon ulash/almashtirish |
+
+**Tasdiqlash kodlari:** 6 raqam, 10 daqiqa amal qiladi, bazada faqat xeshi saqlanadi; 5 ta noto'g'ri urinishdan keyin
+kod yaroqsiz; qayta so'rash — 60 soniyadan keyin, bitta manzilga soatiga 5 tagacha. Telefon formati: `+998XXXXXXXXX`
+(`90 123 45 67`, `+998 (90) 123-45-67` ham qabul qilinadi). Telefon orqali kirganlar parolsiz, email ixtiyoriy.
+`email` va `phone` ni `PATCH /me/` bilan o'zgartirib bo'lmaydi — faqat kod orqali.
 
 So'rovlarda token: `Authorization: Bearer <access>`.
 
@@ -581,6 +598,50 @@ Xabarlar avval bazaga yoziladi (admin panel → *Telegram xabarlari*), `schedule
 xato bo'lsa 5 martagacha qayta urinadi. Telegram sekinlashsa ham sayt kutib qolmaydi.
 Token sozlanmagan bo'lsa — hech narsa yozilmaydi. Testlar hech qachon haqiqiy Telegram'ga yozmaydi.
 
+## Foydalanuvchilarga bildirishnomalar (email / SMS)
+
+Muhim xabarlar — email **va** SMS (telefon tasdiqlangan bo'lsa yoki tashkilot telefoni), qolganlari — email.
+Xabarlar navbatga yoziladi (admin panel → *Email / SMS xabarlari*), `scheduler` yuboradi, 5 martagacha qayta urinadi.
+Tasdiqlash kodlari navbatsiz, darhol yuboriladi.
+
+| Kimga | Qachon |
+|---|---|
+| Turist | bron yaratildi; tasdiqlandi (SMS); tashkilotchi bekor qildi (SMS); gid qabul qildi / rad etdi / javob bermadi |
+| Agentlik (email + xodimlar) | yangi to'langan bron (SMS); turist to'langan bronni bekor qildi; tur tasdiqlandi / rad etildi; ariza natijasi |
+| Gid | **yangi so'rov (SMS — 24 soatda javob kerak)**; bron to'landi (SMS); turist bekor qildi; profil holati |
+| Mehmonxona | yangi to'langan bron (SMS); mehmon bekor qildi; mehmonxona holati |
+
+> SMS hozircha `console` rejimida — matn server logiga chiqadi (`docker compose logs web | grep SMS`).
+> Haqiqiy SMS uchun provayder bilan shartnoma tuzilgach `apps/notifications/sms.py` ga backend qo'shiladi.
+
+## Fayllar va maxfiylik
+
+- **Yopiq fayllar:** gid sertifikatlari `private_media/` da (MEDIA'dan tashqarida), API ularni hech kimga qaytarmaydi
+  (`has_certificate_file`). Admin panelda — *"yuklab olish"* havolasi (`/admin/private/...`, faqat `is_staff`).
+- **Yuklash cheklovlari:** rasmlar — jpg/png/webp, ≤ 10 MB; video — mp4/mov/webm, ≤ 100 MB (muqova faqat rasm);
+  hujjatlar — pdf/jpg/png, ≤ 10 MB; audio-gid — mp3/m4a/ogg, ≤ 30 MB.
+
+## Production'ga chiqarish
+
+```bash
+cp .env.prod.example .env.prod      # qiymatlarni to'ldiring (SECRET_KEY, domen, Postgres paroli, SMTP...)
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+```
+
+| Servis | Vazifa |
+|---|---|
+| `db` | PostgreSQL 16 (port tashqariga ochilmaydi) |
+| `web` | gunicorn + `config.settings.prod`; ishga tushganda `migrate` va `collectstatic`; healthcheck `/api/health/` |
+| `scheduler` | bronlar muddati, bildirishnomalar (15 s) |
+| `nginx` | 80-port: `/media/`, API'ga proksi, yuklash ≤ 110 MB |
+| `backup` | har kuni `pg_dump` → `./backups/lazuri-YYYYMMDD-HHMM.dump`, 14 kun saqlanadi |
+
+- HTTPS'ni oldidagi proksi / load balancer yoki certbot beradi (`X-Forwarded-Proto` uzatilishi kerak).
+- Static fayllar — whitenoise (alohida server kerak emas). Konteynerlar root bo'lmagan foydalanuvchi (uid 1000) bilan.
+- Zaxiradan tiklash: `pg_restore -h db -U lazuri -d lazuri --clean backups/lazuri-....dump`
+- **CI:** `.github/workflows/ci.yml` — har push'da ruff, migratsiya tekshiruvi, Postgres bilan pytest, `check --deploy`.
+
 ## Rollar va ruxsatlar
 
 | Rol | Kim | Imkoniyatlar |
@@ -631,6 +692,8 @@ Joriy model — triphub.uz. Batafsil: `.claude/skills/lazuri-business-rules/SKIL
   agentlikka pul o'tkazish va qaytarishlar
 - [x] **6-bosqich:** sharhlar va reyting, agentlik javobi, blog ("Qo'llanmalar"), FAQ, sahifalar,
   adminlarga Telegram bildirishnomalari
+- [x] **8-bosqich:** parolni tiklash, email tasdiqlash, telefon + SMS bilan kirish; foydalanuvchilarga email/SMS;
+  yopiq fayllar va yuklash cheklovlari; production (gunicorn, nginx, zaxira, Sentry, CI)
 - [x] **7-bosqich:** individual gidlar va mehmonxonalar (to'liq). AI marshrut va ko'p tilli kontent (uz, ru, en) —
   "Tez kunda" (`/api/v1/features/`)
 
@@ -643,3 +706,5 @@ Joriy model — triphub.uz. Batafsil: `.claude/skills/lazuri-business-rules/SKIL
 | `Set the DJANGO_SECRET_KEY environment variable` | `prod` sozlamalari kalitsiz ishlamaydi — `.env` ga yozing |
 | Port 5432 yoki 8000 band | `docker-compose.yml` dagi `ports` ni o'zgartiring (masalan `"5433:5432"`) va `DATABASE_URL` ni moslang |
 | `relation ... does not exist` | `python manage.py migrate` |
+| SMS kod kelmayapti (dev) | Kod server logida: `docker compose logs web \| grep SMS` |
+| Email kelmayapti (dev) | `EMAIL_URL=consolemail://` — xat `docker compose logs scheduler` / `web` da |

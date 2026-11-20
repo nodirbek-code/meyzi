@@ -4,6 +4,7 @@ from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import User
+from apps.notifications import user_events
 
 from .models import Agency, AgencyApplication, AgencyMember
 
@@ -45,6 +46,7 @@ def approve_application(application: AgencyApplication, reviewer: User) -> Agenc
     application.reviewed_by = reviewer
     application.reviewed_at = timezone.now()
     application.save()
+    user_events.agency_application_reviewed(application)
     return agency
 
 
@@ -58,6 +60,7 @@ def reject_application(application: AgencyApplication, reviewer: User, note: str
     application.reviewed_by = reviewer
     application.reviewed_at = timezone.now()
     application.save()
+    user_events.agency_application_reviewed(application)
     return application
 
 

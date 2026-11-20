@@ -4,7 +4,8 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from apps.core.views import FeaturesView
+from apps.core.admin_views import private_file
+from apps.core.views import FeaturesView, HealthView
 
 api_v1 = [
     path("features/", FeaturesView.as_view(), name="features"),
@@ -24,8 +25,10 @@ api_v1 = [
 ]
 
 urlpatterns = [
+    path("admin/private/<path:path>", private_file, name="private-file"),
     path("admin/", admin.site.urls),
     path("api/v1/", include(api_v1)),
+    path("api/health/", HealthView.as_view(), name="health"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]

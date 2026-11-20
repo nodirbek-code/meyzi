@@ -70,6 +70,24 @@ docker compose logs scheduler --tail 3      # "expired: N, completed: M" har daq
 
 Dev bazada sinov foydalanuvchilarini qoldirsangiz, foydalanuvchiga ayting.
 
+## Production stack'ni sinash (kerak bo'lganda)
+
+Alohida loyiha nomi va port bilan — dev bazaga tegmaydi. Env faylni scratchpad'da yarating
+(`DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1`, `DJANGO_SECURE_SSL_REDIRECT=False`,
+`POSTGRES_PASSWORD`, `NGINX_PORT=8088`):
+
+```bash
+export PROD_ENV_FILE=<scratchpad>/prodtest.env
+docker compose -p lazuri-prodtest -f docker-compose.prod.yml --env-file $PROD_ENV_FILE up -d --build
+# birinchi ishga tushishda migratsiyalar bir necha daqiqa — /api/health/ 200 bo'lguncha kuting
+curl localhost:8088/api/health/ ; curl -o /dev/null -w "%{http_code}" localhost:8088/static/admin/css/base.css
+docker compose -p lazuri-prodtest -f docker-compose.prod.yml --env-file $PROD_ENV_FILE down -v
+rm -rf backups   # sinov dump'lari
+```
+
+Shell eslatmasi: `cat > fayl` ni heredoc'siz yozmang (stdin kutib osilib qoladi); uzoq `docker compose exec`
+buyruqlariga `timeout N ... </dev/null` qo'shing.
+
 ## Hisobot
 
 Faqat haqiqatan bajarilgan narsani ayting: "N ta test o'tdi", "ruff toza", "Postgres'da sinalmadi — Docker o'chiq".

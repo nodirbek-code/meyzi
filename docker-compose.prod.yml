@@ -1,0 +1,92 @@
+# Production: docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lazuri}
+      POSTGRES_USER: ${POSTGRES_USER:-lazuri}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env.prod da majburiy}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-lazuri} -d $${POSTGRES_DB:-lazuri}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web: &app
+    build:
+      context: .
+      args:
+        REQUIREMENTS: base
+    restart: unless-stopped
+    user: "1000:1000"
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --access-logfile -"
+    env_file: ${PROD_ENV_FILE:-.env.prod}
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DATABASE_URL: postgres://${POSTGRES_USER:-lazuri}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lazuri}
+    volumes:
+      - media:/app/media
+      - private_media:/app/private_media
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s  # birinchi ishga tushishda migratsiyalar uchun
+
+  scheduler:
+    <<: *app
+    command: >
+      sh -c "while true; do python manage.py process_bookings; python manage.py send_notifications; sleep 15; done"
+    healthcheck:
+      disable: true
+    depends_on:
+      web:
+        condition: service_started
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - media:/app/media:ro
+    depends_on:
+      - web
+
+  # Har kuni bazaning zaxira nusxasi ./backups ga (14 kun saqlanadi)
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          f=/backups/lazuri-$$(date +%Y%m%d-%H%M).dump
+          pg_dump -h db -U ${POSTGRES_USER:-lazuri} -d ${POSTGRES_DB:-lazuri} -Fc -f "$$f" && echo "zaxira: $$f"
+          find /backups -name 'lazuri-*.dump' -mtime +14 -delete
+          sleep 86400
+        done
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  media:
+  private_media:

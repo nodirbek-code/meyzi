@@ -1,5 +1,7 @@
 from django.contrib import admin, messages
 
+from apps.notifications import user_events
+
 from .models import Departure, ItineraryDay, ItineraryItem, Tour, TourCategory, TourMedia
 
 
@@ -48,12 +50,18 @@ class TourAdmin(admin.ModelAdmin):
             tour.publish()
             tour.moderation_note = ""
             tour.save()
+            user_events.tour_moderated(tour)
             n += 1
         self.message_user(request, f"{n} ta tur e'lon qilindi.", messages.SUCCESS)
 
     @admin.action(description="Rad etish (izohni tur sahifasida yozing)")
     def reject(self, request, queryset):
-        n = queryset.filter(status=Tour.Status.PENDING_REVIEW).update(status=Tour.Status.REJECTED)
+        n = 0
+        for tour in queryset.filter(status=Tour.Status.PENDING_REVIEW):
+            tour.status = Tour.Status.REJECTED
+            tour.save(update_fields=["status", "updated_at"])
+            user_events.tour_moderated(tour)
+            n += 1
         self.message_user(request, f"{n} ta tur rad etildi.", messages.WARNING)
 
 

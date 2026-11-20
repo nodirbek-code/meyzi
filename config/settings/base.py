@@ -48,6 +48,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -104,9 +105,17 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+# Yopiq fayllar (gid sertifikatlari va h.k.) — veb orqali berilmaydi, faqat admin yuklab oladi
+PRIVATE_MEDIA_ROOT = env.path("PRIVATE_MEDIA_ROOT", default=BASE_DIR / "private_media")
+# Katta video yuklash uchun (nginx'da ham client_max_body_size)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -197,9 +206,31 @@ LAZURI_GUIDE_GROUP_THRESHOLD = env.int(
 # --- Mehmonxonalar ---
 LAZURI_HOTEL_COMMISSION_PERCENT = Decimal(env.str("LAZURI_HOTEL_COMMISSION_PERCENT", default="15"))
 
+# --- Email va SMS (foydalanuvchilarga) ---
+# EMAIL_URL misollari: consolemail://  |  smtp+tls://user:parol@smtp.gmail.com:587
+vars().update(env.email_url("EMAIL_URL", default="consolemail://"))
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="LAZURI <no-reply@lazuri.uz>")
+# console | disabled  (provayder ulanganda — uning nomi)
+SMS_BACKEND = env.str("SMS_BACKEND", default="console")
+# Tasdiqlash kodi
+LAZURI_OTP_TTL_MINUTES = env.int("LAZURI_OTP_TTL_MINUTES", default=10)
+LAZURI_OTP_MAX_ATTEMPTS = 5
+LAZURI_OTP_RESEND_SECONDS = 60
+LAZURI_OTP_MAX_PER_HOUR = 5
+
 # --- Telegram bildirishnomalari (faqat adminlar uchun) ---
 # Bo'sh bo'lsa — o'chiq. Sozlash: README → "Telegram bildirishnomalari".
 TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN", default="")
 TELEGRAM_ADMIN_CHAT_IDS = env.list("TELEGRAM_ADMIN_CHAT_IDS", default=[])
 # Xabardagi admin panel havolalari uchun
 LAZURI_SITE_URL = env.str("LAZURI_SITE_URL", default="http://localhost:8000")
+
+# --- Loglar (stdout — docker logs) ---
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "root": {"handlers": ["console"], "level": env.str("LOG_LEVEL", default="INFO")},
+    "loggers": {"django.db.backends": {"level": "WARNING"}},
+}
