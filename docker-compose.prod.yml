@@ -53,6 +53,18 @@ services:
       web:
         condition: service_started
 
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_URL:-http://localhost}
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://web:8000
+      NEXT_PUBLIC_API_URL: ${PUBLIC_URL:-http://localhost}
+    depends_on:
+      - web
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
@@ -63,6 +75,7 @@ services:
       - media:/app/media:ro
     depends_on:
       - web
+      - frontend
 
   # Har kuni bazaning zaxira nusxasi ./backups ga (14 kun saqlanadi)
   backup:

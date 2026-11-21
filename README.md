@@ -1,6 +1,6 @@
 # LAZURI — Discover the Blue Road
 
-**LAZURI** — O'zbekiston bo'ylab turlar platformasi. Tekshirilgan turagentliklar turlarini joylaydi,
+**LAZURI** — O'zbekiston bo'ylab turlar platformasi (backend — Django/DRF, frontend — Next.js). Tekshirilgan turagentliklar turlarini joylaydi,
 turist sana va joyni tanlab, onlayn to'laydi (karta yoki muddatli to'lov). **LAZURI'ning o'zi ham** tur yaratadi —
 platforma faqat agregator emas. Ushbu repozitoriy — platformaning **backend (REST API)** qismi.
 
@@ -65,6 +65,7 @@ Bu buyruq uchta konteyner ko'taradi:
 - `db` — PostgreSQL 16 (`localhost:5432`, baza/foydalanuvchi/parol: `lazuri`);
 - `web` — Django, avval `migrate` bajaradi, so'ng `http://localhost:8000` da ishga tushadi
   (kod papkasi konteynerga ulangan — o'zgarishlar darhol qo'llanadi);
+- `frontend` — Next.js (dev) `http://localhost:3000` — sayt shu yerda;
 - `scheduler` — har 15 soniyada: `process_bookings` (to'lanmagan bronlarning joyini bo'shatadi, tugagan
   sayohatlarni yopadi) va `send_notifications` (adminlarga Telegram xabarlari).
 
@@ -149,6 +150,36 @@ python -c "import secrets; print(secrets.token_urlsafe(50))"
 | `config/settings/dev.py` | Ishlab chiqish: DEBUG, barcha hostlar, email konsolga |
 | `config/settings/test.py` | pytest: SQLite, tez xeshlash, throttling o'chiq |
 | `config/settings/prod.py` | Production: HTTPS, xavfsiz cookie, HSTS. `wsgi.py`/`asgi.py` sukut bo'yicha shuni ishlatadi |
+
+## Frontend (Next.js)
+
+`frontend/` — Next.js 15 (App Router) + TypeScript + Tailwind CSS. Tuzilish va foydalanuvchi yo'li — triphub.uz kabi,
+dizayn — LAZURI'ning o'zi: **lazurit ko'k** `#1E3A8A`, **oltin** `#C9A227`, qum fon `#F7F3EA`, girih naqshi,
+sarlavhalar Playfair Display, matn Inter (kirill ham bor).
+
+| Sahifa | Yo'l |
+|---|---|
+| Bosh sahifa: qidiruv, toifalar, mashhur turlar, yo'nalishlar, LAZURI turlari, "Tez kunda" | `/` |
+| Turlar (filtrlar, sahifalash) · tur sahifasi (galereya, dastur, sanalar, bron) | `/tours` · `/tours/[slug]` |
+| Yo'nalishlar · yo'nalish (turlar, diqqatga sazovor joylar) | `/destinations` · `/destinations/[slug]` |
+| Gidlar · gid (narx kalkulyatori, so'rov) · gid bo'lish | `/guides` · `/guides/[slug]` · `/guides/become` |
+| Mehmonxonalar (sana bo'yicha) · mehmonxona (bo'sh xonalar, bron) · qo'shish | `/hotels` · `/hotels/[slug]` · `/hotels/join` |
+| Kirish (telefon+SMS / email) · ro'yxatdan o'tish · parolni tiklash | `/login` · `/register` · `/forgot-password` |
+| Kabinet: bronlarim, bron (taymer, bekor qilish, sharh), profil | `/account` · `/account/bookings/[code]` · `/account/profile` |
+| Qo'llanmalar · FAQ · sahifalar · agentliklar uchun | `/articles` · `/faq` · `/pages/[slug]` · `/agencies` |
+
+**Xavfsizlik:** JWT'lar faqat **httpOnly cookie**'da (`lz_access`, `lz_refresh`) — brauzer JavaScript'i ko'rmaydi.
+Brauzer backendga to'g'ridan emas, `/api/proxy/...` (Next route handler) orqali murojaat qiladi; kirish/chiqish —
+`/api/auth/*`. Access token muddati tugashidan oldin `middleware.ts` uni jimgina yangilaydi.
+Server Component'lar backendni ichki manzil (`API_INTERNAL_URL=http://web:8000`) orqali o'qiydi.
+
+```bash
+docker compose up -d frontend                          # dev (birinchi marta npm install — bir necha daqiqa)
+docker compose exec frontend npx tsc --noEmit         # tip tekshiruvi
+docker compose exec frontend npm run build            # prod build tekshiruvi
+```
+
+Hali yo'q (keyingi bosqich): agentlik, gid va mehmonxona **kabinetlari** frontend'i (backend API tayyor).
 
 ## Foydali buyruqlar
 
@@ -634,7 +665,8 @@ docker compose -f docker-compose.prod.yml exec web python manage.py createsuperu
 | `db` | PostgreSQL 16 (port tashqariga ochilmaydi) |
 | `web` | gunicorn + `config.settings.prod`; ishga tushganda `migrate` va `collectstatic`; healthcheck `/api/health/` |
 | `scheduler` | bronlar muddati, bildirishnomalar (15 s) |
-| `nginx` | 80-port: `/media/`, API'ga proksi, yuklash ≤ 110 MB |
+| `frontend` | Next.js (standalone, prod) |
+| `nginx` | 80-port: `/api/v1`, `/admin`, `/static` → backend; `/media/` — fayllar; qolgani → frontend. Yuklash ≤ 110 MB |
 | `backup` | har kuni `pg_dump` → `./backups/lazuri-YYYYMMDD-HHMM.dump`, 14 kun saqlanadi |
 
 - HTTPS'ni oldidagi proksi / load balancer yoki certbot beradi (`X-Forwarded-Proto` uzatilishi kerak).

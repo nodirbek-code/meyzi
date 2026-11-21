@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-sand-50 text-ink antialiased; }
+  h1, h2, h3 { @apply font-display font-bold tracking-tight text-ink; }
+  :focus-visible { @apply outline-none ring-2 ring-forest-400 ring-offset-2 ring-offset-sand-50; }
+}
+
+@layer components {
+  .container-lz { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-forest-600 text-white hover:bg-forest-700 active:bg-forest-800; }
+  .btn-gold { @apply btn bg-forest-600 text-white hover:bg-forest-700 active:bg-forest-800; } /* eski nom: asosiy CTA */
+  .btn-accent { @apply btn bg-sun-500 text-forest-900 hover:bg-sun-300; }
+  .btn-ghost { @apply btn border border-sand-300 bg-white text-ink hover:border-forest-400 hover:text-forest-700; }
+  .btn-light { @apply btn bg-white text-forest-700 shadow-card hover:bg-sand-50; }
+
+  .card { @apply rounded-xl2 border border-sand-200 bg-white shadow-card; }
+  .input { @apply w-full rounded-xl border border-sand-300 bg-white px-4 py-2.5 text-sm text-ink placeholder:text-ink-mute focus:border-forest-400 focus:outline-none focus:ring-2 focus:ring-forest-100 disabled:bg-sand-100; }
+  .label { @apply mb-1.5 block font-sans text-xs font-semibold text-ink-soft; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold; }
+  .eyebrow { @apply text-xs font-bold uppercase tracking-[0.2em] text-forest-500; }
+  .prose-lz p { @apply mb-3 leading-relaxed text-ink-soft; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}
+
+/* Rasm yo'q joylar va bloklar uchun: tog' silueti tushirilgan tabiat gradienti */
+.pattern-girih,
+.nature-bg {
+  background-color: #1b5737;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 120 L0 78 L60 40 L110 70 L170 22 L230 66 L285 38 L340 72 L400 50 L400 120Z' fill='%230E2E1E' fill-opacity='.55'/%3E%3Cpath d='M0 120 L0 96 L80 70 L150 92 L220 64 L300 94 L360 80 L400 90 L400 120Z' fill='%230E2E1E' fill-opacity='.7'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, #4f9a6b 0%, #226b43 45%, #15432b 100%);
+  background-repeat: no-repeat;
+  background-position: bottom, center;
+  background-size: 100% 60%, cover;
+}
+
+/* Rasm yo'q kartalar uchun fon variantlari: o'rmon, tong (osmon), quyosh botishi, tuproq */
+.nature-1 { background-image: var(--peaks), linear-gradient(160deg, #8cc3da 0%, #2d7c9c 50%, #1f5870 100%); }
+.nature-2 { background-image: var(--peaks), linear-gradient(160deg, #f2d49c 0%, #d99a2b 45%, #8e5f15 100%); }
+.nature-3 { background-image: var(--peaks), linear-gradient(160deg, #e9ba67 0%, #c1623a 50%, #8f4426 100%); }
+:root {
+  --peaks: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 120 L0 78 L60 40 L110 70 L170 22 L230 66 L285 38 L340 72 L400 50 L400 120Z' fill='%230E2E1E' fill-opacity='.35'/%3E%3Cpath d='M0 120 L0 96 L80 70 L150 92 L220 64 L300 94 L360 80 L400 90 L400 120Z' fill='%230E2E1E' fill-opacity='.5'/%3E%3C/svg%3E");
+}
