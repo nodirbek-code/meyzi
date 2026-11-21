@@ -144,6 +144,8 @@ class Command(BaseCommand):
                     "max_group_size": 20,
                     "departure_time": _t(program[1][0][0]),
                     "meeting_point": "Toshkent, Amir Temur xiyoboni",
+                    "meeting_latitude": "41.311151",
+                    "meeting_longitude": "69.279737",
                     "included": ["Transport", "Gid", "Kirish chiptalari"],
                     "not_included": ["Tushlik", "Shaxsiy xarajatlar"],
                     "what_to_bring": ["Pasport", "Qulay poyabzal", "Issiq kiyim"],

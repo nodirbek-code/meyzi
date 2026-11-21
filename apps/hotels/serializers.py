@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.accounts.phones import VerifiedPhoneMixin
+from apps.accounts.serializers import phone_token_field
 from apps.catalog.models import Destination
 from apps.catalog.serializers import DestinationShortSerializer
 
@@ -117,11 +119,12 @@ class HotelDetailSerializer(HotelCardSerializer):
         )
 
 
-class MyHotelSerializer(serializers.ModelSerializer):
+class MyHotelSerializer(VerifiedPhoneMixin, serializers.ModelSerializer):
     """Mehmonxona egasi: ariza va profil. Holat, komissiya, reyting — faqat admin."""
 
     destination = serializers.SlugRelatedField(slug_field="slug", queryset=Destination.objects.all())
     amenities = _AmenityList(required=False)
+    phone_token = phone_token_field()
 
     class Meta:
         model = Hotel
@@ -137,6 +140,7 @@ class MyHotelSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "phone",
+            "phone_token",
             "email",
             "amenities",
             "check_in_time",
@@ -174,7 +178,9 @@ class AvailabilityQuerySerializer(serializers.Serializer):
         return attrs
 
 
-class HotelBookingCreateSerializer(serializers.Serializer):
+class HotelBookingCreateSerializer(VerifiedPhoneMixin, serializers.Serializer):
+    verified_phone_field = "contact_phone"
+
     room_type = serializers.IntegerField()
     check_in = serializers.DateField()
     check_out = serializers.DateField()
@@ -182,6 +188,7 @@ class HotelBookingCreateSerializer(serializers.Serializer):
     guests = serializers.IntegerField(min_value=1, max_value=60)
     contact_name = serializers.CharField(max_length=200)
     contact_phone = serializers.CharField(max_length=30)
+    phone_token = phone_token_field()
     contact_email = serializers.EmailField(required=False, allow_blank=True, default="")
     note = serializers.CharField(required=False, allow_blank=True, default="")
 

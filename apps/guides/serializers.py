@@ -1,12 +1,16 @@
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.accounts.phones import VerifiedPhoneMixin
+from apps.accounts.serializers import phone_token_field
 from apps.catalog.models import Destination
 from apps.catalog.serializers import DestinationShortSerializer
 from apps.core.files import document_rule
 
 from .models import (
     GuideBooking,
+    GuideMeetingPoint,
     GuideProfile,
     GuideReview,
     GuideUnavailableDate,
@@ -47,12 +51,58 @@ class GuideCardSerializer(serializers.ModelSerializer):
         ]
 
 
+class MeetingPointSerializer(serializers.ModelSerializer):
+    destination = serializers.SlugRelatedField(slug_field="slug", queryset=Destination.objects.all())
+
+    class Meta:
+        model = GuideMeetingPoint
+        fields = ["id", "destination", "name", "address", "latitude", "longitude", "is_active"]
+
+    def validate_destination(self, value):
+        guide = self.context["request"].guide
+        if not guide.destinations.filter(pk=value.pk).exists():
+            raise serializers.ValidationError("Bu shahar profilingizdagi shaharlar ro'yxatida yo'q.")
+        return value
+
+    def validate(self, attrs):
+        guide = self.context["request"].guide
+        destination = attrs.get("destination", getattr(self.instance, "destination", None))
+        name = attrs.get("name", getattr(self.instance, "name", None))
+        dup = GuideMeetingPoint.objects.filter(guide=guide, destination=destination, name=name)
+        if self.instance:
+            dup = dup.exclude(pk=self.instance.pk)
+        if dup.exists():
+            raise serializers.ValidationError({"name": "Bu shaharda shu nomli uchrashuv joyi bor."})
+        return attrs
+
+
+class PublicMeetingPointSerializer(serializers.ModelSerializer):
+    destination = serializers.SlugRelatedField(slug_field="slug", read_only=True)
+
+    class Meta:
+        model = GuideMeetingPoint
+        fields = ["id", "destination", "name", "address", "latitude", "longitude"]
+        read_only_fields = fields
+
+
 class GuideDetailSerializer(GuideCardSerializer):
+    meeting_points = serializers.SerializerMethodField()
+
     class Meta(GuideCardSerializer.Meta):
-        fields = GuideCardSerializer.Meta.fields + ["bio", "group_surcharge_percent", "max_group_size"]
+        fields = GuideCardSerializer.Meta.fields + [
+            "bio",
+            "group_surcharge_percent",
+            "max_group_size",
+            "meeting_points",
+        ]
+
+    @extend_schema_field(PublicMeetingPointSerializer(many=True))
+    def get_meeting_points(self, guide):
+        points = [p for p in guide.meeting_points.all() if p.is_active]
+        return PublicMeetingPointSerializer(points, many=True).data
 
 
-class MyGuideProfileSerializer(serializers.ModelSerializer):
+class MyGuideProfileSerializer(VerifiedPhoneMixin, serializers.ModelSerializer):
     """Gid o'z profilini yaratadi/tahrirlaydi. Holat, komissiya, sertifikat tasdig'i — faqat admin.
 
     Sertifikat fayli yopiq saqlanadi va hech kimga qaytarilmaydi (faqat `has_certificate_file`).
@@ -60,6 +110,7 @@ class MyGuideProfileSerializer(serializers.ModelSerializer):
 
     certificate_file = serializers.FileField(write_only=True, required=False, validators=[document_rule])
     has_certificate_file = serializers.SerializerMethodField()
+    phone_token = phone_token_field()
 
     languages = _ChoiceList(SpokenLanguage.choices, min_length=1)
     specializations = _ChoiceList(Specialization.choices, required=False)
@@ -76,6 +127,7 @@ class MyGuideProfileSerializer(serializers.ModelSerializer):
             "photo",
             "bio",
             "phone",
+            "phone_token",
             "languages",
             "specializations",
             "destinations",
@@ -118,6 +170,7 @@ class MyGuideProfileSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        attrs = super().validate(attrs)  # telefon — Telegram kodi bilan tasdiqlangan
         for field in ("price_half_day_uzs", "price_full_day_uzs", "price_per_day_uzs"):
             if field in attrs and attrs[field] <= 0:
                 raise serializers.ValidationError({field: "Narx 0 dan katta bo'lishi kerak."})
@@ -151,7 +204,9 @@ class UnavailableDateSerializer(serializers.ModelSerializer):
         return value
 
 
-class GuideBookingCreateSerializer(serializers.Serializer):
+class GuideBookingCreateSerializer(VerifiedPhoneMixin, serializers.Serializer):
+    verified_phone_field = "contact_phone"
+
     guide = serializers.SlugRelatedField(slug_field="slug", queryset=GuideProfile.objects.all())
     destination = serializers.SlugRelatedField(slug_field="slug", queryset=Destination.objects.all())
     duration = serializers.ChoiceField(choices=GuideBooking.Duration.choices)
@@ -160,9 +215,18 @@ class GuideBookingCreateSerializer(serializers.Serializer):
     days = serializers.IntegerField(min_value=1, max_value=14, default=1)
     group_size = serializers.IntegerField(min_value=1, max_value=50)
     language = serializers.ChoiceField(choices=SpokenLanguage.choices)
-    meeting_point = serializers.CharField(max_length=255)
+    meeting_point = serializers.PrimaryKeyRelatedField(
+        queryset=GuideMeetingPoint.objects.filter(is_active=True),
+        help_text="Gid sahifasidagi `meeting_points[].id` — erkin matn qabul qilinmaydi",
+        error_messages={
+            "does_not_exist": "Gid belgilagan uchrashuv joylaridan birini tanlang.",
+            "incorrect_type": "Gid belgilagan uchrashuv joylaridan birini tanlang.",
+            "required": "Uchrashuv joyini tanlang.",
+        },
+    )
     contact_name = serializers.CharField(max_length=200)
     contact_phone = serializers.CharField(max_length=30)
+    phone_token = phone_token_field()
     note = serializers.CharField(required=False, allow_blank=True, default="")
 
 
@@ -196,6 +260,8 @@ class GuideBookingSerializer(serializers.ModelSerializer):
             "surcharge_uzs",
             "total_uzs",
             "meeting_point",
+            "meeting_latitude",
+            "meeting_longitude",
             "note",
             "contact_name",
             "contact_phone",

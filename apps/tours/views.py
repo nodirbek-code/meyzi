@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db.models import Count, F, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -91,6 +93,31 @@ class TourViewSet(viewsets.ReadOnlyModelViewSet):
     def get_serializer_class(self):
         return TourDetailSerializer if self.action == "retrieve" else TourCardSerializer
 
+    @extend_schema(responses={200: dict})
+    @action(detail=False, methods=["get"])
+    def calendar(self, request):
+        """Sana tasmasi uchun: keyingi `days` (≤ 90) kundagi bo'sh joyli jo'nashlar soni.
+        Katalog filtrlari (destination, category...) ham qo'llanadi. Javob: [{"date", "tours"}]."""
+        try:
+            days = max(1, min(90, int(request.query_params.get("days", 45))))
+        except ValueError:
+            days = 45
+        today = timezone.localdate()
+        tours = self.filter_queryset(self.get_queryset()).values("pk")
+        rows = (
+            Departure.objects.filter(
+                tour__in=tours,
+                status=Departure.Status.OPEN,
+                seats_booked__lt=F("seats_total"),
+                date__gte=today,
+                date__lte=today + timedelta(days=days - 1),
+            )
+            .values("date")
+            .annotate(tours=Count("tour", distinct=True))
+            .order_by("date")
+        )
+        return Response([{"date": r["date"].isoformat(), "tours": r["tours"]} for r in rows])
+
 
 # ---------- Agentlik kabineti ----------
 
@@ -133,6 +160,14 @@ class CabinetTourViewSet(viewsets.ModelViewSet):
             )
         if not tour.media.exists():
             raise ValidationError({"detail": "Kamida bitta rasm yuklang."})
+        # Uchrashuv joyi majburiy va aniq bo'lsin: nomi + xaritadagi joyi (havola yoki koordinata)
+        if not tour.meeting_point.strip():
+            raise ValidationError({"meeting_point": "Uchrashuv joyini kiriting."})
+        has_coords = tour.meeting_latitude is not None and tour.meeting_longitude is not None
+        if not (tour.meeting_map_url or has_coords):
+            raise ValidationError(
+                {"meeting_map_url": "Uchrashuv joyining xarita havolasini yoki koordinatasini kiriting."}
+            )
         if request.agency.auto_publish:
             tour.publish()
         else:

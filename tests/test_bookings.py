@@ -10,11 +10,13 @@ from apps.bookings import services
 from apps.bookings.models import Booking
 from apps.tours.models import Departure, Tour
 
-from .conftest import PASSWORD
+from .conftest import PASSWORD, phone_token
 
 pytestmark = pytest.mark.django_db
 
 CONTACT = {"contact_name": "Ali Valiyev", "contact_phone": "+998901234567"}
+# API orqali: telefon Telegram kodi bilan tasdiqlangan bo'lishi shart
+API_CONTACT = {**CONTACT, "phone_token": phone_token("+998901234567")}
 
 
 @pytest.fixture
@@ -43,7 +45,7 @@ def test_create_booking_api(auth_api, departure, tour):
         {
             "departure": departure.id,
             "seats": 2,
-            **CONTACT,
+            **API_CONTACT,
             "travelers": [{"full_name": "A"}, {"full_name": "B"}],
         },
         format="json",
@@ -60,7 +62,7 @@ def test_create_booking_api(auth_api, departure, tour):
 
 
 def test_booking_requires_login(api, departure):
-    res = api.post("/api/v1/bookings/", {"departure": departure.id, "seats": 1, **CONTACT}, format="json")
+    res = api.post("/api/v1/bookings/", {"departure": departure.id, "seats": 1, **API_CONTACT}, format="json")
     assert res.status_code == 401
 
 
@@ -321,3 +323,20 @@ def test_process_bookings_command(book, capsys):
     done.refresh_from_db()
     assert pending.status == Booking.Status.EXPIRED
     assert done.status == Booking.Status.COMPLETED
+
+
+def test_today_departure_not_bookable_after_start_time(tour, departure):
+    from datetime import time as dtime
+
+    from django.utils import timezone as tz
+
+    departure.date = tz.localdate()
+    departure.save()
+    tour.departure_time = dtime(0, 0)
+    tour.save()
+    departure.refresh_from_db()
+    assert departure.is_bookable is False  # 00:00 allaqachon o'tgan
+    tour.departure_time = dtime(23, 59, 59)
+    tour.save()
+    departure.refresh_from_db()
+    assert departure.is_bookable is (tz.localtime().time() < dtime(23, 59, 59))

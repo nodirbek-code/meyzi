@@ -200,7 +200,7 @@ class HotelBookingViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet
 
     @extend_schema(request=HotelBookingCreateSerializer, responses={201: HotelBookingSerializer})
     def create(self, request, *args, **kwargs):
-        ser = HotelBookingCreateSerializer(data=request.data)
+        ser = HotelBookingCreateSerializer(data=request.data, context=self.get_serializer_context())
         ser.is_valid(raise_exception=True)
         d = dict(ser.validated_data)
         booking = services.create_booking(user=request.user, room_type_id=d.pop("room_type"), **d)

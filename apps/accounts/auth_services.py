@@ -1,15 +1,33 @@
-"""Kod bilan bog'liq auth oqimlari: parolni tiklash, email tasdiqlash, telefon orqali kirish."""
+"""Kod bilan bog'liq auth oqimlari: parolni tiklash, email tasdiqlash, telefon orqali kirish.
 
+Telefon kodlari SMS bilan emas — Telegram orqali yuboriladi (`apps.notifications.telegram_codes`).
+"""
+
+import logging
+
+from django.conf import settings
 from django.db import IntegrityError, transaction
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 from apps.notifications import services as notify
+from apps.notifications import telegram_codes
 
 from . import otp
 from .models import OneTimeCode, User
+from .phones import make_phone_token
 
 P = OneTimeCode.Purpose
+log = logging.getLogger("lazuri.auth")
+
+
+class CodeNotDelivered(APIException):
+    status_code = 503
+    default_detail = (
+        "Kodni Telegram'ga yuborib bo'lmadi. Shu raqamda Telegram ochilganini tekshiring "
+        "yoki birozdan keyin qayta urinib ko'ring."
+    )
+    default_code = "code_not_delivered"
 
 
 def _send_email_code(email: str, code: str, purpose: str):
@@ -27,10 +45,16 @@ def _send_email_code(email: str, code: str, purpose: str):
     notify.queue_email(email, subject, body, event=purpose, immediate=True)
 
 
-def _send_sms_code(phone: str, code: str, purpose: str):
-    notify.queue_sms(
-        phone, f"LAZURI: tasdiqlash kodi {code}. Hech kimga aytmang.", event=purpose, immediate=True
-    )
+def _send_phone_code(purpose: str, target: str, phone: str) -> None:
+    """Kod yaratadi va Telegram orqali `phone` ga yuboradi. Yuborilmasa — kod bekor qilinadi (503)."""
+    code = otp.issue(purpose, target)
+    try:
+        telegram_codes.send_code(phone, code, ttl_seconds=settings.LAZURI_OTP_TTL_MINUTES * 60)
+    except telegram_codes.CodeDeliveryError as exc:
+        log.warning("Telegram kod yuborilmadi (%s): %s", phone, exc)
+        # yetkazilmagan kod "qayta yuborish — 60 s" cheklovini yoqmasin
+        OneTimeCode.objects.filter(purpose=purpose, target=target, used_at__isnull=True).delete()
+        raise CodeNotDelivered() from None
 
 
 # ---------- Email ----------
@@ -88,8 +112,7 @@ def logout_everywhere(user: User) -> None:
 
 
 def request_phone_login(phone: str) -> None:
-    code = otp.issue(P.PHONE_LOGIN, phone)
-    _send_sms_code(phone, code, P.PHONE_LOGIN)
+    _send_phone_code(P.PHONE_LOGIN, phone, phone)
 
 
 def verify_phone_login(phone: str, code: str, first_name: str = "") -> tuple[User, bool]:
@@ -116,8 +139,7 @@ def verify_phone_login(phone: str, code: str, first_name: str = "") -> tuple[Use
 def request_phone_change(user: User, phone: str) -> None:
     if User.objects.filter(phone=phone).exclude(pk=user.pk).exists():
         raise ValidationError({"phone": "Bu raqam boshqa akkauntga ulangan."})
-    code = otp.issue(P.PHONE_CHANGE, f"{user.pk}:{phone}")
-    _send_sms_code(phone, code, P.PHONE_CHANGE)
+    _send_phone_code(P.PHONE_CHANGE, f"{user.pk}:{phone}", phone)
 
 
 def verify_phone_change(user: User, phone: str, code: str) -> User:
@@ -128,3 +150,24 @@ def verify_phone_change(user: User, phone: str, code: str) -> User:
     user.phone_verified = True
     user.save(update_fields=["phone", "phone_verified"])
     return user
+
+
+# ---------- Formadagi telefonni tasdiqlash (bron, arizalar, profillar) ----------
+
+
+def request_phone_check(phone: str) -> None:
+    _send_phone_code(P.PHONE_CONFIRM, phone, phone)
+
+
+def verify_phone_check(phone: str, code: str, user: User | None = None) -> str:
+    """To'g'ri kod → `phone_token` (formaga telefon bilan birga yuboriladi).
+
+    Kirgan foydalanuvchining akkauntida telefon yo'q bo'lsa — raqam akkauntga ham ulanadi.
+    """
+    otp.verify(P.PHONE_CONFIRM, phone, code)
+    if user is not None and user.is_authenticated and not user.phone:
+        if not User.objects.filter(phone=phone).exclude(pk=user.pk).exists():
+            user.phone = phone
+            user.phone_verified = True
+            user.save(update_fields=["phone", "phone_verified"])
+    return make_phone_token(phone)

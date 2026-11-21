@@ -118,13 +118,35 @@ class PasswordResetSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True)
 
 
+def phone_field(**kwargs):
+    return serializers.CharField(
+        max_length=30, help_text="+998 dan keyin 9 raqam: +998 90 123 45 67", **kwargs
+    )
+
+
+def phone_token_field():
+    return serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        default="",
+        help_text="`/auth/phone-check/verify/` javobidagi token "
+        "(akkauntdagi tasdiqlangan raqam uchun shart emas)",
+    )
+
+
 class PhoneSerializer(serializers.Serializer):
-    phone = serializers.CharField(max_length=30, help_text="+998 90 123 45 67")
+    phone = phone_field()
 
     def validate_phone(self, value):
-        from .phones import normalize_phone
+        from rest_framework.exceptions import ValidationError as DRFValidationError
 
-        return normalize_phone(value)
+        from .phones import INVALID_TEXT, normalize_phone
+
+        try:
+            return normalize_phone(value)
+        except DRFValidationError:
+            raise serializers.ValidationError(INVALID_TEXT) from None
 
 
 class PhoneVerifySerializer(PhoneSerializer):
@@ -134,6 +156,15 @@ class PhoneVerifySerializer(PhoneSerializer):
 
 class PhoneChangeVerifySerializer(PhoneSerializer):
     code = serializers.CharField(min_length=6, max_length=6)
+
+
+class PhoneCheckResponseSerializer(serializers.Serializer):
+    phone = serializers.CharField()
+    phone_token = serializers.CharField()
+
+
+class GoogleLoginSerializer(serializers.Serializer):
+    credential = serializers.CharField(help_text="Google Identity Services bergan ID token")
 
 
 class AuthResponseSerializer(serializers.Serializer):

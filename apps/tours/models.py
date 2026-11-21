@@ -65,7 +65,7 @@ class Tour(TimeStampedModel):
     departure_time = models.TimeField("jo'nash vaqti", null=True, blank=True)
     return_time = models.TimeField("qaytish vaqti", null=True, blank=True)
 
-    meeting_point = models.CharField("uchrashuv joyi", max_length=255, blank=True)
+    meeting_point = models.CharField("uchrashuv joyi", max_length=255)
     meeting_latitude = models.DecimalField(
         "uchrashuv kengligi", max_digits=9, decimal_places=6, null=True, blank=True, validators=LAT_VALIDATORS
     )
@@ -210,4 +210,11 @@ class Departure(TimeStampedModel):
 
     @property
     def is_bookable(self) -> bool:
-        return self.status == self.Status.OPEN and self.date >= timezone.localdate() and self.seats_left > 0
+        if self.status != self.Status.OPEN or self.seats_left <= 0:
+            return False
+        today = timezone.localdate()
+        if self.date != today:
+            return self.date > today
+        # bugun: jo'nash vaqti o'tgan bo'lsa — bron qilib bo'lmaydi (vaqt yo'q bo'lsa kun boshi — o'tgan)
+        start = self.tour.departure_time
+        return bool(start) and timezone.localtime().time() < start

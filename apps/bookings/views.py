@@ -24,9 +24,9 @@ class _BookingQuerysetMixin:
     ordering_fields = ["created_at", "departure_at"]
 
     def base_queryset(self):
-        return Booking.objects.select_related("tour", "agency", "departure", "user").prefetch_related(
-            "travelers"
-        )
+        return Booking.objects.select_related(
+            "tour", "agency", "departure", "user", "review"
+        ).prefetch_related("travelers", "tour__media")
 
     def get_object(self):
         return services.refresh_if_expired(super().get_object())
@@ -54,7 +54,7 @@ class BookingViewSet(_BookingQuerysetMixin, mixins.CreateModelMixin, viewsets.Re
 
     @extend_schema(request=BookingCreateSerializer, responses={201: BookingSerializer})
     def create(self, request, *args, **kwargs):
-        ser = BookingCreateSerializer(data=request.data)
+        ser = BookingCreateSerializer(data=request.data, context=self.get_serializer_context())
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
         booking = services.create_booking(

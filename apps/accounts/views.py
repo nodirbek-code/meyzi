@@ -9,16 +9,18 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from . import auth_services
+from . import auth_services, google
 from .serializers import (
     AuthResponseSerializer,
     ChangePasswordSerializer,
     CodeSerializer,
     EmailSerializer,
+    GoogleLoginSerializer,
     LoginSerializer,
     LogoutSerializer,
     PasswordResetSerializer,
     PhoneChangeVerifySerializer,
+    PhoneCheckResponseSerializer,
     PhoneSerializer,
     PhoneVerifySerializer,
     RegisterSerializer,
@@ -157,8 +159,11 @@ class EmailVerifyView(_CodeView):
         return Response(UserSerializer(user, context={"request": request}).data)
 
 
+TELEGRAM_SENT = "Tasdiqlash kodi Telegram'ga yuborildi."
+
+
 class PhoneRequestCodeView(_CodeView):
-    """Telefon orqali kirish/ro'yxatdan o'tish: SMS kod."""
+    """Telefon orqali kirish/ro'yxatdan o'tish: kod shu raqamning Telegram akkauntiga yuboriladi."""
 
     permission_classes = [permissions.AllowAny]
 
@@ -167,7 +172,9 @@ class PhoneRequestCodeView(_CodeView):
         ser = PhoneSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         auth_services.request_phone_login(ser.validated_data["phone"])
-        return Response({"detail": "SMS kod yuborildi.", "phone": ser.validated_data["phone"]})
+        return Response(
+            {"detail": TELEGRAM_SENT, "phone": ser.validated_data["phone"], "channel": "telegram"}
+        )
 
 
 class PhoneVerifyView(_CodeView):
@@ -184,7 +191,7 @@ class PhoneVerifyView(_CodeView):
 
 
 class MePhoneRequestCodeView(_CodeView):
-    """Akkauntga telefon ulash / almashtirish: yangi raqamga SMS kod."""
+    """Akkauntga telefon ulash / almashtirish: yangi raqamning Telegram'iga kod."""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -193,7 +200,9 @@ class MePhoneRequestCodeView(_CodeView):
         ser = PhoneSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         auth_services.request_phone_change(request.user, ser.validated_data["phone"])
-        return Response({"detail": "SMS kod yuborildi."})
+        return Response(
+            {"detail": TELEGRAM_SENT, "phone": ser.validated_data["phone"], "channel": "telegram"}
+        )
 
 
 class MePhoneVerifyView(_CodeView):
@@ -205,3 +214,46 @@ class MePhoneVerifyView(_CodeView):
         ser.is_valid(raise_exception=True)
         user = auth_services.verify_phone_change(request.user, **ser.validated_data)
         return Response(UserSerializer(user, context={"request": request}).data)
+
+
+class PhoneCheckRequestCodeView(_CodeView):
+    """Formadagi telefonni tasdiqlash (bron, arizalar, profillar): kod Telegram'ga yuboriladi."""
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(request=PhoneSerializer, responses={200: dict})
+    def post(self, request):
+        ser = PhoneSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        auth_services.request_phone_check(ser.validated_data["phone"])
+        return Response(
+            {"detail": TELEGRAM_SENT, "phone": ser.validated_data["phone"], "channel": "telegram"}
+        )
+
+
+class PhoneCheckVerifyView(_CodeView):
+    """Kod to'g'ri bo'lsa — `phone_token`. Formaga telefon bilan birga yuboring (1 soat amal qiladi)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(request=PhoneChangeVerifySerializer, responses=PhoneCheckResponseSerializer)
+    def post(self, request):
+        ser = PhoneChangeVerifySerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        phone = ser.validated_data["phone"]
+        token = auth_services.verify_phone_check(phone, ser.validated_data["code"], user=request.user)
+        return Response({"phone": phone, "phone_token": token})
+
+
+class GoogleLoginView(_CodeView):
+    """Google (Gmail) orqali kirish: Google Identity Services `credential` (ID token) → JWT.
+    Akkaunt bo'lmasa avtomatik yaratiladi (`is_new: true`)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(request=GoogleLoginSerializer, responses=AuthResponseSerializer)
+    def post(self, request):
+        ser = GoogleLoginSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        user, created = google.login(ser.validated_data["credential"])
+        return Response(_tokens(user, request, is_new=created))

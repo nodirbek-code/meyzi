@@ -25,4 +25,10 @@ def features(request=None) -> dict:
             "description": "Turlar va sahifalar o'zbek, rus va ingliz tillarida.",
         },
         "payments": available_methods(request),
+        # Telefon kodlari SMS emas, Telegram orqali keladi
+        "phone_verification": {"channel": "telegram", "country_code": "+998", "digits": 9},
+        "google_login": {
+            "enabled": bool(settings.GOOGLE_CLIENT_ID),
+            "client_id": settings.GOOGLE_CLIENT_ID or None,
+        },
     }

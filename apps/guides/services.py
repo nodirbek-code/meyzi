@@ -137,7 +137,7 @@ def request_booking(
     days: int,
     group_size: int,
     language: str,
-    meeting_point: str,
+    meeting_point,
     contact_name: str,
     contact_phone: str,
     note: str = "",
@@ -152,6 +152,15 @@ def request_booking(
         raise ValidationError({"guide": "O'zingizni bron qila olmaysiz."})
     if not guide.destinations.filter(pk=destination.pk).exists():
         raise ValidationError({"destination": "Gid bu shaharda ishlamaydi."})
+    # Uchrashuv joyi — faqat gid belgilagan ro'yxatdan (turist o'zi xohlagan joyni yoza olmaydi)
+    if (
+        meeting_point is None
+        or getattr(meeting_point, "guide_id", None) != guide.pk
+        or not meeting_point.is_active
+    ):
+        raise ValidationError({"meeting_point": "Gid belgilagan uchrashuv joylaridan birini tanlang."})
+    if meeting_point.destination_id != destination.pk:
+        raise ValidationError({"meeting_point": "Bu uchrashuv joyi tanlangan shaharda emas."})
     if language not in guide.languages:
         raise ValidationError({"language": "Gid bu tilda gapirmaydi."})
     if group_size < 1 or group_size > guide.max_group_size:
@@ -198,7 +207,10 @@ def request_booking(
         commission_percent=q["commission_percent"],
         commission_uzs=q["commission_uzs"],
         guide_amount_uzs=q["guide_amount_uzs"],
-        meeting_point=meeting_point,
+        meeting_place=meeting_point,
+        meeting_point=meeting_point.as_text,
+        meeting_latitude=meeting_point.latitude,
+        meeting_longitude=meeting_point.longitude,
         note=note,
         contact_name=contact_name,
         contact_phone=contact_phone,

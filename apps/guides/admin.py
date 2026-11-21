@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 from apps.notifications import user_events
 
 from . import services
-from .models import GuideBooking, GuideProfile, GuideReview, GuideUnavailableDate
+from .models import GuideBooking, GuideMeetingPoint, GuideProfile, GuideReview, GuideUnavailableDate
 
 
 @admin.register(GuideProfile)
@@ -116,3 +116,11 @@ class GuideReviewAdmin(admin.ModelAdmin):
 class GuideUnavailableDateAdmin(admin.ModelAdmin):
     list_display = ["guide", "date", "note"]
     date_hierarchy = "date"
+
+
+@admin.register(GuideMeetingPoint)
+class GuideMeetingPointAdmin(admin.ModelAdmin):
+    list_display = ["name", "guide", "destination", "address", "is_active"]
+    list_filter = ["is_active", "destination"]
+    search_fields = ["name", "address", "guide__display_name"]
+    autocomplete_fields = ["guide"]

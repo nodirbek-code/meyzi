@@ -139,6 +139,8 @@ TOUR_PAYLOAD = {
     "duration_nights": 1,
     "price_uzs": 890000,
     "cancellation_policy": "free",
+    "meeting_point": "Toshkent, Amir Temur xiyoboni",
+    "meeting_map_url": "https://yandex.uz/maps/?pt=69.279737,41.311151&z=16",
     "included": ["Transport", "Gid"],
     "itinerary": [
         {
@@ -256,3 +258,10 @@ def test_seed_tours_idempotent(api):
     lazuri = Agency.objects.get(slug="lazuri")
     assert lazuri.is_platform and lazuri.auto_publish and lazuri.commission_percent == 0
     assert api.get("/api/v1/tours/?category=tog").data["count"] == 2
+
+
+def test_calendar_counts_open_departures(api, tour, departure):
+    res = api.get("/api/v1/tours/calendar/", {"days": 30})
+    assert res.status_code == 200
+    assert res.data == [{"date": departure.date.isoformat(), "tours": 1}]
+    assert api.get("/api/v1/tours/calendar/", {"destination": "yoq"}).data == []

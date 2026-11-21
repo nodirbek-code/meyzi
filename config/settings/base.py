@@ -218,6 +218,19 @@ LAZURI_OTP_MAX_ATTEMPTS = 5
 LAZURI_OTP_RESEND_SECONDS = 60
 LAZURI_OTP_MAX_PER_HOUR = 5
 
+# --- Telefon tasdiqlash kodlari: Telegram Gateway (SMS emas) ---
+# console — kod server logiga chiqadi (dev) | locmem — testlar | gateway — https://gatewayapi.telegram.org
+# Token: https://gateway.telegram.org → Account settings → API token
+TELEGRAM_CODE_BACKEND = env.str("TELEGRAM_CODE_BACKEND", default="console")
+TELEGRAM_GATEWAY_TOKEN = env.str("TELEGRAM_GATEWAY_TOKEN", default="")
+# Kod bilan tasdiqlangan raqam formada shuncha vaqt "tasdiqlangan" hisoblanadi (soniya)
+LAZURI_PHONE_TOKEN_MAX_AGE = env.int("LAZURI_PHONE_TOKEN_MAX_AGE", default=3600)
+
+# --- Google orqali kirish ---
+# Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application).
+# Bo'sh bo'lsa — "Google orqali kirish" o'chiq.
+GOOGLE_CLIENT_ID = env.str("GOOGLE_CLIENT_ID", default="")
+
 # --- Telegram bildirishnomalari (faqat adminlar uchun) ---
 # Bo'sh bo'lsa — o'chiq. Sozlash: README → "Telegram bildirishnomalari".
 TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN", default="")

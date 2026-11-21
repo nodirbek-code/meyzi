@@ -245,7 +245,18 @@ class CabinetTourSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Narx 0 dan katta bo'lishi kerak.")
         return value
 
+    def validate_meeting_point(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Uchrashuv joyini kiriting.")
+        return value.strip()
+
     def validate(self, attrs):
+        lat = attrs.get("meeting_latitude", getattr(self.instance, "meeting_latitude", None))
+        lng = attrs.get("meeting_longitude", getattr(self.instance, "meeting_longitude", None))
+        if (lat is None) != (lng is None):
+            raise serializers.ValidationError(
+                {"meeting_latitude": "Kenglik va uzunlik ikkalasi birga kiritiladi."}
+            )
         days = attrs.get("duration_days", getattr(self.instance, "duration_days", 1))
         itinerary = attrs.get("itinerary")
         if itinerary is not None:

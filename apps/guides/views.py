@@ -10,7 +10,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from . import services
-from .models import GuideBooking, GuideProfile, GuideReview, GuideUnavailableDate
+from .models import GuideBooking, GuideMeetingPoint, GuideProfile, GuideReview, GuideUnavailableDate
 from .serializers import (
     CabinetGuideBookingSerializer,
     GuideBookingCreateSerializer,
@@ -20,6 +20,7 @@ from .serializers import (
     GuideReasonSerializer,
     GuideReviewCreateSerializer,
     GuideReviewSerializer,
+    MeetingPointSerializer,
     MyGuideProfileSerializer,
     QuoteQuerySerializer,
     QuoteSerializer,
@@ -51,7 +52,9 @@ class GuideViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ["rating", "price_full_day_uzs", "experience_years"]
 
     def get_queryset(self):
-        qs = GuideProfile.objects.filter(status=GuideProfile.Status.APPROVED).prefetch_related("destinations")
+        qs = GuideProfile.objects.filter(status=GuideProfile.Status.APPROVED).prefetch_related(
+            "destinations", "meeting_points"
+        )
         p = self.request.query_params
         if v := p.get("destination"):
             qs = qs.filter(destinations__slug=v)
@@ -201,7 +204,7 @@ class GuideBookingViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet
 
     @extend_schema(request=GuideBookingCreateSerializer, responses={201: GuideBookingSerializer})
     def create(self, request, *args, **kwargs):
-        ser = GuideBookingCreateSerializer(data=request.data)
+        ser = GuideBookingCreateSerializer(data=request.data, context=self.get_serializer_context())
         ser.is_valid(raise_exception=True)
         booking = services.request_booking(user=request.user, **ser.validated_data)
         return Response(GuideBookingSerializer(booking).data, status=201)
@@ -319,3 +322,29 @@ class CabinetUnavailableDateViewSet(
         if services.busy_dates(self.request.guide, start=day, end=day):
             raise ValidationError({"date": "Bu kunda bron bor — avval uni hal qiling."})
         serializer.save(guide=self.request.guide)
+
+
+class CabinetMeetingPointViewSet(viewsets.ModelViewSet):
+    """Gidning uchrashuv joylari. Turist bron qilganda faqat shulardan (faol) birini tanlaydi.
+
+    Bronlarda ishlatilgan joy o'chirilmaydi — nofaol qilinadi (eski bronlarda nusxasi saqlanadi).
+    """
+
+    serializer_class = MeetingPointSerializer
+    permission_classes = [_HasGuideProfile]
+    pagination_class = None
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return GuideMeetingPoint.objects.none()
+        return GuideMeetingPoint.objects.filter(guide=self.request.guide).select_related("destination")
+
+    def perform_create(self, serializer):
+        serializer.save(guide=self.request.guide)
+
+    def perform_destroy(self, point):
+        if point.bookings.exists():
+            point.is_active = False
+            point.save(update_fields=["is_active", "updated_at"])
+        else:
+            point.delete()

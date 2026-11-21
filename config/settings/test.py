@@ -21,6 +21,9 @@ REST_FRAMEWORK = {
 TELEGRAM_BOT_TOKEN = ""
 TELEGRAM_ADMIN_CHAT_IDS = []
 SMS_BACKEND = "locmem"
+TELEGRAM_CODE_BACKEND = "locmem"
+TELEGRAM_GATEWAY_TOKEN = ""
+GOOGLE_CLIENT_ID = ""
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},

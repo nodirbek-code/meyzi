@@ -5,7 +5,11 @@ from rest_framework.routers import SimpleRouter
 
 from apps.agencies.views import CabinetAgencyView
 from apps.bookings.views import CabinetBookingViewSet
-from apps.guides.views import CabinetGuideBookingViewSet, CabinetUnavailableDateViewSet
+from apps.guides.views import (
+    CabinetGuideBookingViewSet,
+    CabinetMeetingPointViewSet,
+    CabinetUnavailableDateViewSet,
+)
 from apps.hotels.views import (
     CabinetHotelBookingViewSet,
     CabinetHotelImageViewSet,
@@ -30,6 +34,7 @@ router.register("guide/bookings", CabinetGuideBookingViewSet, basename="cabinet-
 router.register(
     "guide/unavailable-dates", CabinetUnavailableDateViewSet, basename="cabinet-guide-unavailable"
 )
+router.register("guide/meeting-points", CabinetMeetingPointViewSet, basename="cabinet-guide-meeting-point")
 # Mehmonxona kabineti
 router.register("hotel/rooms", CabinetRoomTypeViewSet, basename="cabinet-hotel-room")
 router.register("hotel/images", CabinetHotelImageViewSet, basename="cabinet-hotel-image")

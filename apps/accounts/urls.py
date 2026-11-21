@@ -18,4 +18,7 @@ urlpatterns = [
     path("phone/verify/", views.PhoneVerifyView.as_view(), name="auth-phone-verify"),
     path("me/phone/request-code/", views.MePhoneRequestCodeView.as_view(), name="auth-me-phone-request"),
     path("me/phone/verify/", views.MePhoneVerifyView.as_view(), name="auth-me-phone-verify"),
+    path("phone-check/send-code/", views.PhoneCheckRequestCodeView.as_view(), name="auth-phone-check-send"),
+    path("phone-check/verify/", views.PhoneCheckVerifyView.as_view(), name="auth-phone-check-verify"),
+    path("google/", views.GoogleLoginView.as_view(), name="auth-google"),
 ]

@@ -53,7 +53,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         RU = "ru", "Русский"
         EN = "en", "English"
 
-    # Email yoki telefon — kamida bittasi. Telefon orqali (SMS) kirganlarda email bo'lmasligi mumkin.
+    # Email yoki telefon — kamida bittasi. Telefon orqali (Telegram kod) kirganlarda email bo'lmasligi mumkin.
     email = models.EmailField("email", unique=True, null=True, blank=True)
     email_verified = models.BooleanField("email tasdiqlangan", default=False)
     first_name = models.CharField("ism", max_length=100, blank=True)
@@ -62,6 +62,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         "telefon", max_length=20, unique=True, null=True, blank=True, help_text="+998XXXXXXXXX formatida"
     )
     phone_verified = models.BooleanField("telefon tasdiqlangan", default=False)
+    google_sub = models.CharField(
+        "Google ID", max_length=255, unique=True, null=True, blank=True, editable=False
+    )
     role = models.CharField("rol", max_length=20, choices=Role.choices, default=Role.TOURIST)
     language = models.CharField("til", max_length=5, choices=Language.choices, default=Language.UZ)
     country = models.CharField("mamlakat", max_length=2, blank=True, help_text="ISO kod: UZ, US, CN...")
@@ -90,13 +93,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class OneTimeCode(models.Model):
-    """Tasdiqlash kodi (email/SMS). Kodning o'zi saqlanmaydi — faqat xeshi."""
+    """Tasdiqlash kodi (email yoki Telegram). Kodning o'zi saqlanmaydi — faqat xeshi."""
 
     class Purpose(models.TextChoices):
         EMAIL_VERIFY = "email_verify", "Emailni tasdiqlash"
         PASSWORD_RESET = "password_reset", "Parolni tiklash"
         PHONE_LOGIN = "phone_login", "Telefon orqali kirish"
         PHONE_CHANGE = "phone_change", "Telefonni ulash"
+        PHONE_CONFIRM = "phone_confirm", "Formadagi telefonni tasdiqlash"
 
     purpose = models.CharField("maqsad", max_length=20, choices=Purpose.choices)
     target = models.CharField("email/telefon", max_length=254, db_index=True)

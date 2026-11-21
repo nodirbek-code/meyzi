@@ -4,6 +4,8 @@ from rest_framework.test import APIClient
 
 from apps.guides.models import GuideProfile
 
+from .conftest import phone_token
+
 pytestmark = pytest.mark.django_db
 
 PNG = (
@@ -23,6 +25,7 @@ def apply_as_guide(client, samarqand, **files):
     data = {
         "display_name": "Ali Gid",
         "phone": "+998901234567",
+        "phone_token": phone_token("+998901234567"),
         "languages": ["uz"],
         "destinations": ["samarqand"],
         "price_half_day_uzs": 1,

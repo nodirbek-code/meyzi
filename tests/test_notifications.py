@@ -6,6 +6,8 @@ from apps.bookings.models import Booking
 from apps.notifications import services, telegram
 from apps.notifications.models import TelegramMessage
 
+from .conftest import phone_token
+
 pytestmark = pytest.mark.django_db
 
 
@@ -93,7 +95,12 @@ def test_departure_cancel_sends_one_summary(tg, settings, user, departure):
 def test_agency_application_notifies(tg, api):
     api.post(
         "/api/v1/agencies/applications/",
-        {"agency_name": "Yangi Tur", "contact_person": "Aziz", "phone": "+998900000000"},
+        {
+            "agency_name": "Yangi Tur",
+            "contact_person": "Aziz",
+            "phone": "+998900000000",
+            "phone_token": phone_token("+998900000000"),
+        },
         format="json",
     )
     assert TelegramMessage.objects.filter(event="agency_application").count() == 2

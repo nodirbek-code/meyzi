@@ -4,7 +4,7 @@ from django.db import transaction
 
 from apps.accounts.models import User
 from apps.catalog.models import Destination
-from apps.guides.models import GuideProfile
+from apps.guides.models import GuideMeetingPoint, GuideProfile
 from apps.hotels.models import Hotel, RoomType
 
 GUIDES = [
@@ -90,6 +90,13 @@ class Command(BaseCommand):
                 },
             )
             profile.destinations.set(Destination.objects.filter(slug__in=g["destinations"]))
+            for dest in profile.destinations.exclude(latitude=None).exclude(longitude=None):
+                GuideMeetingPoint.objects.get_or_create(
+                    guide=profile,
+                    destination=dest,
+                    name=f"{dest.name} markazi",
+                    defaults={"address": dest.name, "latitude": dest.latitude, "longitude": dest.longitude},
+                )
 
         for h in HOTELS:
             hotel, _ = Hotel.objects.update_or_create(

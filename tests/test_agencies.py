@@ -3,9 +3,16 @@ import pytest
 from apps.accounts.models import User
 from apps.agencies.models import Agency, AgencyApplication, AgencyMember
 
+from .conftest import phone_token
+
 pytestmark = pytest.mark.django_db
 
-APPLICATION = {"agency_name": "Silk Road Tours", "contact_person": "Aziz", "phone": "+998901234567"}
+APPLICATION = {
+    "agency_name": "Silk Road Tours",
+    "contact_person": "Aziz",
+    "phone": "+998901234567",
+    "phone_token": phone_token("+998901234567"),
+}
 
 
 def test_anyone_can_apply(api):

@@ -8,9 +8,9 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.guides import policies, services
-from apps.guides.models import GuideBooking, GuideProfile, GuideUnavailableDate
+from apps.guides.models import GuideBooking, GuideMeetingPoint, GuideProfile, GuideUnavailableDate
 
-from .conftest import PASSWORD
+from .conftest import PASSWORD, phone_token
 
 pytestmark = pytest.mark.django_db
 
@@ -35,6 +35,14 @@ def guide(guide_user, samarqand):
         status=GuideProfile.Status.APPROVED,
     )
     g.destinations.add(samarqand)
+    GuideMeetingPoint.objects.create(
+        guide=g,
+        destination=samarqand,
+        name="Registon",
+        address="Registon maydoni, Samarqand",
+        latitude="39.654167",
+        longitude="66.959722",
+    )
     return g
 
 
@@ -59,7 +67,7 @@ def request(user, guide, samarqand, **kw):
         days=1,
         group_size=2,
         language="en",
-        meeting_point="Registon",
+        meeting_point=guide.meeting_points.first(),
         contact_name="Ali",
         contact_phone="+998900000000",
     )
@@ -116,6 +124,7 @@ def test_become_guide_flow(auth_api, user, admin_api, samarqand):
     payload = {
         "display_name": "Ali Gid",
         "phone": "+998901234567",
+        "phone_token": phone_token("+998901234567"),
         "languages": ["uz", "ru", "uz"],
         "destinations": ["samarqand"],
         "price_half_day_uzs": 200000,
@@ -194,9 +203,10 @@ def test_request_booking_api(auth_api, guide, samarqand):
             "start_time": "09:00",
             "group_size": 6,
             "language": "en",
-            "meeting_point": "Registon",
+            "meeting_point": guide.meeting_points.get().pk,
             "contact_name": "Ali",
             "contact_phone": "+998900000000",
+            "phone_token": phone_token("+998900000000"),
         },
         format="json",
     )

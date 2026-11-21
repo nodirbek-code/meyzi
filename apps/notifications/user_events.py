@@ -4,6 +4,7 @@ Foydalanuvchilarga (turist, agentlik, gid, mehmonxona) email va SMS bildirishnom
 Qoida: muhim/shoshilinch xabar — email + SMS (telefon tasdiqlangan bo'lsa yoki tashkilot telefoni);
 qolganlari — faqat email. Xabarlar navbatga yoziladi, scheduler yuboradi.
 Matnlar hozircha o'zbekcha (ko'p tilli kontent — "Tez kunda").
+Turistga boradigan xabarlarda bron kodi (LZ…/LG…/LH…) ko'rsatilmaydi — faqat hamkor va admin uchun.
 """
 
 from django.utils import timezone
@@ -49,7 +50,7 @@ def _hotel_emails(hotel):
 def tour_booking_created(b) -> None:
     _to_user(
         b.user,
-        f"Bron {b.code} — {b.tour.title}",
+        f"Bron yaratildi — {b.tour.title}",
         f"Bron yaratildi: {b.tour.title}\n"
         f"Sana: {_dt(b.departure_at)}, {b.seats} kishi, jami {_money(b.total_uzs)}.\n"
         f"Joylaringiz {_dt(b.expires_at)} gacha band qilindi.",
@@ -62,10 +63,10 @@ def tour_booking_confirmed(b) -> None:
     _to_user(
         b.user,
         f"Bron tasdiqlandi — {b.tour.title}",
-        f"Broningiz {b.code} tasdiqlandi.\n{b.tour.title}\nJo'nash: {_dt(b.departure_at)}, {b.seats} kishi."
+        f"Broningiz tasdiqlandi.\n{b.tour.title}\nJo'nash: {_dt(b.departure_at)}, {b.seats} kishi."
         f"{meeting}\nTashkilotchi: {b.agency.name}, {b.agency.phone}",
         event="tour_booking_confirmed",
-        sms_text=f"bron {b.code} tasdiqlandi. {b.tour.title}, {_dt(b.departure_at)}.",
+        sms_text=f"broningiz tasdiqlandi. {b.tour.title}, {_dt(b.departure_at)}.",
     )
     _to_org(
         emails=_agency_emails(b.agency),
@@ -85,10 +86,10 @@ def tour_booking_cancelled(b) -> None:
         _to_user(
             b.user,
             f"Bron bekor qilindi — {b.tour.title}",
-            f"Afsuski, {b.code} broningiz tashkilotchi tomonidan bekor qilindi.\n"
+            f"Afsuski, «{b.tour.title}» broningiz tashkilotchi tomonidan bekor qilindi.\n"
             f"Sabab: {b.cancel_reason or '—'}{refund}",
             event="tour_booking_cancelled",
-            sms_text=f"bron {b.code} bekor qilindi.{' Pul qaytariladi.' if b.refund_uzs else ''}",
+            sms_text=f"«{b.tour.title}» broningiz bekor qilindi.{' Pul qaytariladi.' if b.refund_uzs else ''}",
         )
     elif b.confirmed_at:  # to'langan bronni turist bekor qildi — agentlikka xabar
         _to_org(
@@ -169,16 +170,16 @@ def guide_request_answered(b) -> None:
         ),
     }
     subject, body = texts[b.status]
-    _to_user(b.user, f"{subject} — {b.code}", body, event=f"guide_request_{b.status}")
+    _to_user(b.user, f"{subject} — {b.guide.display_name}", body, event=f"guide_request_{b.status}")
 
 
 def guide_booking_confirmed(b) -> None:
     _to_user(
         b.user,
-        f"Gid broni tasdiqlandi — {b.code}",
+        f"Gid broni tasdiqlandi — {b.guide.display_name}",
         f"Gid: {b.guide.display_name}, {b.guide.phone}\nBoshlanish: {_dt(b.starts_at)}\nUchrashuv: {b.meeting_point}",
         event="guide_booking_confirmed",
-        sms_text=f"gid broni {b.code} tasdiqlandi. {b.guide.display_name}, {b.guide.phone}.",
+        sms_text=f"gid broni tasdiqlandi. {b.guide.display_name}, {b.guide.phone}.",
     )
     _to_org(
         emails=[b.guide.user.email],
@@ -204,10 +205,10 @@ def guide_booking_cancelled(b) -> None:
     else:
         _to_user(
             b.user,
-            f"Gid broni bekor qilindi — {b.code}",
-            f"{b.code} broningiz bekor qilindi.\nSabab: {b.cancel_reason or '—'}{refund}",
+            f"Gid broni bekor qilindi — {b.guide.display_name}",
+            f"{b.guide.display_name} bilan {_dt(b.starts_at)} dagi broningiz bekor qilindi.\nSabab: {b.cancel_reason or '—'}{refund}",
             event="guide_booking_cancelled",
-            sms_text=f"gid broni {b.code} bekor qilindi.{' Pul qaytariladi.' if b.refund_uzs else ''}",
+            sms_text=f"gid broni ({_dt(b.starts_at)}) bekor qilindi.{' Pul qaytariladi.' if b.refund_uzs else ''}",
         )
 
 
@@ -233,12 +234,12 @@ def hotel_booking_confirmed(b) -> None:
     hotel = b.hotel
     _to_user(
         b.user,
-        f"Mehmonxona broni tasdiqlandi — {b.code}",
+        f"Mehmonxona broni tasdiqlandi — {hotel.name}",
         f"{hotel.name}, {hotel.address}\n{b.room_type.name} × {b.rooms}\n"
         f"Kirish: {b.check_in:%d.%m.%Y} {hotel.check_in_time:%H:%M} dan, chiqish: {b.check_out:%d.%m.%Y} "
         f"{hotel.check_out_time:%H:%M} gacha.\nTelefon: {hotel.phone}",
         event="hotel_booking_confirmed",
-        sms_text=f"bron {b.code} tasdiqlandi. {hotel.name}, {b.check_in:%d.%m}.",
+        sms_text=f"mehmonxona broni tasdiqlandi. {hotel.name}, {b.check_in:%d.%m}.",
     )
     _to_org(
         emails=_hotel_emails(hotel),
@@ -265,10 +266,10 @@ def hotel_booking_cancelled(b) -> None:
     else:
         _to_user(
             b.user,
-            f"Mehmonxona broni bekor qilindi — {b.code}",
-            f"{b.hotel.name}: {b.code} broningiz bekor qilindi.\nSabab: {b.cancel_reason or '—'}{refund}",
+            f"Mehmonxona broni bekor qilindi — {b.hotel.name}",
+            f"{b.hotel.name}: {b.check_in:%d.%m.%Y} dagi broningiz bekor qilindi.\nSabab: {b.cancel_reason or '—'}{refund}",
             event="hotel_booking_cancelled",
-            sms_text=f"mehmonxona broni {b.code} bekor qilindi.",
+            sms_text=f"mehmonxona broni ({b.hotel.name}, {b.check_in:%d.%m}) bekor qilindi.",
         )
 
 

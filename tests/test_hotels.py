@@ -10,7 +10,7 @@ from apps.accounts.models import User
 from apps.hotels import services
 from apps.hotels.models import Hotel, HotelBooking, HotelMember, RoomType
 
-from .conftest import PASSWORD
+from .conftest import PASSWORD, phone_token
 
 pytestmark = pytest.mark.django_db
 
@@ -84,6 +84,7 @@ def test_register_hotel_flow(auth_api, user, samarqand):
             "destination": "samarqand",
             "address": "Samarqand, Registon ko'chasi",
             "phone": "+998901234567",
+            "phone_token": phone_token("+998901234567"),
             "amenities": ["wifi", "wifi", "ac"],
             "status": "approved",
         },
@@ -168,6 +169,7 @@ def test_create_booking_api(auth_api, hotel, room):
             "guests": 3,
             "contact_name": "Ali",
             "contact_phone": "+998900000000",
+            "phone_token": phone_token("+998900000000"),
         },
         format="json",
     )

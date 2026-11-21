@@ -6,7 +6,7 @@ from django.core import mail
 from django.utils import timezone
 
 from apps.accounts.models import OneTimeCode, User
-from apps.notifications import sms
+from apps.notifications import sms, telegram_codes
 
 from .conftest import PASSWORD
 
@@ -16,8 +16,10 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture(autouse=True)
 def clean_outboxes():
     sms.outbox.clear()
+    telegram_codes.outbox.clear()
     yield
     sms.outbox.clear()
+    telegram_codes.outbox.clear()
 
 
 @pytest.fixture
@@ -36,7 +38,8 @@ def last_email_code():
 
 
 def last_sms_code():
-    return re.search(r"\b(\d{6})\b", sms.outbox[-1][1]).group(1)
+    """Telefon kodlari endi SMS emas — Telegram orqali (telegram_codes.outbox: (telefon, kod))."""
+    return telegram_codes.outbox[-1][1]
 
 
 def expire_resend_wait():
@@ -154,7 +157,9 @@ def test_phone_login_creates_user(api, run_on_commit):
     res = run_on_commit(lambda: api.post("/api/v1/auth/phone/request-code/", {"phone": "90 123 45 67"}))
     assert res.status_code == 200
     assert res.data["phone"] == "+998901234567"
-    assert sms.outbox[-1][0] == "+998901234567"
+    assert res.data["channel"] == "telegram"
+    assert telegram_codes.outbox[-1][0] == "+998901234567"
+    assert not sms.outbox  # SMS yuborilmaydi
     code = last_sms_code()
 
     res = api.post(

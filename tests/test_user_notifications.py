@@ -86,6 +86,11 @@ def test_guide_request_is_urgent_sms(user, samarqand):
         status="approved",
     )
     g.destinations.add(samarqand)
+    from apps.guides.models import GuideMeetingPoint
+
+    point = GuideMeetingPoint.objects.create(
+        guide=g, destination=samarqand, name="Registon", address="Samarqand", latitude=39.65, longitude=66.96
+    )
     b = guides.request_booking(
         user=user,
         guide=g,
@@ -96,7 +101,7 @@ def test_guide_request_is_urgent_sms(user, samarqand):
         days=1,
         group_size=1,
         language="uz",
-        meeting_point="X",
+        meeting_point=point,
         contact_name="A",
         contact_phone="1",
     )

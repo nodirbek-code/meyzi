@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.catalog.models import LAT_VALIDATORS, LNG_VALIDATORS
 from apps.core.files import document_rule, image_rule, private_storage
 from apps.core.models import TimeStampedModel
 
@@ -115,6 +116,38 @@ class GuideProfile(TimeStampedModel):
         return self.status == self.Status.APPROVED
 
 
+class GuideMeetingPoint(TimeStampedModel):
+    """Gid belgilagan uchrashuv joyi. Turist bron qilganda faqat shu ro'yxatdan tanlaydi (erkin matn emas)."""
+
+    guide = models.ForeignKey(GuideProfile, on_delete=models.CASCADE, related_name="meeting_points")
+    destination = models.ForeignKey(
+        "catalog.Destination",
+        on_delete=models.PROTECT,
+        related_name="guide_meeting_points",
+        verbose_name="shahar",
+    )
+    name = models.CharField("nomi", max_length=150, help_text="Masalan: Registon maydoni, asosiy kirish")
+    address = models.CharField("manzil", max_length=255)
+    latitude = models.DecimalField("kenglik", max_digits=9, decimal_places=6, validators=LAT_VALIDATORS)
+    longitude = models.DecimalField("uzunlik", max_digits=9, decimal_places=6, validators=LNG_VALIDATORS)
+    is_active = models.BooleanField("faol", default=True)
+
+    class Meta:
+        verbose_name = "uchrashuv joyi"
+        verbose_name_plural = "uchrashuv joylari"
+        ordering = ["destination_id", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=["guide", "destination", "name"], name="uniq_guide_meeting_point")
+        ]
+
+    def __str__(self):
+        return f"{self.name} — {self.address}"
+
+    @property
+    def as_text(self) -> str:
+        return f"{self.name}, {self.address}"
+
+
 class GuideUnavailableDate(models.Model):
     """Gid ishlamaydigan kun (o'zi belgilaydi)."""
 
@@ -198,7 +231,21 @@ class GuideBooking(TimeStampedModel):
     commission_uzs = models.PositiveBigIntegerField("LAZURI komissiyasi (so'm)")
     guide_amount_uzs = models.PositiveBigIntegerField("gidga (so'm)")
 
-    meeting_point = models.CharField("uchrashuv joyi", max_length=255)
+    meeting_place = models.ForeignKey(
+        GuideMeetingPoint,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="bookings",
+        verbose_name="uchrashuv joyi (ro'yxatdan)",
+    )
+    meeting_point = models.CharField("uchrashuv joyi", max_length=255, help_text="Bron paytidagi nusxa")
+    meeting_latitude = models.DecimalField(
+        "uchrashuv kengligi", max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    meeting_longitude = models.DecimalField(
+        "uchrashuv uzunligi", max_digits=9, decimal_places=6, null=True, blank=True
+    )
     note = models.TextField("izoh", blank=True)
     contact_name = models.CharField("aloqa uchun ism", max_length=200)
     contact_phone = models.CharField("telefon", max_length=30)

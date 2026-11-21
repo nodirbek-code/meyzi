@@ -7,6 +7,13 @@ from apps.catalog.models import Destination, Place
 PASSWORD = "Kuchli-Parol-2026"
 
 
+def phone_token(phone: str) -> str:
+    """Telegram kodi bilan tasdiqlangan raqam tokeni (testlarda kodni chetlab o'tish uchun)."""
+    from apps.accounts.phones import make_phone_token, normalize_phone
+
+    return make_phone_token(normalize_phone(phone))
+
+
 @pytest.fixture
 def api():
     return APIClient()
@@ -91,6 +98,9 @@ def tour(agency, samarqand, category):
         title="Samarqand 1 kun",
         slug="samarqand-1-kun",
         price_uzs=890_000,
+        meeting_point="Registon maydoni",
+        meeting_latitude="39.654167",
+        meeting_longitude="66.959722",
     )
     t.categories.add(category)
     t.publish()

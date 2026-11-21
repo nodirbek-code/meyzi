@@ -1,5 +1,8 @@
 from rest_framework import serializers
 
+from apps.accounts.phones import VerifiedPhoneMixin
+from apps.accounts.serializers import phone_token_field
+
 from .models import Agency, AgencyApplication
 
 
@@ -32,8 +35,12 @@ class AgencySerializer(serializers.ModelSerializer):
         ]
 
 
-class CabinetAgencySerializer(serializers.ModelSerializer):
-    """Agentlik o'z profilini tahrirlaydi. Holat, komissiya, tekshiruv — faqat admin."""
+class CabinetAgencySerializer(VerifiedPhoneMixin, serializers.ModelSerializer):
+    """Agentlik o'z profilini tahrirlaydi. Holat, komissiya, tekshiruv — faqat admin.
+    Telefon o'zgarsa — Telegram kodi bilan tasdiqlanadi."""
+
+    verified_phone_allow_blank = True
+    phone_token = phone_token_field()
 
     class Meta:
         model = Agency
@@ -44,6 +51,7 @@ class CabinetAgencySerializer(serializers.ModelSerializer):
             "logo",
             "description",
             "phone",
+            "phone_token",
             "email",
             "telegram",
             "website",
@@ -70,10 +78,24 @@ class CabinetAgencySerializer(serializers.ModelSerializer):
         ]
 
 
-class AgencyApplicationSerializer(serializers.ModelSerializer):
+class AgencyApplicationSerializer(VerifiedPhoneMixin, serializers.ModelSerializer):
+    """Ariza telefoni Telegram kodi bilan tasdiqlanadi."""
+
+    phone_token = phone_token_field()
+
     class Meta:
         model = AgencyApplication
-        fields = ["id", "agency_name", "contact_person", "phone", "email", "message", "status", "created_at"]
+        fields = [
+            "id",
+            "agency_name",
+            "contact_person",
+            "phone",
+            "phone_token",
+            "email",
+            "message",
+            "status",
+            "created_at",
+        ]
         read_only_fields = ["id", "status", "created_at"]
 
 
