@@ -81,7 +81,7 @@ class Hotel(TimeStampedModel):
     status = models.CharField("holat", max_length=20, choices=Status.choices, default=Status.PENDING)
     moderation_note = models.TextField("moderator izohi", blank=True)
     commission_percent = models.DecimalField(
-        "LAZURI komissiyasi (%)", max_digits=5, decimal_places=2, default=default_hotel_commission
+        "Platforma komissiyasi (%)", max_digits=5, decimal_places=2, default=default_hotel_commission
     )
     is_featured = models.BooleanField("tavsiya", default=False)
     rating = models.DecimalField("reyting", max_digits=3, decimal_places=2, default=0)
@@ -196,7 +196,7 @@ class HotelBooking(TimeStampedModel):
     price_per_night_uzs = models.PositiveIntegerField("1 kecha narxi (so'm)")
     total_uzs = models.PositiveBigIntegerField("jami (so'm)")
     commission_percent = models.DecimalField("komissiya (%)", max_digits=5, decimal_places=2)
-    commission_uzs = models.PositiveBigIntegerField("LAZURI komissiyasi (so'm)")
+    commission_uzs = models.PositiveBigIntegerField("Platforma komissiyasi (so'm)")
     hotel_amount_uzs = models.PositiveBigIntegerField("mehmonxonaga (so'm)")
     cancellation_policy = models.CharField(
         "bekor qilish siyosati", max_length=20, choices=CancellationPolicy.choices

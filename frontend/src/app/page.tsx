@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { DateStrip, type CalendarDay } from "@/components/DateStrip";
+import { AppIcon } from "@/components/Logo";
 import { SearchBar } from "@/components/SearchBar";
 import { TourCard } from "@/components/TourCard";
 import { Cover, Icon, MoreLink, SectionTitle } from "@/components/ui";
@@ -281,6 +282,52 @@ export default async function HomePage() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ---------- Mobil ilova (tez kunda) ---------- */}
+      <section className="container-lz pt-20">
+        <div className="grid items-center overflow-hidden rounded-[1.5rem] bg-[linear-gradient(135deg,#dfe3e4_0%,#d3d7d9_45%,#c3c6ca_100%)] md:grid-cols-2">
+          <div className="p-8 sm:p-12">
+            <span className="chip bg-white/80 text-forest-700">● Tez kunda</span>
+            <div className="mt-5 flex items-center gap-3">
+              <AppIcon size={52} />
+              <span className="font-display text-2xl font-extrabold" style={{ color: BRAND.ink }}>
+                {BRAND.name.toLowerCase()}
+              </span>
+            </div>
+            <h2 className="mt-5 text-3xl leading-tight sm:text-4xl" style={{ color: BRAND.ink }}>
+              O&apos;zbekistonda sayohat topish endi oson
+            </h2>
+            <p className="mt-3 max-w-md text-ink-soft">
+              Turlarni bron qiling, sayohatlaringizni kuzating va real vaqtda bildirishnomalar oling — istalgan vaqt, istalgan joyda.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {[
+                ["App Store", "M16.4 12.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.9-1.1-2.9-4.1ZM13.9 5.1c.7-.8 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.4Z"],
+                ["Google Play", "M3.6 2.3c-.3.3-.4.7-.4 1.2v17c0 .5.1.9.4 1.2l9.5-9.7-9.5-9.7Zm10.6 10.8 2.7 2.7-11.4 6.5 8.7-9.2Zm0-2.2L5.5 1.7l11.4 6.5-2.7 2.7Zm5.6-.7 2.6 1.5c.8.5.8 1.2 0 1.7l-2.6 1.5-2.9-2.4 2.9-2.3Z"],
+              ].map(([store, d]) => (
+                <span key={store} className="flex items-center gap-2.5 rounded-xl bg-ink px-4 py-2.5 text-white opacity-90" title="Tez kunda">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d={d} />
+                  </svg>
+                  <span className="leading-tight">
+                    <span className="block text-[10px] text-white/70">Tez kunda</span>
+                    <span className="block text-sm font-semibold">{store}</span>
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/meyzi-app-mockup.jpg"
+            alt={`${BRAND.name} mobil ilovasi`}
+            width={1200}
+            height={896}
+            loading="lazy"
+            className="h-full w-full object-cover md:min-h-[26rem] md:[mask-image:linear-gradient(to_right,transparent,black_20%)]"
+          />
         </div>
       </section>
 

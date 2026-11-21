@@ -156,7 +156,7 @@ SIMPLE_JWT = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "LAZURI API",
+    "TITLE": "MEYZI API",
     "DESCRIPTION": "Discover the Blue Road — O'zbekiston turizm platformasi",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -209,7 +209,9 @@ LAZURI_HOTEL_COMMISSION_PERCENT = Decimal(env.str("LAZURI_HOTEL_COMMISSION_PERCE
 # --- Email va SMS (foydalanuvchilarga) ---
 # EMAIL_URL misollari: consolemail://  |  smtp+tls://user:parol@smtp.gmail.com:587
 vars().update(env.email_url("EMAIL_URL", default="consolemail://"))
-DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="LAZURI <no-reply@lazuri.uz>")
+# Loyiha nomi (foydalanuvchiga ko'rinadigan matnlarda: email, SMS, xabarlar)
+BRAND_NAME = env.str("BRAND_NAME", default="MEYZI")
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="MEYZI <no-reply@meyzi.uz>")
 # console | disabled  (provayder ulanganda — uning nomi)
 SMS_BACKEND = env.str("SMS_BACKEND", default="console")
 # Tasdiqlash kodi

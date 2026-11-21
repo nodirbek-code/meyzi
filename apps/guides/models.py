@@ -95,7 +95,7 @@ class GuideProfile(TimeStampedModel):
     moderation_note = models.TextField("moderator izohi", blank=True)
     approved_at = models.DateTimeField("tasdiqlangan", null=True, blank=True)
     commission_percent = models.DecimalField(
-        "LAZURI komissiyasi (%)", max_digits=5, decimal_places=2, default=default_guide_commission
+        "Platforma komissiyasi (%)", max_digits=5, decimal_places=2, default=default_guide_commission
     )
 
     rating = models.DecimalField("reyting", max_digits=3, decimal_places=2, default=0)
@@ -228,7 +228,7 @@ class GuideBooking(TimeStampedModel):
     surcharge_uzs = models.PositiveBigIntegerField("guruh ustamasi (so'm)", default=0)
     total_uzs = models.PositiveBigIntegerField("jami (so'm)")
     commission_percent = models.DecimalField("komissiya (%)", max_digits=5, decimal_places=2)
-    commission_uzs = models.PositiveBigIntegerField("LAZURI komissiyasi (so'm)")
+    commission_uzs = models.PositiveBigIntegerField("Platforma komissiyasi (so'm)")
     guide_amount_uzs = models.PositiveBigIntegerField("gidga (so'm)")
 
     meeting_place = models.ForeignKey(

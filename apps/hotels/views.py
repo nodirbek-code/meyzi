@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import connection
 from django.db.models import Min, Q
 from django.utils import timezone
@@ -161,7 +162,9 @@ class MyHotelView(generics.GenericAPIView):
     def patch(self, request):
         hotel = self._hotel()
         if hotel.status == Hotel.Status.SUSPENDED:
-            raise ValidationError({"detail": "Mehmonxona to'xtatilgan. LAZURI bilan bog'laning."})
+            raise ValidationError(
+                {"detail": f"Mehmonxona to'xtatilgan. {settings.BRAND_NAME} bilan bog'laning."}
+            )
         ser = self.get_serializer(hotel, data=request.data, partial=True)
         ser.is_valid(raise_exception=True)
         hotel = ser.save()

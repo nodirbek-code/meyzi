@@ -34,7 +34,7 @@ class Agency(TimeStampedModel):
     status = models.CharField("holat", max_length=20, choices=Status.choices, default=Status.ACTIVE)
     is_verified = models.BooleanField("tekshirilgan", default=False)
     is_platform = models.BooleanField(
-        "LAZURI'ning o'zi", default=False, help_text="Platformaning o'z turlari uchun agentlik"
+        "Platformaning o'zi", default=False, help_text="Platformaning o'z turlari uchun agentlik"
     )
     auto_publish = models.BooleanField(
         "turlarni moderatsiyasiz e'lon qilish",
@@ -42,7 +42,7 @@ class Agency(TimeStampedModel):
         help_text="O'chiq bo'lsa, agentlik turlari admin tasdig'idan keyin chiqadi",
     )
     commission_percent = models.DecimalField(
-        "LAZURI komissiyasi (%)",
+        "Platforma komissiyasi (%)",
         max_digits=5,
         decimal_places=2,
         default=default_commission,

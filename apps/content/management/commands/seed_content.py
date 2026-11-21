@@ -31,7 +31,7 @@ FAQ = [
     (
         "Turni kim o'tkazadi?",
         "Turni sahifada ko'rsatilgan agentlik o'tkazadi. Barcha agentliklar platformaga qo'shilishdan oldin "
-        "tekshiriladi. LAZURI'ning o'zi ham turlar tashkil qiladi.",
+        "tekshiriladi. Platformaning o'zi ham turlar tashkil qiladi.",
     ),
     (
         "Bo'sh joylar va sanalarni qayerda ko'raman?",

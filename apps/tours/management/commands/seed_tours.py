@@ -1,5 +1,6 @@
 from datetime import time, timedelta
 
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -98,7 +99,7 @@ def _t(value):
 
 
 class Command(BaseCommand):
-    help = "Demo: toifalar, LAZURI agentligi, 3 ta tur va kelgusi shanbalarga jo'nash sanalari."
+    help = "Demo: toifalar, platforma agentligi, 3 ta tur va kelgusi shanbalarga jo'nash sanalari."
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -118,8 +119,8 @@ class Command(BaseCommand):
         lazuri, _ = Agency.objects.update_or_create(
             slug="lazuri",
             defaults={
-                "name": "LAZURI",
-                "description": "LAZURI platformasining o'z turlari.",
+                "name": settings.BRAND_NAME,
+                "description": f"{settings.BRAND_NAME} platformasining o'z turlari.",
                 "is_platform": True,
                 "is_verified": True,
                 "auto_publish": True,
@@ -172,7 +173,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Tayyor: {len(CATEGORIES)} toifa, LAZURI agentligi, {created} ta yangi tur "
+                f"Tayyor: {len(CATEGORIES)} toifa, platforma agentligi, {created} ta yangi tur "
                 "(rasmlarni admin panel yoki kabinet orqali yuklang)."
             )
         )

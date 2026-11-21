@@ -32,15 +32,15 @@ class CodeNotDelivered(APIException):
 
 def _send_email_code(email: str, code: str, purpose: str):
     subjects = {
-        P.EMAIL_VERIFY: ("LAZURI — emailni tasdiqlash", "Emailingizni tasdiqlash kodi"),
-        P.PASSWORD_RESET: ("LAZURI — parolni tiklash", "Parolni tiklash kodi"),
+        P.EMAIL_VERIFY: (f"{settings.BRAND_NAME} — emailni tasdiqlash", "Emailingizni tasdiqlash kodi"),
+        P.PASSWORD_RESET: (f"{settings.BRAND_NAME} — parolni tiklash", "Parolni tiklash kodi"),
     }
     subject, title = subjects[purpose]
     body = (
         f"{title}: {code}\n\n"
         "Kod 10 daqiqa amal qiladi. "
         "Agar bu so'rovni siz yubormagan bo'lsangiz, xabarni e'tiborsiz qoldiring.\n\n"
-        "— LAZURI"
+        f"— {settings.BRAND_NAME}"
     )
     notify.queue_email(email, subject, body, event=purpose, immediate=True)
 

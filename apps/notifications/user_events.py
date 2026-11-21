@@ -7,11 +7,12 @@ Matnlar hozircha o'zbekcha (ko'p tilli kontent — "Tez kunda").
 Turistga boradigan xabarlarda bron kodi (LZ…/LG…/LH…) ko'rsatilmaydi — faqat hamkor va admin uchun.
 """
 
+from django.conf import settings
 from django.utils import timezone
 
 from .services import queue_email, queue_sms
 
-SIGN = "\n\n— LAZURI"
+SIGN = f"\n\n— {settings.BRAND_NAME}"
 
 
 def _money(v: int) -> str:
@@ -26,14 +27,14 @@ def _to_user(user, subject: str, body: str, *, event: str, sms_text: str = "") -
     if user.email:
         queue_email(user.email, subject, body + SIGN, event=event)
     if sms_text and user.phone and user.phone_verified:
-        queue_sms(user.phone, f"LAZURI: {sms_text}", event=event)
+        queue_sms(user.phone, f"{settings.BRAND_NAME}: {sms_text}", event=event)
 
 
 def _to_org(*, emails, phone: str, subject: str, body: str, event: str, sms_text: str = "") -> None:
     for email in {e for e in emails if e}:
         queue_email(email, subject, body + SIGN, event=event)
     if sms_text and phone:
-        queue_sms(phone, f"LAZURI: {sms_text}", event=event)
+        queue_sms(phone, f"{settings.BRAND_NAME}: {sms_text}", event=event)
 
 
 def _agency_emails(agency):
@@ -106,7 +107,11 @@ def tour_booking_cancelled(b) -> None:
 
 def agency_application_reviewed(application) -> None:
     approved = application.status == "approved"
-    subject = "LAZURI: arizangiz tasdiqlandi" if approved else "LAZURI: arizangiz bo'yicha javob"
+    subject = (
+        f"{settings.BRAND_NAME}: arizangiz tasdiqlandi"
+        if approved
+        else f"{settings.BRAND_NAME}: arizangiz bo'yicha javob"
+    )
     body = (
         f"«{application.agency_name}» agentligi platformaga qo'shildi. Kabinetga kirib, turlaringizni qo'shing."
         if approved
@@ -221,7 +226,7 @@ def guide_profile_status(profile) -> None:
     if profile.status in texts:
         _to_user(
             profile.user,
-            "LAZURI: gid profili",
+            f"{settings.BRAND_NAME}: gid profili",
             texts[profile.status],
             event=f"guide_profile_{profile.status}",
         )
@@ -277,13 +282,13 @@ def hotel_status(hotel) -> None:
     texts = {
         "approved": f"«{hotel.name}» tasdiqlandi va katalogda ko'rinmoqda. Xona turlarini qo'shishni unutmang.",
         "rejected": f"«{hotel.name}» arizasi rad etildi. Izoh: {hotel.moderation_note or '—'}.",
-        "suspended": f"«{hotel.name}» vaqtincha to'xtatildi. LAZURI bilan bog'laning.",
+        "suspended": f"«{hotel.name}» vaqtincha to'xtatildi. {settings.BRAND_NAME} bilan bog'laning.",
     }
     if hotel.status in texts:
         _to_org(
             emails=_hotel_emails(hotel),
             phone="",
-            subject="LAZURI: mehmonxona holati",
+            subject=f"{settings.BRAND_NAME}: mehmonxona holati",
             body=texts[hotel.status],
             event=f"hotel_{hotel.status}",
         )

@@ -53,7 +53,7 @@ class Booking(TimeStampedModel):
     unit_price_uzs = models.PositiveIntegerField("1 kishi narxi (so'm)")
     total_uzs = models.PositiveBigIntegerField("jami (so'm)")
     commission_percent = models.DecimalField("komissiya (%)", max_digits=5, decimal_places=2)
-    commission_uzs = models.PositiveBigIntegerField("LAZURI komissiyasi (so'm)")
+    commission_uzs = models.PositiveBigIntegerField("Platforma komissiyasi (so'm)")
     agency_amount_uzs = models.PositiveBigIntegerField("agentlikka (so'm)")
     cancellation_policy = models.CharField(
         "bekor qilish siyosati", max_length=20, choices=CancellationPolicy.choices

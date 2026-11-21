@@ -1,26 +1,41 @@
+/* eslint-disable @next/next/no-img-element */
 import { BRAND } from "@/lib/brand";
 
 /**
- * VAQTINCHALIK belgi (tog' + quyosh). Haqiqiy logo keyin tanlanadi — shu faylni almashtirish yetarli.
+ * MEYZI logotipi (fayllar: public/brand/). Manba: D:\lazuri\brand\ — "Minimalist MEYZI logotipi.png".
+ * `light` — to'q fon ustida (footer, tabiat panellari) oq variant.
  */
-export function LogoMark({ size = 32 }: { size?: number }) {
+export function LogoMark({ size = 34, light = false }: { size?: number; light?: boolean }) {
+  // belgining nisbati 407×247
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden>
-      <rect width="40" height="40" rx="11" fill="#1B5737" />
-      <circle cx="27" cy="13" r="4.5" fill="#E9BA67" />
-      <path d="M5 31 L15 16 L21 24 L25 19 L35 31 Z" fill="#7DB890" />
-      <path d="M5 31 L15 16 L18.5 21.2 L13 31 Z" fill="#ADD4B8" />
-    </svg>
+    <img
+      src={light ? "/brand/meyzi-mark-white.png" : "/brand/meyzi-mark.png"}
+      alt=""
+      width={Math.round((size * 407) / 247)}
+      height={size}
+      className="shrink-0"
+      aria-hidden
+    />
   );
 }
 
-export function Logo({ light = false }: { light?: boolean }) {
+export function Logo({ light = false, size = "md" }: { light?: boolean; size?: "md" | "lg" }) {
+  const h = size === "lg" ? 44 : 36;
   return (
-    <span className="inline-flex items-center gap-2.5">
-      <LogoMark />
-      <span className={`font-display text-xl font-extrabold tracking-tight ${light ? "text-white" : "text-forest-800"}`}>
-        {BRAND.name}
-      </span>
+    <span className="inline-flex items-center gap-2.5" aria-label={BRAND.name}>
+      <LogoMark size={h} light={light} />
+      <img
+        src={light ? "/brand/meyzi-wordmark-white.png" : "/brand/meyzi-wordmark.png"}
+        alt={BRAND.name}
+        height={Math.round(h * 0.55)}
+        width={Math.round((h * 0.55 * 698) / 122)}
+        className="shrink-0"
+      />
     </span>
   );
+}
+
+/** Ilova ikonkasi (to'q ko'k kvadrat, oq M) */
+export function AppIcon({ size = 56 }: { size?: number }) {
+  return <img src="/brand/meyzi-app-icon-192.png" alt={`${BRAND.name} ilovasi`} width={size} height={size} className="rounded-[22%] shadow-card" />;
 }
