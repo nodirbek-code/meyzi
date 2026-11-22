@@ -1,6 +1,12 @@
 #!/bin/sh
 # Render (free plan) uchun API'ni ishga tushirish: migratsiya → statik fayllar → (demo/admin) → scheduler (fonda) → gunicorn
 set -e
+
+# Diagnostika: qaysi sozlamalar serverga yetib kelgan (qiymatlar chiqarilmaydi)
+for v in GOOGLE_CLIENT_ID TELEGRAM_BOT_TOKEN TELEGRAM_BOT_USERNAME TELEGRAM_WEBHOOK_SECRET MEYZI_SITE_URL MEYZI_FRONTEND_URL; do
+  eval "val=\${$v:-}"
+  if [ -n "$val" ]; then echo "[env] $v: BOR"; else echo "[env] $v: YO'Q"; fi
+done
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
