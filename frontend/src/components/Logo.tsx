@@ -2,7 +2,7 @@
 import { BRAND } from "@/lib/brand";
 
 /**
- * MEYZI logotipi (fayllar: public/brand/). Manba: D:\lazuri\brand\ — "Minimalist MEYZI logotipi.png".
+ * MEYZI logotipi (fayllar: public/brand/). Manba: brand/ papkasi — "Minimalist MEYZI logotipi.png".
  * `light` — to'q fon ustida (footer, tabiat panellari) oq variant.
  */
 export function LogoMark({ size = 34, light = false }: { size?: number; light?: boolean }) {

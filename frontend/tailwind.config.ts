@@ -4,7 +4,7 @@ import type { Config } from "tailwindcss";
  * Tabiat palitrasi: o'rmon yashili (asosiy), quyosh oxrasi (urg'u), tuproq (dam olish kunlari, ogohlantirish),
  * osmon (ma'lumot), qum (fon), ko'mir (matn).
  *
- * `lazurite`, `gold`, `turquoise` — eski nomlar (hali qayta dizayn qilinmagan sahifalar uchun) — yangi
+ * `gold`, `turquoise` — eski nomlar (hali qayta dizayn qilinmagan sahifalar uchun) — yangi
  * ranglarga ulangan. Sahifalar yangilangani sari `forest`/`sun`/`sky` ga o'tkaziladi.
  */
 const forest = {
@@ -42,7 +42,6 @@ export default {
         sand: { 50: "#FBFAF6", 100: "#F5F2EA", 200: "#E8E2D3", 300: "#D6CDB8" }, // fon
         ink: { DEFAULT: "#18221D", soft: "#4A5650", mute: "#7E8882" }, // matn
         // eski nomlar → yangi ranglar
-        lazurite: forest,
         gold: sun,
         turquoise: sky,
       },
