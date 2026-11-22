@@ -29,13 +29,13 @@ services:
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_ALLOWED_HOSTS
-        value: meyzi-api.onrender.com
+        value: meyzi-api-chnc.onrender.com
       - key: CSRF_TRUSTED_ORIGINS
-        value: https://meyzi-api.onrender.com,https://meyzi-web.onrender.com
+        value: https://meyzi-api-chnc.onrender.com,https://meyzi-web.onrender.com
       - key: CORS_ALLOWED_ORIGINS
         value: https://meyzi-web.onrender.com
       - key: MEYZI_SITE_URL
-        value: https://meyzi-api.onrender.com
+        value: https://meyzi-api-chnc.onrender.com
       - key: MEYZI_FRONTEND_URL
         value: https://meyzi-web.onrender.com
       - key: SEED_DEMO
@@ -70,6 +70,6 @@ services:
     envVars:
       # Build paytida ham kerak (Render env'larni Docker build-arg sifatida beradi)
       - key: NEXT_PUBLIC_API_URL
-        value: https://meyzi-api.onrender.com
+        value: https://meyzi-api-chnc.onrender.com
       - key: API_INTERNAL_URL
-        value: https://meyzi-api.onrender.com
+        value: https://meyzi-api-chnc.onrender.com

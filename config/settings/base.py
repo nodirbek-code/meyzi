@@ -1,5 +1,6 @@
 """MEYZI — umumiy sozlamalar. Muhitga xos sozlamalar dev.py / test.py / prod.py da."""
 
+import re
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -242,7 +243,9 @@ TELEGRAM_ADMIN_CHAT_IDS = env.list("TELEGRAM_ADMIN_CHAT_IDS", default=[])
 # Bo'sh bo'lsa — tugma o'chiq. Dev: `python manage.py telegram_bot` (long polling).
 # Prod: webhook — `python manage.py telegram_bot --set-webhook https://<domen>/api/v1/auth/telegram/webhook/`
 TELEGRAM_BOT_USERNAME = env.str("TELEGRAM_BOT_USERNAME", default="").lstrip("@")
-TELEGRAM_WEBHOOK_SECRET = env.str("TELEGRAM_WEBHOOK_SECRET", default="")
+# Telegram secret_token faqat A-Z a-z 0-9 _ - qabul qiladi (1–256 belgi).
+# Boshqa belgilar (masalan Render generateValue bergan + / =) olib tashlanadi.
+TELEGRAM_WEBHOOK_SECRET = re.sub(r"[^A-Za-z0-9_-]", "", env.str("TELEGRAM_WEBHOOK_SECRET", default=""))[:256]
 # Bot yuboradigan "saytga kirish" havolasi shu manzilga olib boradi (Next.js sayt)
 MEYZI_FRONTEND_URL = env.str("MEYZI_FRONTEND_URL", default="http://localhost:3000").rstrip("/")
 MEYZI_TELEGRAM_LOGIN_TTL_MINUTES = env.int("MEYZI_TELEGRAM_LOGIN_TTL_MINUTES", default=10)
