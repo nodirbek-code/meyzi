@@ -27,8 +27,11 @@ def _hash(code: str, target: str, purpose: str) -> str:
 
 
 @transaction.atomic
-def issue(purpose: str, target: str) -> str:
-    """Yangi kod yaratadi (eski faol kodlar bekor bo'ladi) va kodni qaytaradi — yuborish chaqiruvchida."""
+def issue(purpose: str, target: str, *, ttl_seconds: int | None = None) -> str:
+    """Yangi kod yaratadi (eski faol kodlar bekor bo'ladi) va kodni qaytaradi — yuborish chaqiruvchida.
+
+    `ttl_seconds` berilmasa — MEYZI_OTP_TTL_MINUTES (email kodlari). Telefon kodlari — 60 soniya.
+    """
     now = timezone.now()
     recent = OneTimeCode.objects.filter(
         purpose=purpose, target=target, created_at__gte=now - timedelta(hours=1)
@@ -46,7 +49,12 @@ def issue(purpose: str, target: str) -> str:
         purpose=purpose,
         target=target,
         code_hash=_hash(code, target, purpose),
-        expires_at=now + timedelta(minutes=settings.MEYZI_OTP_TTL_MINUTES),
+        expires_at=now
+        + (
+            timedelta(seconds=ttl_seconds)
+            if ttl_seconds
+            else timedelta(minutes=settings.MEYZI_OTP_TTL_MINUTES)
+        ),
     )
     return code
 

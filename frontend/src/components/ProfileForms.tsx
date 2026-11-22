@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { api, ClientApiError } from "@/lib/client";
 import type { User } from "@/lib/types";
 
-import { TelegramLogo, useTelegramLogin } from "./TelegramButton";
+import { TelegramPhoneButton } from "./TelegramPhoneLink";
 
 function useRun() {
   const [busy, setBusy] = useState(false);
@@ -120,67 +120,8 @@ export function AttachEmail({ current }: { current?: string | null }) {
   );
 }
 
-/**
- * Telefon raqami yo'q foydalanuvchi (masalan Google orqali kirgan) uchun: botga bir martalik havola bilan
- * olib boradi — bot kimligini havoladan biladi va faqat telefon raqamini so'raydi.
- * Foydalanuvchi saytga qaytganda (oyna fokusga qaytsa) profil avtomatik yangilanadi.
- */
+/** Telefon raqami yo'q foydalanuvchi (masalan Google orqali kirgan) uchun: bot faqat raqamni so'raydi. */
 export function AddPhoneViaTelegram() {
   const router = useRouter();
-  const telegram = useTelegramLogin();
-  const { busy, error, run } = useRun();
-  const [opened, setOpened] = useState(false);
-
-  useEffect(() => {
-    if (!opened) return;
-    const refresh = () => document.visibilityState === "visible" && router.refresh();
-    document.addEventListener("visibilitychange", refresh);
-    window.addEventListener("focus", refresh);
-    return () => {
-      document.removeEventListener("visibilitychange", refresh);
-      window.removeEventListener("focus", refresh);
-    };
-  }, [opened, router]);
-
-  const open = () => {
-    // Oyna darhol ochiladi (aks holda brauzer so'rovdan keyingi popup'ni bloklaydi), havola keyin beriladi
-    const win = window.open("", "_blank");
-    run(async () => {
-      try {
-        const { url } = await api.post<{ url: string }>("/auth/me/phone/telegram-link");
-        if (win) win.location.href = url;
-        else window.location.href = url;
-        setOpened(true);
-      } catch (e) {
-        win?.close();
-        throw e;
-      }
-    });
-  };
-
-  if (!telegram?.enabled) return null; // bot sozlanmagan — tugma ko'rsatilmaydi
-
-  return (
-    <div className="space-y-2">
-      <button
-        type="button"
-        onClick={open}
-        disabled={busy}
-        className="btn bg-[#229ED9] text-white hover:bg-[#1c8cc2] disabled:opacity-60"
-      >
-        <TelegramLogo />
-        {busy ? "Ochilmoqda…" : "Telefon raqam qo'shish"}
-      </button>
-      {opened && (
-        <p className="text-xs text-ink-soft">
-          Telegram botda <b>📱 Telefon raqamni yuborish</b> tugmasini bosing. Raqam akkauntingizga yoziladi —
-          saytga qaytganingizda shu sahifa o&apos;zi yangilanadi.{" "}
-          <button type="button" className="underline" onClick={() => router.refresh()}>
-            Yangilash
-          </button>
-        </p>
-      )}
-      {error && <p className="text-sm text-clay-700">{error}</p>}
-    </div>
-  );
+  return <TelegramPhoneButton onLinked={() => router.refresh()} />;
 }

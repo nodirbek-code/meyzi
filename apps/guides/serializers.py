@@ -170,7 +170,15 @@ class MyGuideProfileSerializer(VerifiedPhoneMixin, serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        attrs = super().validate(attrs)  # telefon — Telegram kodi bilan tasdiqlangan
+        attrs = super().validate(attrs)  # telefon — akkauntdagi (bot orqali tasdiqlangan) raqam
+        if self.instance is None:  # ariza: o'z rasmi va sertifikat majburiy
+            missing = {}
+            if not attrs.get("photo"):
+                missing["photo"] = "O'zingizning rasmingizni yuklang (jpg, png yoki webp, 6 MB gacha)."
+            if not attrs.get("certificate_file"):
+                missing["certificate_file"] = "Gid sertifikatini yuklang (pdf, jpg yoki png, 6 MB gacha)."
+            if missing:
+                raise serializers.ValidationError(missing)
         for field in ("price_half_day_uzs", "price_full_day_uzs", "price_per_day_uzs"):
             if field in attrs and attrs[field] <= 0:
                 raise serializers.ValidationError({field: "Narx 0 dan katta bo'lishi kerak."})

@@ -9,7 +9,7 @@ import { Icon } from "./ui";
 const PERKS = [
   { icon: "shield", text: "Faqat tekshirilgan agentliklar va gidlar" },
   { icon: "calendar", text: "Bronlaringiz va sayohat sanalari bir joyda" },
-  { icon: "telegram", text: "Telefon raqam Telegram kodi bilan tasdiqlanadi" },
+  { icon: "telegram", text: "Telefon raqam Telegram bot orqali tasdiqlanadi" },
 ] as const;
 
 /** Kirish sahifalari: chapda tabiat paneli (katta ekranda), o'ngda forma. */

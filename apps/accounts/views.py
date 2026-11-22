@@ -338,7 +338,7 @@ class TelegramPhoneLinkView(APIView):
             return Response(
                 {"detail": "Telegram bot hozircha sozlanmagan."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-        if request.user.phone:
+        if request.user.phone and request.user.phone_verified:
             return Response(
                 {"detail": "Akkauntingizda telefon raqam allaqachon bor."}, status=status.HTTP_400_BAD_REQUEST
             )

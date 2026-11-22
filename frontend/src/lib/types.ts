@@ -211,7 +211,7 @@ export type HotelDetail = HotelCard & {
   check_in_time: string;
   check_out_time: string;
   cancellation_policy_text: string;
-  images: { id: number; image: string; caption: string }[];
+  images: { id: number; kind: "image" | "video"; image: string; caption: string }[];
 };
 export type RoomOffer = {
   id: number;

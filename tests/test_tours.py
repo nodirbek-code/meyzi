@@ -11,13 +11,11 @@ from apps.tours.models import Departure, Tour, TourMedia
 from apps.tours.policies import refund_ratio
 from apps.tours.pricing import installment
 
+from .media_samples import PNG
+
 pytestmark = pytest.mark.django_db
 
 # 1x1 PNG
-PNG = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
-    b"\x00\x00\x00\rIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
-)
 
 
 @pytest.fixture(autouse=True)

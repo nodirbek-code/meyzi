@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
-import { api, ClientApiError } from "@/lib/client";
+import { api } from "@/lib/client";
+
+import { TelegramPhoneButton } from "./TelegramPhoneLink";
 
 /** O'zbekiston kodi — maydon boshida qotirilgan, foydalanuvchi faqat qolgan 9 raqamni yozadi. */
 export const PHONE_PREFIX = "+998";
@@ -59,28 +63,19 @@ export function PhoneDigitsInput({
   );
 }
 
-/** 6 xonali kod maydoni */
-export function CodeInput({ value, onChange, autoFocus }: { value: string; onChange: (v: string) => void; autoFocus?: boolean }) {
-  return (
-    <input
-      className="input text-center font-mono text-lg tracking-[0.5em]"
-      inputMode="numeric"
-      autoComplete="one-time-code"
-      maxLength={6}
-      placeholder="••••••"
-      autoFocus={autoFocus}
-      value={value}
-      onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
-    />
-  );
-}
-
 export type VerifiedPhone = { phone: string; token: string };
 
+/** Akkauntdagi tasdiqlangan raqamdan olingan qiymat belgisi (backend akkaunt raqamini o'zi tekshiradi). */
+const FROM_ACCOUNT = "account";
+
+type Me = { phone: string | null; phone_verified: boolean };
+
 /**
- * Telefon + Telegram kod bilan tasdiqlash. Raqam faqat kod to'g'ri kiritilgandan keyin "tasdiqlangan" bo'ladi
- * (`value.token` to'ladi) — formani shu token bilan yuboring.
- * `trustedPhone` — akkauntdagi tasdiqlangan yoki saqlangan (o'zgarmagan) raqam: unga kod so'ralmaydi.
+ * Formadagi telefon — faqat akkauntdagi (Telegram bot orqali tasdiqlangan) raqam. Kod so'ralmaydi.
+ * - Akkauntda tasdiqlangan raqam bo'lsa — avtomatik qo'yiladi, o'zgartirib bo'lmaydi.
+ * - Bo'lmasa — "Telefon raqam qo'shish" botga olib boradi; bot raqamni akkauntga yozgach, maydon o'zi to'ladi.
+ * - Kirmagan foydalanuvchiga — "Kirish" havolasi.
+ * `trustedPhone` — oldin saqlangan raqam (masalan kabinetdagi mehmonxona raqami): u ham tasdiqlangan hisoblanadi.
  */
 export function VerifiedPhoneField({
   value,
@@ -95,49 +90,28 @@ export function VerifiedPhoneField({
   label?: string;
   required?: boolean;
 }) {
-  const digits = phoneDigits(value.phone);
-  const [sent, setSent] = useState(false);
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const pathname = usePathname();
+  const [me, setMe] = useState<Me | null | undefined>(undefined); // undefined — yuklanmoqda, null — kirmagan
+  const change = useRef(onChange);
+  change.current = onChange;
 
-  const verified = !!digits && ((!!trustedPhone && fullPhone(digits) === trustedPhone) || !!value.token);
+  useEffect(() => {
+    api
+      .get<Me>("/auth/me")
+      .then(setMe)
+      .catch(() => setMe(null));
+  }, []);
 
-  function change(d: string) {
-    setSent(false);
-    setCode("");
-    setError("");
-    onChange({ phone: fullPhone(d), token: "" });
-  }
+  const acct = me?.phone && me.phone_verified ? me.phone : null;
+  const isTrusted = !!trustedPhone && value.phone === trustedPhone;
 
-  async function run(fn: () => Promise<void>) {
-    setBusy(true);
-    setError("");
-    try {
-      await fn();
-    } catch (e) {
-      setError(e instanceof ClientApiError ? e.message : "Xatolik yuz berdi");
-    } finally {
-      setBusy(false);
-    }
-  }
+  // Akkaunt raqami avtomatik qo'yiladi (oldin saqlangan ishonchli raqam bo'lsa — o'sha qoladi)
+  useEffect(() => {
+    if (!acct || isTrusted) return;
+    if (value.phone !== acct || !value.token) change.current({ phone: acct, token: FROM_ACCOUNT });
+  }, [acct, isTrusted, value.phone, value.token]);
 
-  const sendCode = () =>
-    run(async () => {
-      await api.post("/auth/phone-check/send-code", { phone: fullPhone(digits) });
-      setSent(true);
-    });
-
-  const confirm = () =>
-    run(async () => {
-      const r = await api.post<{ phone: string; phone_token: string }>("/auth/phone-check/verify", {
-        phone: fullPhone(digits),
-        code,
-      });
-      setSent(false);
-      setCode("");
-      onChange({ phone: r.phone, token: r.phone_token });
-    });
+  const shown = isTrusted || (!!acct && value.phone === acct) ? value.phone : "";
 
   return (
     <div className="space-y-2">
@@ -145,41 +119,46 @@ export function VerifiedPhoneField({
         {label}
         {required && <span className="text-clay-500"> *</span>}
       </span>
-      <div className="flex gap-2">
-        <div className="min-w-0 flex-1">
-          <PhoneDigitsInput digits={digits} onChange={change} required={required} disabled={busy} />
-        </div>
-        {verified ? (
-          <span className="chip shrink-0 self-center bg-forest-50 text-forest-700">✓ Tasdiqlangan</span>
-        ) : (
-          isComplete(digits) &&
-          !sent && (
-            <button type="button" className="btn shrink-0 bg-sky-500 px-3 text-xs text-white hover:bg-sky-700" disabled={busy} onClick={sendCode}>
-              {busy ? "…" : "Kod olish"}
+      {me === undefined ? (
+        <div className="input animate-pulse text-ink-mute">Yuklanmoqda…</div>
+      ) : shown ? (
+        <>
+          <div className="flex items-center gap-2">
+            <div className="input flex-1 select-all bg-sand-50 font-semibold text-ink" aria-readonly>
+              {PHONE_PREFIX} {formatDigits(phoneDigits(shown))}
+            </div>
+            <span className="chip shrink-0 bg-forest-50 text-forest-700">✓ Tasdiqlangan</span>
+          </div>
+          {acct && shown !== acct ? (
+            <button type="button" className="text-xs font-semibold text-sky-700 hover:underline" onClick={() => onChange({ phone: acct, token: FROM_ACCOUNT })}>
+              Akkauntimdagi raqamni qo&apos;yish ({acct})
             </button>
-          )
-        )}
-      </div>
-      {sent && !verified && (
+          ) : (
+            <p className="text-xs text-ink-mute">Akkauntingizdagi tasdiqlangan raqam. Raqamni almashtirish uchun qo&apos;llab-quvvatlashga yozing.</p>
+          )}
+        </>
+      ) : me ? (
         <div className="space-y-2 rounded-xl bg-sky-50 p-3">
           <p className="text-xs text-sky-700">
-            Tasdiqlash kodi <b>Telegram</b>&apos;ga yuborildi — Telegram ilovangizni oching.
+            Akkauntingizda tasdiqlangan telefon raqam yo&apos;q. Telegram bot orqali qo&apos;shing — raqam shu yerga o&apos;zi
+            tushadi.
           </p>
-          <div className="flex gap-2">
-            <CodeInput value={code} onChange={setCode} autoFocus />
-            <button type="button" className="btn-primary shrink-0 px-4" disabled={busy || code.length !== 6} onClick={confirm}>
-              Tasdiqlash
-            </button>
-          </div>
-          <button type="button" className="text-xs font-semibold text-sky-700 hover:underline" disabled={busy} onClick={sendCode}>
-            Kodni qayta yuborish
-          </button>
+          <TelegramPhoneButton
+            onLinked={(phone) => {
+              setMe({ phone, phone_verified: true });
+              change.current({ phone, token: FROM_ACCOUNT });
+            }}
+          />
+        </div>
+      ) : (
+        <div className="rounded-xl bg-sky-50 p-3 text-xs text-sky-700">
+          Telefon raqam akkauntingizdan olinadi.{" "}
+          <Link href={`/login?next=${encodeURIComponent(pathname || "/")}`} className="font-semibold underline">
+            Tizimga kiring
+          </Link>{" "}
+          yoki Telegram orqali ro&apos;yxatdan o&apos;ting.
         </div>
       )}
-      {!verified && isComplete(digits) && !sent && !error && (
-        <p className="text-xs text-ink-mute">Raqam Telegram&apos;ga keladigan kod bilan tasdiqlanadi.</p>
-      )}
-      {error && <p className="text-xs text-clay-700">{error}</p>}
     </div>
   );
 }

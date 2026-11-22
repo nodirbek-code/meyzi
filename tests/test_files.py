@@ -5,13 +5,9 @@ from rest_framework.test import APIClient
 from apps.guides.models import GuideProfile
 
 from .conftest import phone_token
+from .media_samples import MP4, PDF, PNG
 
 pytestmark = pytest.mark.django_db
-
-PNG = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
-    b"\x00\x00\x00\rIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
-)
 
 
 @pytest.fixture(autouse=True)
@@ -31,6 +27,8 @@ def apply_as_guide(client, samarqand, **files):
         "price_half_day_uzs": 1,
         "price_full_day_uzs": 1,
         "price_per_day_uzs": 1,
+        "photo": SimpleUploadedFile("men.png", PNG, content_type="image/png"),
+        "certificate_file": SimpleUploadedFile("sertifikat.pdf", PDF, content_type="application/pdf"),
         **files,
     }
     return client.post("/api/v1/guides/me/", data, format="multipart")
@@ -72,21 +70,21 @@ def test_certificate_wrong_type(auth_api, samarqand):
 
 def test_tour_media_rules(agency_api, tour, settings):
     url = f"/api/v1/cabinet/tours/{tour.slug}/media/"
-    big = SimpleUploadedFile("big.png", PNG + b"0" * (11 * 1024 * 1024), content_type="image/png")
+    big = SimpleUploadedFile("big.png", PNG + b"0" * (7 * 1024 * 1024), content_type="image/png")
     res = agency_api.post(url, {"file": big}, format="multipart")
-    assert res.status_code == 400  # 10 MB dan katta rasm
+    assert res.status_code == 400  # 6 MB dan katta rasm
 
-    def vid():
-        return SimpleUploadedFile("v.mp4", b"\x00\x00\x00\x18ftypmp42", content_type="video/mp4")
+    def vid(name="v.mp4", data=MP4):
+        return SimpleUploadedFile(name, data, content_type="video/mp4")
 
-    assert agency_api.post(url, {"file": vid(), "kind": "image"}, format="multipart").status_code == 400
+    # turi fayldan aniqlanadi: "kind=image" deb yuborilgan mp4 — video bo'lib saqlanadi
+    res = agency_api.post(url, {"file": vid(), "kind": "image"}, format="multipart")
+    assert res.status_code == 201 and res.data["kind"] == "video", res.data
     assert (
         agency_api.post(
             url, {"file": vid(), "kind": "video", "is_cover": True}, format="multipart"
         ).status_code
         == 400
     )
-    res = agency_api.post(url, {"file": vid(), "kind": "video"}, format="multipart")
-    assert res.status_code == 201, res.data
     ok = SimpleUploadedFile("a.png", PNG, content_type="image/png")
     assert agency_api.post(url, {"file": ok, "is_cover": True}, format="multipart").status_code == 201

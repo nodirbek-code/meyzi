@@ -18,7 +18,7 @@ const DURATIONS = [
 
 /**
  * Gidni bron qilish (so'rov). Uchrashuv joyi — faqat gid belgilagan ro'yxatdan (erkin matn yo'q).
- * Telefon — Telegram kodi bilan tasdiqlanadi.
+ * Telefon — akkauntdagi tasdiqlangan raqam (kod so'ralmaydi).
  */
 export function GuideRequestForm({
   slug,

@@ -468,10 +468,34 @@ def test_phone_link_telegram_linked_to_other_account(bot, google_user_api):
 def test_phone_link_api_rules(bot, api, google_user_api, settings):
     assert api.post(PHONE_LINK).status_code == 401
     user, client = google_user_api
-    user.phone = "+998901234567"
+    user.phone, user.phone_verified = "+998901234567", True
     user.save()
     assert client.post(PHONE_LINK).status_code == 400
     settings.TELEGRAM_BOT_TOKEN = ""
     user.phone = None
     user.save()
     assert client.post(PHONE_LINK).status_code == 503
+
+
+# ---------- Telefon kodlari faqat bot orqali, 1 daqiqa amal qiladi ----------
+
+
+def test_phone_codes_sent_via_bot_and_expire_in_a_minute(bot, api, settings):
+    from apps.accounts.models import OneTimeCode
+
+    settings.TELEGRAM_CODE_BACKEND = "bot"
+    User.objects.create_user(email=None, phone="+998901234567", first_name="Ali", telegram_id=TG_ID)
+    r = api.post("/api/v1/auth/phone-check/send-code/", {"phone": "+998901234567"}, format="json")
+    assert r.status_code in (200, 204), r.data
+    assert bot[-1]["chat_id"] == TG_ID and "tasdiqlash kodi" in bot[-1]["text"]
+    assert "1 daqiqa" in bot[-1]["text"]
+    otp = OneTimeCode.objects.get()
+    assert 55 <= (otp.expires_at - otp.created_at).total_seconds() <= 61
+
+
+def test_phone_code_for_number_not_linked_to_bot(bot, api, settings):
+    settings.TELEGRAM_CODE_BACKEND = "bot"
+    r = api.post("/api/v1/auth/phone-check/send-code/", {"phone": "+998909999999"}, format="json")
+    assert r.status_code == 503
+    assert "@meyzi_test_bot" in r.data["detail"] and "faqat bot" in r.data["detail"]
+    assert not bot  # hech narsa yuborilmadi

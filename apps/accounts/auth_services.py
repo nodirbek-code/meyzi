@@ -49,13 +49,20 @@ def _send_email_code(email: str, code: str, purpose: str):
 
 def _send_phone_code(purpose: str, target: str, phone: str) -> None:
     """Kod yaratadi va Telegram orqali `phone` ga yuboradi. Yuborilmasa — kod bekor qilinadi (503)."""
-    code = otp.issue(purpose, target)
+    ttl = settings.MEYZI_PHONE_CODE_TTL_SECONDS
+    code = otp.issue(purpose, target, ttl_seconds=ttl)
     try:
-        telegram_codes.send_code(phone, code, ttl_seconds=settings.MEYZI_OTP_TTL_MINUTES * 60)
+        telegram_codes.send_code(phone, code, ttl_seconds=ttl)
     except telegram_codes.CodeDeliveryError as exc:
         log.warning("Telegram kod yuborilmadi (%s): %s", phone, exc)
         # yetkazilmagan kod "qayta yuborish — 60 s" cheklovini yoqmasin
         OneTimeCode.objects.filter(purpose=purpose, target=target, used_at__isnull=True).delete()
+        if isinstance(exc, telegram_codes.PhoneNotLinked):
+            bot = f"@{settings.TELEGRAM_BOT_USERNAME}" if settings.TELEGRAM_BOT_USERNAME else "Telegram bot"
+            raise CodeNotDelivered(
+                f"Bu raqam {bot} ga ulanmagan. Avval botga kirib, /start bosing va raqamingizni yuboring — "
+                "kodlar faqat bot orqali keladi."
+            ) from None
         raise CodeNotDelivered() from None
 
 

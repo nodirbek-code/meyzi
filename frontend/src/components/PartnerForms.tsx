@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { firstError } from "@/lib/client";
 import { AMENITIES, LANGUAGE_NAMES, SPECIALIZATIONS } from "@/lib/format";
 import type { DestinationShort } from "@/lib/types";
+import { DOC_ACCEPT, fileError, IMAGE_ACCEPT, IMAGE_MAX_MB } from "@/lib/uploads";
 
 import { phoneReady, VerifiedPhoneField, type VerifiedPhone } from "./PhoneField";
 
@@ -44,6 +45,60 @@ function Req() {
   return <span className="text-clay-500"> *</span>;
 }
 
+/** Fayl tanlash: format va hajm darhol tekshiriladi (xato bo'lsa fayl qabul qilinmaydi). */
+function FilePick({
+  label,
+  accept,
+  kind,
+  hint,
+  file,
+  onChange,
+  preview,
+}: {
+  label: string;
+  accept: string;
+  kind: "image" | "document";
+  hint: string;
+  file: File | null;
+  onChange: (f: File | null) => void;
+  preview?: boolean;
+}) {
+  const [error, setError] = useState("");
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!preview || !file) return setUrl(null);
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file, preview]);
+  return (
+    <label className="block">
+      <span className="label">
+        {label}
+        <Req />
+      </span>
+      <div className="flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {url && <img src={url} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" />}
+        <input
+          className="input py-2"
+          type="file"
+          accept={accept}
+          required={!file}
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            const err = f ? fileError(f, kind) : null;
+            setError(err ?? "");
+            if (err) e.target.value = "";
+            onChange(err ? null : f);
+          }}
+        />
+      </div>
+      <span className={`mt-1 block text-xs ${error ? "text-clay-700" : "text-ink-mute"}`}>{error || hint}</span>
+    </label>
+  );
+}
+
 /** multipart (fayl bilan) — ro'yxatlar takroriy kalitlar sifatida */
 async function sendForm(url: string, fields: Record<string, string | string[] | File | null>) {
   const fd = new FormData();
@@ -74,11 +129,12 @@ export function BecomeGuideForm({ destinations, trustedPhone }: { destinations: 
   const [specs, setSpecs] = useState<string[]>([]);
   const [dests, setDests] = useState<string[]>([]);
   const [cert, setCert] = useState<File | null>(null);
+  const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
-  const ready = f.display_name.trim() && langs.length && dests.length && phoneReady(phone, trustedPhone);
+  const ready = f.display_name.trim() && langs.length && dests.length && photo && cert && phoneReady(phone, trustedPhone);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -86,6 +142,7 @@ export function BecomeGuideForm({ destinations, trustedPhone }: { destinations: 
     setError("");
     try {
       await sendForm("/api/proxy/guides/me", {
+        photo,
         ...f,
         phone: phone.phone,
         phone_token: phone.token,
@@ -115,6 +172,15 @@ export function BecomeGuideForm({ destinations, trustedPhone }: { destinations: 
           </span>
           <input className="input" required value={f.display_name} onChange={set("display_name")} />
         </label>
+        <FilePick
+          label="O'zingizning rasmingiz"
+          accept={IMAGE_ACCEPT}
+          kind="image"
+          hint={`Yuzingiz aniq ko'rinadigan rasm — jpg, png yoki webp, ${IMAGE_MAX_MB} MB gacha. Sayohatchilar shu rasmni ko'radi.`}
+          file={photo}
+          onChange={setPhoto}
+          preview
+        />
         <VerifiedPhoneField value={phone} onChange={setPhone} trustedPhone={trustedPhone} />
         <label className="block">
           <span className="label">O&apos;zingiz haqingizda</span>
@@ -173,7 +239,7 @@ export function BecomeGuideForm({ destinations, trustedPhone }: { destinations: 
 
       <fieldset className="space-y-4 border-t border-sand-200 pt-6">
         <legend className="mb-1 font-sans text-base font-semibold">Tajriba va sertifikat</legend>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <label>
             <span className="label">Tajriba (yil)</span>
             <input className="input" type="number" min={0} value={f.experience_years} onChange={set("experience_years")} />
@@ -182,11 +248,15 @@ export function BecomeGuideForm({ destinations, trustedPhone }: { destinations: 
             <span className="label">Sertifikat raqami</span>
             <input className="input" value={f.certificate_number} onChange={set("certificate_number")} />
           </label>
-          <label>
-            <span className="label">Sertifikat (pdf/rasm)</span>
-            <input className="input py-2" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setCert(e.target.files?.[0] ?? null)} />
-          </label>
         </div>
+        <FilePick
+          label="Gid sertifikati"
+          accept={DOC_ACCEPT}
+          kind="document"
+          hint={`pdf, jpg yoki png — ${IMAGE_MAX_MB} MB gacha.`}
+          file={cert}
+          onChange={setCert}
+        />
         <p className="text-xs text-ink-mute">Sertifikat faqat tekshiruvchilarimizga ko&apos;rinadi.</p>
       </fieldset>
 

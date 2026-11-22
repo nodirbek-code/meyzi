@@ -6,7 +6,7 @@ import { api, ClientApiError } from "@/lib/client";
 
 import { phoneReady, VerifiedPhoneField, type VerifiedPhone } from "./PhoneField";
 
-/** Agentlik arizasi. Telefon — Telegram kodi bilan tasdiqlanadi (kirmagan foydalanuvchi ham yubora oladi). */
+/** Agentlik arizasi. Telefon — akkauntdagi (Telegram bot orqali tasdiqlangan) raqam. */
 export function AgencyApplyForm({ trustedPhone }: { trustedPhone?: string | null }) {
   const [f, setF] = useState({ agency_name: "", contact_person: "", email: "", message: "" });
   const [phone, setPhone] = useState<VerifiedPhone>({ phone: trustedPhone ?? "", token: "" });

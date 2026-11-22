@@ -31,7 +31,7 @@ export function AgencyHome() {
   const a = agency.data;
   const f = form ?? a ?? {};
   const ph = phone ?? { phone: a?.phone ?? "", token: "" };
-  // telefon bo'sh qoldirilishi mumkin; o'zgarsa — Telegram kodi bilan tasdiqlanadi
+  // telefon bo'sh qoldirilishi mumkin; faqat akkauntdagi tasdiqlangan raqam qo'yiladi
   const phoneOk = !ph.phone || phoneReady(ph, a?.phone || null);
 
   return (

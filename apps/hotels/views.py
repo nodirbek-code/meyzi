@@ -270,6 +270,11 @@ class CabinetHotelImageViewSet(
             return HotelImage.objects.none()
         return HotelImage.objects.filter(hotel=self.request.hotel)
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["hotel"] = getattr(self.request, "hotel", None)  # galereya chegarasi (20 rasm / 4 video) uchun
+        return ctx
+
     def perform_create(self, serializer):
         image = serializer.save(hotel=self.request.hotel)
         if image.is_cover:

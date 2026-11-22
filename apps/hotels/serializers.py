@@ -16,9 +16,37 @@ class _AmenityList(serializers.ListField):
 
 
 class HotelImageSerializer(serializers.ModelSerializer):
+    """Galereya: rasm (≤ 6 MB, 20 tagacha) yoki video (≤ 20 MB, 4 tagacha). `kind` fayldan aniqlanadi."""
+
     class Meta:
         model = HotelImage
-        fields = ["id", "image", "caption", "is_cover", "sort_order"]
+        fields = ["id", "kind", "image", "caption", "is_cover", "sort_order"]
+        read_only_fields = ["kind"]
+
+    def validate(self, attrs):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from apps.core.files import check_gallery_limit, image_rule, media_kind, video_rule
+
+        f = attrs.get("image")
+        kind = attrs.get("kind", getattr(self.instance, "kind", HotelImage.Kind.IMAGE))
+        if f is not None:
+            # turi fayldan aniqlanadi (mijoz yuborgan qiymatga ishonilmaydi)
+            kind = media_kind(f.name) or kind
+            attrs["kind"] = kind
+            rule = video_rule if kind == HotelImage.Kind.VIDEO else image_rule
+            try:
+                rule(f)
+                check_gallery_limit(self._gallery(), kind, exclude_pk=getattr(self.instance, "pk", None))
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({"image": list(exc.messages)}) from None
+        if kind == HotelImage.Kind.VIDEO and attrs.get("is_cover"):
+            raise serializers.ValidationError({"is_cover": "Muqova faqat rasm bo'lishi mumkin."})
+        return attrs
+
+    def _gallery(self):
+        hotel = self.context.get("hotel") or getattr(self.instance, "hotel", None)
+        return HotelImage.objects.filter(hotel=hotel) if hotel is not None else HotelImage.objects.none()
 
 
 class RoomTypeSerializer(serializers.ModelSerializer):
@@ -88,7 +116,7 @@ class HotelCardSerializer(serializers.ModelSerializer):
         ]
 
     def get_cover(self, hotel) -> str | None:
-        images = list(hotel.images.all())
+        images = [i for i in hotel.images.all() if i.kind == HotelImage.Kind.IMAGE]  # video muqova emas
         if not images:
             return None
         request = self.context.get("request")

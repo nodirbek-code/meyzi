@@ -216,7 +216,9 @@ DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="MEYZI <no-reply@meyz
 # console | disabled  (provayder ulanganda — uning nomi)
 SMS_BACKEND = env.str("SMS_BACKEND", default="console")
 # Tasdiqlash kodi
-MEYZI_OTP_TTL_MINUTES = env.int("MEYZI_OTP_TTL_MINUTES", default=10)
+MEYZI_OTP_TTL_MINUTES = env.int("MEYZI_OTP_TTL_MINUTES", default=10)  # email kodlari
+# Telefon kodlari faqat Telegram bot orqali keladi va 1 daqiqa amal qiladi
+MEYZI_PHONE_CODE_TTL_SECONDS = env.int("MEYZI_PHONE_CODE_TTL_SECONDS", default=60)
 MEYZI_OTP_MAX_ATTEMPTS = 5
 MEYZI_OTP_RESEND_SECONDS = 60
 MEYZI_OTP_MAX_PER_HOUR = 5
@@ -224,7 +226,7 @@ MEYZI_OTP_MAX_PER_HOUR = 5
 # --- Telefon tasdiqlash kodlari: Telegram Gateway (SMS emas) ---
 # console — kod server logiga chiqadi (dev) | locmem — testlar | gateway — https://gatewayapi.telegram.org
 # Token: https://gateway.telegram.org → Account settings → API token
-TELEGRAM_CODE_BACKEND = env.str("TELEGRAM_CODE_BACKEND", default="console")
+TELEGRAM_CODE_BACKEND = env.str("TELEGRAM_CODE_BACKEND", default="bot")
 TELEGRAM_GATEWAY_TOKEN = env.str("TELEGRAM_GATEWAY_TOKEN", default="")
 # Kod bilan tasdiqlangan raqam formada shuncha vaqt "tasdiqlangan" hisoblanadi (soniya)
 MEYZI_PHONE_TOKEN_MAX_AGE = env.int("MEYZI_PHONE_TOKEN_MAX_AGE", default=3600)
@@ -248,7 +250,7 @@ TELEGRAM_BOT_USERNAME = env.str("TELEGRAM_BOT_USERNAME", default="").lstrip("@")
 TELEGRAM_WEBHOOK_SECRET = re.sub(r"[^A-Za-z0-9_-]", "", env.str("TELEGRAM_WEBHOOK_SECRET", default=""))[:256]
 # Bot yuboradigan "saytga kirish" havolasi shu manzilga olib boradi (Next.js sayt)
 MEYZI_FRONTEND_URL = env.str("MEYZI_FRONTEND_URL", default="http://localhost:3000").rstrip("/")
-MEYZI_TELEGRAM_LOGIN_TTL_MINUTES = env.int("MEYZI_TELEGRAM_LOGIN_TTL_MINUTES", default=10)
+MEYZI_TELEGRAM_LOGIN_TTL_MINUTES = env.int("MEYZI_TELEGRAM_LOGIN_TTL_MINUTES", default=1)
 # Xabardagi admin panel havolalari uchun
 MEYZI_SITE_URL = env.str("MEYZI_SITE_URL", default="http://localhost:8000")
 

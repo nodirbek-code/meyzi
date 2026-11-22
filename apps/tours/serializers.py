@@ -344,18 +344,27 @@ class CabinetMediaSerializer(serializers.ModelSerializer):
         fields = ["id", "kind", "file", "caption", "is_cover", "sort_order"]
 
     def validate(self, attrs):
-        from apps.core.files import image_rule, video_rule
+        from django.core.exceptions import ValidationError as DjangoValidationError
 
-        kind = attrs.get("kind", getattr(self.instance, "kind", TourMedia.Kind.IMAGE))
+        from apps.core.files import check_gallery_limit, image_rule, media_kind, video_rule
+
         f = attrs.get("file")
+        kind = attrs.get("kind", getattr(self.instance, "kind", TourMedia.Kind.IMAGE))
         if f is not None:
+            # turi fayldan aniqlanadi (mijoz yuborgan qiymatga ishonilmaydi)
+            kind = media_kind(f.name) or kind
+            attrs["kind"] = kind
             rule = video_rule if kind == TourMedia.Kind.VIDEO else image_rule
             try:
                 rule(f)
-            except Exception as exc:  # django ValidationError → DRF
-                raise serializers.ValidationError(
-                    {"file": list(getattr(exc, "messages", [str(exc)]))}
-                ) from None
+                check_gallery_limit(self._gallery(), kind, exclude_pk=getattr(self.instance, "pk", None))
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({"file": list(exc.messages)}) from None
         if kind == TourMedia.Kind.VIDEO and attrs.get("is_cover"):
             raise serializers.ValidationError({"is_cover": "Muqova faqat rasm bo'lishi mumkin."})
         return attrs
+
+    def _gallery(self):
+        """Shu turning media'si: yangi faylda — view `context["tour"]` beradi, tahrirda — instance'dan."""
+        tour = self.context.get("tour") or getattr(self.instance, "tour", None)
+        return TourMedia.objects.filter(tour=tour) if tour is not None else TourMedia.objects.none()

@@ -41,24 +41,113 @@ def _ext(name: str) -> str:
     return name.rsplit(".", 1)[-1].lower() if "." in name else ""
 
 
+# ---------- Faylning haqiqiy formati (kengaytma emas, ichidagi baytlar) ----------
+
+# Pillow formati → ruxsat etilgan kengaytmalar
+_IMAGE_FORMATS = {"JPEG": ("jpg", "jpeg"), "PNG": ("png",), "WEBP": ("webp",)}
+
+
+def _head(f, n: int = 64) -> bytes:
+    pos = f.tell() if hasattr(f, "tell") else 0
+    try:
+        f.seek(0)
+        return f.read(n) or b""
+    finally:
+        f.seek(pos)
+
+
+def sniff_image(f) -> str | None:
+    """Haqiqiy rasm bo'lsa — Pillow formati (JPEG/PNG/WEBP), aks holda None."""
+    from PIL import Image, UnidentifiedImageError
+
+    pos = f.tell() if hasattr(f, "tell") else 0
+    try:
+        f.seek(0)
+        with Image.open(f) as img:
+            fmt = img.format
+            img.verify()  # buzilgan / soxta fayl — xato
+        return fmt
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
+        return None
+    finally:
+        f.seek(pos)
+
+
+def sniff_video(f) -> str | None:
+    """mp4/mov (ISO BMFF: 4–8 baytda `ftyp`) yoki webm (EBML sarlavhasi)."""
+    head = _head(f, 16)
+    if len(head) >= 12 and head[4:8] == b"ftyp":
+        return "mov" if head[8:10] == b"qt" else "mp4"
+    if head.startswith(bytes.fromhex("1a45dfa3")):  # EBML
+        return "webm"
+    return None
+
+
+def is_pdf(f) -> bool:
+    return _head(f, 5) == b"%PDF-"
+
+
 @deconstructible
 class FileRule:
-    """Hajm va kengaytma cheklovi (model validatori)."""
+    """Hajm, kengaytma va haqiqiy format cheklovi (model va serializer validatori).
 
-    def __init__(self, max_mb: int, exts: tuple[str, ...], label: str):
-        self.max_mb, self.exts, self.label = max_mb, exts, label
+    `kind`: "image" | "video" | "document" | "media" (rasm yoki video) | "" (faqat kengaytma — masalan audio).
+    """
+
+    def __init__(self, max_mb: int, exts: tuple[str, ...], label: str, kind: str = ""):
+        self.max_mb, self.exts, self.label, self.kind = max_mb, exts, label, kind
 
     def __call__(self, f):
-        if _ext(f.name) not in self.exts:
+        ext = _ext(f.name)
+        if ext not in self.exts:
             raise ValidationError(f"{self.label}: faqat {', '.join(self.exts)} formatlari.")
         if f.size and f.size > self.max_mb * MB:
-            raise ValidationError(f"{self.label}: fayl {self.max_mb} MB dan oshmasin.")
+            raise ValidationError(f"{self.label}: fayl hajmi {self.max_mb} MB dan oshmasin.")
+        if not self.kind or not hasattr(f, "seek"):
+            return
+        if ext in IMAGE_EXTS and self.kind in ("image", "media", "document"):
+            fmt = sniff_image(f)
+            if fmt is None or ext not in _IMAGE_FORMATS.get(fmt, ()):
+                raise ValidationError(f"{self.label}: fayl haqiqiy {ext.upper()} rasm emas yoki buzilgan.")
+        elif ext in VIDEO_EXTS and self.kind in ("video", "media"):
+            if sniff_video(f) is None or (ext == "webm") != (sniff_video(f) == "webm"):
+                raise ValidationError(f"{self.label}: fayl haqiqiy {ext.upper()} video emas yoki buzilgan.")
+        elif ext == "pdf" and self.kind == "document":
+            if not is_pdf(f):
+                raise ValidationError(f"{self.label}: fayl haqiqiy PDF emas.")
 
     def __eq__(self, other):
-        return isinstance(other, FileRule) and (self.max_mb, self.exts) == (other.max_mb, other.exts)
+        return isinstance(other, FileRule) and (self.max_mb, self.exts, self.kind) == (
+            other.max_mb,
+            other.exts,
+            other.kind,
+        )
 
 
-image_rule = FileRule(10, IMAGE_EXTS, "Rasm")
-video_rule = FileRule(100, VIDEO_EXTS, "Video")
-media_rule = FileRule(100, IMAGE_EXTS + VIDEO_EXTS, "Fayl")
-document_rule = FileRule(10, DOC_EXTS, "Hujjat")
+# Hamma joyda bir xil: rasm — 6 MB, video — 20 MB
+IMAGE_MAX_MB = 6
+VIDEO_MAX_MB = 20
+# Bitta tur / mehmonxona galereyasi: 20 ta rasm, 4 ta video
+MAX_IMAGES = 20
+MAX_VIDEOS = 4
+
+image_rule = FileRule(IMAGE_MAX_MB, IMAGE_EXTS, "Rasm", "image")
+video_rule = FileRule(VIDEO_MAX_MB, VIDEO_EXTS, "Video", "video")
+media_rule = FileRule(VIDEO_MAX_MB, IMAGE_EXTS + VIDEO_EXTS, "Fayl", "media")
+document_rule = FileRule(IMAGE_MAX_MB, DOC_EXTS, "Hujjat", "document")
+
+
+def media_kind(name: str) -> str:
+    """Kengaytma bo'yicha: "image" | "video" | ""."""
+    ext = _ext(name)
+    return "image" if ext in IMAGE_EXTS else "video" if ext in VIDEO_EXTS else ""
+
+
+def check_gallery_limit(queryset, kind: str, *, exclude_pk=None) -> None:
+    """Galereyada `kind` bo'yicha chegarani tekshiradi (rasm — 20, video — 4)."""
+    limit, label = (MAX_VIDEOS, "video") if kind == "video" else (MAX_IMAGES, "rasm")
+    qs = queryset.filter(kind=kind)
+    if exclude_pk is not None:
+        qs = qs.exclude(pk=exclude_pk)
+    if qs.count() >= limit:
+        raise ValidationError(f"Ko'pi bilan {limit} ta {label} yuklash mumkin.")

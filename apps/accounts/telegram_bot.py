@@ -430,7 +430,7 @@ def _on_phone_link_start(chat_id: int, tg_user: dict, token: str) -> None:
     if not user.is_active:
         _send(chat_id, BLOCKED, REMOVE_KEYBOARD)
         return
-    if user.phone:
+    if user.phone and user.phone_verified:
         _send(chat_id, f"Akkauntingizda raqam allaqachon bor: <b>{_esc(user.phone)}</b>.", REMOVE_KEYBOARD)
         return
     if User.objects.filter(telegram_id=tg_user["id"]).exclude(pk=user.pk).exists():
@@ -488,7 +488,7 @@ def _on_link_phone_contact(chat_id: int, tg_user: dict, session: TelegramBotSess
         if user is None or not user.is_active:
             _send(chat_id, BLOCKED if user else PHONE_LINK_INVALID, REMOVE_KEYBOARD)
             return
-        if user.phone:
+        if user.phone and user.phone_verified:
             _send(
                 chat_id, f"Akkauntingizda raqam allaqachon bor: <b>{_esc(user.phone)}</b>.", REMOVE_KEYBOARD
             )

@@ -5,6 +5,7 @@ Kod to'g'ridan-to'g'ri shu telefon raqamiga ulangan Telegram akkauntiga keladi �
 botga kirishi shart emas. Hujjat: https://core.telegram.org/gateway/api
 
 TELEGRAM_CODE_BACKEND:
+- bot     — (asosiy) kod MEYZI botidan keladi: raqam botga ulangan (`User.telegram_id`) bo'lishi shart
 - console — kod server logiga chiqadi (dev)
 - locmem  — testlar uchun (`outbox` ro'yxatiga yoziladi)
 - gateway — haqiqiy yuborish (TELEGRAM_GATEWAY_TOKEN kerak)
@@ -29,9 +30,16 @@ class CodeDeliveryError(Exception):
     pass
 
 
+class PhoneNotLinked(CodeDeliveryError):
+    """Raqam egasi botga ulanmagan — kodni yuboradigan chat yo'q."""
+
+
 def send_code(phone: str, code: str, *, ttl_seconds: int) -> None:
     """`phone` — E.164 (+998XXXXXXXXX). Yuborib bo'lmasa — CodeDeliveryError."""
     backend = settings.TELEGRAM_CODE_BACKEND
+    if backend == "bot":
+        _bot_send(phone, code, ttl_seconds)
+        return
     if backend == "console":
         log.warning("Telegram kod → %s: %s", phone, code)
         print(f"[TELEGRAM KOD] {phone}: {code}", flush=True)
@@ -43,6 +51,38 @@ def send_code(phone: str, code: str, *, ttl_seconds: int) -> None:
         _gateway_send(phone, code, ttl_seconds)
         return
     raise CodeDeliveryError(f"Noma'lum TELEGRAM_CODE_BACKEND={backend}")
+
+
+def _bot_send(phone: str, code: str, ttl_seconds: int) -> None:
+    from apps.accounts.models import User
+
+    from . import telegram
+
+    if not settings.TELEGRAM_BOT_TOKEN:
+        raise CodeDeliveryError("TELEGRAM_BOT_TOKEN sozlanmagan")
+    chat_id = (
+        User.objects.filter(phone=phone, telegram_id__isnull=False)
+        .values_list("telegram_id", flat=True)
+        .first()
+    )
+    if not chat_id:
+        raise PhoneNotLinked(f"{phone} botga ulanmagan")
+    minutes = ttl_seconds // 60
+    ttl = f"{minutes} daqiqa" if minutes and ttl_seconds % 60 == 0 else f"{ttl_seconds} soniya"
+    try:
+        telegram.call(
+            "sendMessage",
+            {
+                "chat_id": chat_id,
+                "text": (
+                    f"🔐 {settings.BRAND_NAME} tasdiqlash kodi: <code>{code}</code>\n\n"
+                    f"Kod {ttl} amal qiladi. Uni hech kimga bermang."
+                ),
+                "parse_mode": "HTML",
+            },
+        )
+    except telegram.TelegramError as exc:
+        raise CodeDeliveryError(str(exc)) from None
 
 
 def _gateway_send(phone: str, code: str, ttl_seconds: int) -> None:

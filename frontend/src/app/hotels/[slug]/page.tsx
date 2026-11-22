@@ -23,6 +23,8 @@ export default async function HotelPage({ params, searchParams }: Props) {
   const [h, user] = await Promise.all([apiGetOrNull<HotelDetail>(`/hotels/${slug}/`, { revalidate: 30 }), getUser()]);
   if (!h) notFound();
   const reviews = await apiGet<Paginated<Review>>(`/hotels/${slug}/reviews/`);
+  const photos = h.images.filter((i) => i.kind !== "video");
+  const videos = h.images.filter((i) => i.kind === "video");
   const map = h.latitude && h.longitude ? `https://yandex.uz/maps/?pt=${h.longitude},${h.latitude}&z=16&l=map` : null;
 
   return (
@@ -33,12 +35,22 @@ export default async function HotelPage({ params, searchParams }: Props) {
 
       {/* Rasmlar mozaikasi */}
       <div className="mt-4 grid gap-3 sm:grid-cols-[2fr_1fr]">
-        <Cover src={h.images[0]?.image ?? null} alt={h.name} className="aspect-[16/10] w-full overflow-hidden rounded-xl2" />
+        <Cover src={photos[0]?.image ?? null} alt={h.name} className="aspect-[16/10] w-full overflow-hidden rounded-xl2" />
         <div className="hidden grid-rows-2 gap-3 sm:grid">
-          <Cover src={h.images[1]?.image ?? null} alt={`${h.name} 2`} className="h-full w-full overflow-hidden rounded-xl2" />
-          <Cover src={h.images[2]?.image ?? null} alt={`${h.name} 3`} className="h-full w-full overflow-hidden rounded-xl2" />
+          <Cover src={photos[1]?.image ?? null} alt={`${h.name} 2`} className="h-full w-full overflow-hidden rounded-xl2" />
+          <Cover src={photos[2]?.image ?? null} alt={`${h.name} 3`} className="h-full w-full overflow-hidden rounded-xl2" />
         </div>
       </div>
+      {(photos.length > 3 || videos.length > 0) && (
+        <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+          {videos.map((v) => (
+            <video key={v.id} src={v.image} controls playsInline preload="metadata" className="h-40 shrink-0 rounded-xl bg-ink" />
+          ))}
+          {photos.slice(3).map((p) => (
+            <Cover key={p.id} src={p.image} alt={p.caption || h.name} className="h-40 w-56 shrink-0 overflow-hidden rounded-xl" />
+          ))}
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-10">
         <div className="min-w-0 space-y-8">

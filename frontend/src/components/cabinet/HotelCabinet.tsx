@@ -6,13 +6,14 @@ import { phoneReady, VerifiedPhoneField, type VerifiedPhone } from "@/components
 import { Badge } from "@/components/ui";
 import { api, ClientApiError } from "@/lib/client";
 import { AMENITIES, money } from "@/lib/format";
+import { galleryError, MAX_IMAGES, MAX_VIDEOS, MEDIA_ACCEPT, MEDIA_HINT, mediaKind } from "@/lib/uploads";
 
 import { ErrorText, Loading, Panel } from "./Bits";
 import { ReviewsReply } from "./ReviewsReply";
 import { useAction, useData } from "./useData";
 
 type Hotel = { name: string; slug: string; status: string; moderation_note: string; description: string; address: string; phone: string; email: string; amenities: string[]; commission_percent: string; check_in_time: string; check_out_time: string };
-type Img = { id: number; image: string; is_cover: boolean };
+type Img = { id: number; kind: "image" | "video"; image: string; is_cover: boolean };
 type Room = { id: number; name: string; description: string; capacity: number; beds: string; size_m2: number | null; price_per_night_uzs: number; total_rooms: number; amenities: string[]; is_active: boolean };
 
 const STATUS: Record<string, string> = { pending: "Tekshiruvda", approved: "Tasdiqlangan", rejected: "Rad etilgan", suspended: "To'xtatilgan" };
@@ -26,13 +27,22 @@ export function HotelCabinet() {
   const h = hotel.data;
   const f = { ...h, ...form } as Hotel;
 
+  const [uploadError, setUploadError] = useState("");
   async function upload(files: FileList | null) {
     if (!files?.length) return;
+    const list = Array.from(files);
+    const err = galleryError(list, images.data ?? []);
+    setUploadError(err ?? "");
+    if (err) return;
     await act.run(async () => {
-      for (const file of Array.from(files)) {
+      let hasCover = !!images.data?.some((i) => i.is_cover);
+      for (const file of list) {
         const fd = new FormData();
         fd.append("image", file);
-        if (!images.data?.length) fd.append("is_cover", "true");
+        if (!hasCover && mediaKind(file) === "image") {
+          fd.append("is_cover", "true"); // muqova — faqat rasm
+          hasCover = true;
+        }
         const res = await fetch("/api/proxy/cabinet/hotel/images", { method: "POST", body: fd });
         if (!res.ok) throw new ClientApiError(res.status, await res.json().catch(() => ({ detail: "Yuklashda xato" })));
       }
@@ -72,12 +82,20 @@ export function HotelCabinet() {
           <div><button className="btn-primary" disabled={act.busy || (!form && !phoneChanged) || !phoneOk}>Saqlash</button></div>
         </form>
       </Panel>
-      <Panel title="Rasmlar" action={<label className="btn-ghost cursor-pointer px-3 py-1.5 text-xs">+ Yuklash<input type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => upload(e.target.files)} /></label>}>
+      <Panel title="Rasm va video" action={<label className="btn-ghost cursor-pointer px-3 py-1.5 text-xs">{act.busy ? "Yuklanmoqda…" : "+ Yuklash"}<input type="file" multiple accept={MEDIA_ACCEPT} className="hidden" onChange={(e) => { upload(e.target.files); e.target.value = ""; }} /></label>}>
+        <p className="mb-3 text-xs text-ink-mute">
+          {MEDIA_HINT} Hozir: {(images.data ?? []).filter((i) => i.kind !== "video").length}/{MAX_IMAGES} rasm, {(images.data ?? []).filter((i) => i.kind === "video").length}/{MAX_VIDEOS} video.
+        </p>
+        <ErrorText text={uploadError} />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {images.data?.map((i) => (
             <div key={i.id} className={`relative overflow-hidden rounded-xl ${i.is_cover ? "ring-2 ring-sun-500" : ""}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={i.image} alt="" className="aspect-square w-full object-cover" />
+              {i.kind === "video" ? (
+                <video src={i.image} className="aspect-square w-full object-cover" muted playsInline controls preload="metadata" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={i.image} alt="" className="aspect-square w-full object-cover" />
+              )}
               <button className="absolute right-1 top-1 rounded-full bg-white/90 px-2 text-xs text-clay-700" onClick={() => act.run(async () => { await api.del(`/cabinet/hotel/images/${i.id}`); images.reload(); })}>✕</button>
             </div>
           ))}

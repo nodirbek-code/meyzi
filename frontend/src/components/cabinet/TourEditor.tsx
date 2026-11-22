@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui";
 import { api, ClientApiError } from "@/lib/client";
 import { dateLong, weekday } from "@/lib/format";
 import type { Category, Destination, Paginated } from "@/lib/types";
+import { galleryError, MAX_IMAGES, MAX_VIDEOS, MEDIA_ACCEPT, MEDIA_HINT, mediaKind } from "@/lib/uploads";
 
 import { TOUR_STATUS } from "./AgencyTours";
 import { parseCoords } from "./MeetingPoints";
@@ -273,13 +274,18 @@ function TourStatusBar({ slug, status, note, hasMedia, onChange }: { slug: strin
 
 function MediaManager({ slug, media, onChange }: { slug: string; media: Media[]; onChange: () => void }) {
   const act = useAction();
+  const [localError, setLocalError] = useState("");
   async function upload(files: FileList | null) {
     if (!files?.length) return;
+    const list = Array.from(files);
+    const err = galleryError(list, media);
+    setLocalError(err ?? "");
+    if (err) return;
     await act.run(async () => {
-      for (const file of Array.from(files)) {
+      for (const file of list) {
         const fd = new FormData();
         fd.append("file", file);
-        fd.append("kind", file.type.startsWith("video") ? "video" : "image");
+        fd.append("kind", mediaKind(file) ?? "image");
         if (!media.length) fd.append("is_cover", "true");
         const res = await fetch(`/api/proxy/cabinet/tours/${slug}/media`, { method: "POST", body: fd });
         if (!res.ok) throw new ClientApiError(res.status, await res.json().catch(() => ({ detail: "Yuklashda xato" })));
@@ -293,12 +299,14 @@ function MediaManager({ slug, media, onChange }: { slug: string; media: Media[];
       action={
         <label className="btn-ghost cursor-pointer px-3 py-1.5 text-xs">
           {act.busy ? "Yuklanmoqda…" : "+ Yuklash"}
-          <input type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" className="hidden" onChange={(e) => upload(e.target.files)} />
+          <input type="file" multiple accept={MEDIA_ACCEPT} className="hidden" onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
         </label>
       }
     >
-      <p className="mb-3 text-xs text-ink-mute">Rasm — jpg/png/webp, 10 MB gacha. Video — mp4/mov/webm, 100 MB gacha.</p>
-      <ErrorText text={act.error} />
+      <p className="mb-3 text-xs text-ink-mute">
+        {MEDIA_HINT} Hozir: {media.filter((m) => m.kind !== "video").length}/{MAX_IMAGES} rasm, {media.filter((m) => m.kind === "video").length}/{MAX_VIDEOS} video.
+      </p>
+      <ErrorText text={localError || act.error} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {media.map((m) => (
           <div key={m.id} className={`relative overflow-hidden rounded-xl ${m.is_cover ? "ring-2 ring-sun-500" : ""}`}>

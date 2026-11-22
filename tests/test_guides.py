@@ -2,6 +2,7 @@ from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
@@ -11,6 +12,7 @@ from apps.guides import policies, services
 from apps.guides.models import GuideBooking, GuideMeetingPoint, GuideProfile, GuideUnavailableDate
 
 from .conftest import PASSWORD, phone_token
+from .media_samples import JPEG, PDF
 
 pytestmark = pytest.mark.django_db
 
@@ -132,11 +134,19 @@ def test_become_guide_flow(auth_api, user, admin_api, samarqand):
         "price_per_day_uzs": 300000,
     }
     res = auth_api.post("/api/v1/guides/me/", payload, format="multipart")
+    assert res.status_code == 400 and {"photo", "certificate_file"} <= set(res.data)  # rasm, sertifikat shart
+    payload |= {
+        "photo": SimpleUploadedFile("men.jpg", JPEG, content_type="image/jpeg"),
+        "certificate_file": SimpleUploadedFile("sertifikat.pdf", PDF, content_type="application/pdf"),
+    }
+    res = auth_api.post("/api/v1/guides/me/", payload, format="multipart")
     assert res.status_code == 201, res.data
     assert res.data["status"] == "pending"
     assert res.data["languages"] == ["uz", "ru"]
     user.refresh_from_db()
     assert user.role == User.Role.GUIDE
+    payload["photo"].seek(0)
+    payload["certificate_file"].seek(0)
     assert auth_api.post("/api/v1/guides/me/", payload, format="multipart").status_code == 400
 
     # tekshiruvda — katalogda yo'q, status o'zgartirib bo'lmaydi

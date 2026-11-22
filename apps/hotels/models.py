@@ -6,7 +6,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.catalog.models import LAT_VALIDATORS, LNG_VALIDATORS
-from apps.core.files import image_rule
+from apps.core.files import image_rule, media_rule
 from apps.core.models import TimeStampedModel
 from apps.tours.models import CancellationPolicy
 
@@ -120,8 +120,15 @@ class HotelMember(TimeStampedModel):
 
 
 class HotelImage(models.Model):
+    """Galereya: rasmlar (ko'pi bilan 20, har biri ≤ 6 MB) va videolar (ko'pi bilan 4, ≤ 20 MB)."""
+
+    class Kind(models.TextChoices):
+        IMAGE = "image", "Rasm"
+        VIDEO = "video", "Video"
+
     hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField("rasm", upload_to="hotels/", validators=[image_rule])
+    kind = models.CharField("turi", max_length=10, choices=Kind.choices, default=Kind.IMAGE)
+    image = models.FileField("fayl (rasm yoki video)", upload_to="hotels/", validators=[media_rule])
     caption = models.CharField("izoh", max_length=200, blank=True)
     is_cover = models.BooleanField("muqova", default=False)
     sort_order = models.PositiveIntegerField("tartib", default=0)
