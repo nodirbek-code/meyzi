@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "@/lib/client";
+import { API_PUBLIC } from "@/lib/config";
 import type { User } from "@/lib/types";
 
 export function UserMenu({ user }: { user: User }) {
@@ -49,8 +50,13 @@ export function UserMenu({ user }: { user: User }) {
         <div className="card absolute right-0 z-50 mt-2 w-56 overflow-hidden py-1.5 text-sm" onClick={() => setOpen(false)}>
           <Link href="/account" className={item}>🗓️ Bronlarim</Link>
           <Link href="/account/profile" className={item}>👤 Profil</Link>
-          {user.role !== "tourist" && (
-            <Link href="/cabinet" className={`${item} font-semibold text-forest-700`}>📊 Boshqaruv paneli</Link>
+          {["agency", "guide", "business"].includes(user.role) && (
+            <Link href="/cabinet" className={`${item} font-semibold text-forest-700`}>📊 Hamkor kabineti</Link>
+          )}
+          {user.is_staff && (
+            <a href={`${API_PUBLIC}/admin/`} target="_blank" rel="noopener noreferrer" className={`${item} font-semibold text-clay-700`}>
+              🛡️ Admin panel ↗
+            </a>
           )}
           <button onClick={logout} className={`${item} w-full border-t border-sand-200 text-clay-500`}>
             ↩ Chiqish

@@ -20,35 +20,11 @@ const STATUS: Record<string, string> = { pending: "Tekshiruvda", approved: "Tasd
 
 export function HotelCabinet() {
   const hotel = useData<Hotel>("/hotels/me");
-  const images = useData<Img[]>("/cabinet/hotel/images");
   const act = useAction();
   const [form, setForm] = useState<Partial<Hotel> | null>(null);
   const [phone, setPhone] = useState<VerifiedPhone | null>(null);
   const h = hotel.data;
   const f = { ...h, ...form } as Hotel;
-
-  const [uploadError, setUploadError] = useState("");
-  async function upload(files: FileList | null) {
-    if (!files?.length) return;
-    const list = Array.from(files);
-    const err = galleryError(list, images.data ?? []);
-    setUploadError(err ?? "");
-    if (err) return;
-    await act.run(async () => {
-      let hasCover = !!images.data?.some((i) => i.is_cover);
-      for (const file of list) {
-        const fd = new FormData();
-        fd.append("image", file);
-        if (!hasCover && mediaKind(file) === "image") {
-          fd.append("is_cover", "true"); // muqova — faqat rasm
-          hasCover = true;
-        }
-        const res = await fetch("/api/proxy/cabinet/hotel/images", { method: "POST", body: fd });
-        if (!res.ok) throw new ClientApiError(res.status, await res.json().catch(() => ({ detail: "Yuklashda xato" })));
-      }
-      images.reload();
-    });
-  }
 
   if (!h) return hotel.error ? <ErrorText text={hotel.error} /> : <Loading />;
   const ph = phone ?? { phone: h.phone, token: "" };
@@ -83,29 +59,6 @@ export function HotelCabinet() {
           <label className="sm:col-span-2"><span className="label">Tavsif</span><textarea className="input min-h-24" value={f.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
           <div><button className="btn-primary" disabled={act.busy || (!form && !phoneChanged) || !phoneOk}>Saqlash</button></div>
         </form>
-      </Panel>
-      <Panel title="Rasm va video" action={<label className="btn-ghost cursor-pointer px-3 py-1.5 text-xs">{act.busy ? "Yuklanmoqda…" : "+ Yuklash"}<input type="file" multiple accept={MEDIA_ACCEPT} className="hidden" onChange={(e) => { upload(e.target.files); e.target.value = ""; }} /></label>}>
-        <p className="mb-3 text-xs text-ink-mute">
-          {MEDIA_HINT} Hozir: {(images.data ?? []).filter((i) => i.kind !== "video").length}/{MAX_IMAGES} rasm, {(images.data ?? []).filter((i) => i.kind === "video").length}/{MAX_VIDEOS} video.
-        </p>
-        <ErrorText text={uploadError} />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {images.data?.map((i) => (
-            <div key={i.id} className={`relative overflow-hidden rounded-xl ${i.is_cover ? "ring-2 ring-sun-500" : ""}`}>
-              {i.kind === "video" ? (
-                <video src={i.image} className="aspect-square w-full object-cover" muted playsInline controls preload="metadata" />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={i.image} alt="" className="aspect-square w-full object-cover" />
-              )}
-              <button className="absolute right-1 top-1 rounded-full bg-white/90 px-2 text-xs text-clay-700" onClick={() => act.run(async () => { await api.del(`/cabinet/hotel/images/${i.id}`); images.reload(); })}>✕</button>
-            </div>
-          ))}
-          {images.data && !images.data.length && <p className="col-span-full text-sm text-ink-mute">Rasm yo&apos;q — mehmonlar rasmsiz mehmonxonani kam tanlaydi.</p>}
-        </div>
-      </Panel>
-      <Panel title="Sharhlar">
-        <ReviewsReply listPath="/cabinet/hotel/reviews?page_size=100" replyPath={(id) => `/cabinet/hotel/reviews/${id}/reply`} replyField="hotel_reply" />
       </Panel>
     </div>
   );
@@ -199,4 +152,64 @@ export function HotelBookings() {
       ))}
     </div>
   );
+}
+
+
+/** Mehmonxona galereyasi: 20 tagacha rasm va 4 tagacha video. Har o'zgarish — qayta tekshiruvga. */
+export function HotelMedia() {
+  const images = useData<Img[]>("/cabinet/hotel/images");
+  const act = useAction();
+  const [uploadError, setUploadError] = useState("");
+  async function upload(files: FileList | null) {
+    if (!files?.length) return;
+    const list = Array.from(files);
+    const err = galleryError(list, images.data ?? []);
+    setUploadError(err ?? "");
+    if (err) return;
+    await act.run(async () => {
+      let hasCover = !!images.data?.some((i) => i.is_cover);
+      for (const file of list) {
+        const fd = new FormData();
+        fd.append("image", file);
+        if (!hasCover && mediaKind(file) === "image") {
+          fd.append("is_cover", "true"); // muqova — faqat rasm
+          hasCover = true;
+        }
+        const res = await fetch("/api/proxy/cabinet/hotel/images", { method: "POST", body: fd });
+        if (!res.ok) throw new ClientApiError(res.status, await res.json().catch(() => ({ detail: "Yuklashda xato" })));
+      }
+      images.reload();
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <ErrorText text={act.error} />
+      <Panel title="Rasm va video" action={<label className="btn-ghost cursor-pointer px-3 py-1.5 text-xs">{act.busy ? "Yuklanmoqda…" : "+ Yuklash"}<input type="file" multiple accept={MEDIA_ACCEPT} className="hidden" onChange={(e) => { upload(e.target.files); e.target.value = ""; }} /></label>}>
+        <p className="mb-3 text-xs text-ink-mute">
+          {MEDIA_HINT} Hozir: {(images.data ?? []).filter((i) => i.kind !== "video").length}/{MAX_IMAGES} rasm, {(images.data ?? []).filter((i) => i.kind === "video").length}/{MAX_VIDEOS} video.
+        </p>
+        <ErrorText text={uploadError} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {images.data?.map((i) => (
+            <div key={i.id} className={`relative overflow-hidden rounded-xl ${i.is_cover ? "ring-2 ring-sun-500" : ""}`}>
+              {i.kind === "video" ? (
+                <video src={i.image} className="aspect-square w-full object-cover" muted playsInline controls preload="metadata" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={i.image} alt="" className="aspect-square w-full object-cover" />
+              )}
+              <button className="absolute right-1 top-1 rounded-full bg-white/90 px-2 text-xs text-clay-700" onClick={() => act.run(async () => { await api.del(`/cabinet/hotel/images/${i.id}`); images.reload(); })}>✕</button>
+            </div>
+          ))}
+          {images.data && !images.data.length && <p className="col-span-full text-sm text-ink-mute">Rasm yo&apos;q — mehmonlar rasmsiz mehmonxonani kam tanlaydi.</p>}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+/** Mehmonlar sharhlari va javob (tekshiruvdagilari ham ko'rinadi — saytga admin tasdiqlagach chiqadi). */
+export function HotelReviews() {
+  return <ReviewsReply listPath="/cabinet/hotel/reviews?page_size=100" replyPath={(id) => `/cabinet/hotel/reviews/${id}/reply`} replyField="hotel_reply" />;
 }

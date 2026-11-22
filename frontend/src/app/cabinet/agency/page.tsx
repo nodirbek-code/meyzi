@@ -1,11 +1,7 @@
-import { notFound } from "next/navigation";
-
 import { AgencyHome } from "@/components/cabinet/AgencyHome";
-import { getRoles } from "@/lib/roles";
-import { requireUser } from "@/lib/session";
+import { requireRole } from "@/lib/roles";
 
-export default async function AgencyCabinetPage() {
-  await requireUser("/cabinet/agency");
-  if (!(await getRoles()).agency) notFound();
+export default async function Page() {
+  await requireRole("agency", "/cabinet/agency");
   return <AgencyHome />;
 }

@@ -222,3 +222,32 @@ def test_dashboard_requires_staff(client, user):
     assert client.get("/admin/").status_code == 302  # login sahifasiga
     client.force_login(user)
     assert client.get("/admin/").status_code == 302  # oddiy foydalanuvchi kira olmaydi
+
+
+# ---------- Hamkor kabineti ----------
+
+
+def test_guide_sees_own_reviews_and_replies(guide_api, guide, user, samarqand):  # noqa: F811
+    from apps.guides.models import GuideBooking, GuideReview
+
+    from .test_guides import confirmed
+
+    b = confirmed(user, guide, samarqand)
+    GuideBooking.objects.filter(pk=b.pk).update(status="completed")
+    r = GuideReview.objects.create(booking=b, user=user, guide=guide, rating=5, text="Zo'r")
+    rows = guide_api.get("/api/v1/cabinet/guide/reviews/").data["results"]
+    assert [x["id"] for x in rows] == [r.pk]  # tekshiruvdagisi ham ko'rinadi
+    res = guide_api.post(f"/api/v1/cabinet/guide/reviews/{r.pk}/reply/", {"text": "Rahmat!"}, format="json")
+    assert res.status_code == 200 and res.data["guide_reply"] == "Rahmat!"
+
+
+def test_regular_user_has_no_cabinet_access(auth_api):
+    for path in ("/api/v1/cabinet/agency/", "/api/v1/cabinet/guide/reviews/", "/api/v1/cabinet/hotel/rooms/"):
+        assert auth_api.get(path).status_code in (403, 404), path
+
+
+def test_me_shows_is_staff(auth_api, admin_user):
+    assert auth_api.get("/api/v1/auth/me/").data["is_staff"] is False
+    c = APIClient()
+    c.force_authenticate(admin_user)
+    assert c.get("/api/v1/auth/me/").data["is_staff"] is True

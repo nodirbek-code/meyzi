@@ -1,7 +1,7 @@
 import { AgencyBookings } from "@/components/cabinet/AgencyBookings";
-import { requireUser } from "@/lib/session";
+import { requireRole } from "@/lib/roles";
 
 export default async function Page() {
-  await requireUser("/cabinet/agency/bookings");
+  await requireRole("agency", "/cabinet/agency/bookings");
   return <AgencyBookings />;
 }

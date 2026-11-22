@@ -26,9 +26,11 @@ class UserSerializer(serializers.ModelSerializer):
             "country",
             "avatar",
             "date_joined",
+            "is_staff",
         ]
         # email/telefon — faqat tasdiqlash kodi orqali o'zgaradi
         read_only_fields = [
+            "is_staff",
             "id",
             "email",
             "email_verified",

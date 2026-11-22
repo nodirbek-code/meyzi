@@ -357,3 +357,24 @@ class CabinetMeetingPointViewSet(viewsets.ModelViewSet):
             point.save(update_fields=["is_active", "updated_at"])
         else:
             point.delete()
+
+
+class CabinetGuideReviewViewSet(viewsets.ReadOnlyModelViewSet):
+    """Gid o'z sharhlarini ko'radi (tekshiruvdagilari ham) va javob yozadi."""
+
+    serializer_class = GuideReviewSerializer
+    permission_classes = [_HasGuideProfile]
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return GuideReview.objects.none()
+        return GuideReview.objects.filter(guide=self.request.guide).select_related("user")
+
+    @extend_schema(request=GuideReasonSerializer, responses=GuideReviewSerializer)
+    @action(detail=True, methods=["post"])
+    def reply(self, request, pk=None):
+        text = str(request.data.get("text", ""))[:2000]
+        review = self.get_object()
+        review.guide_reply = text
+        review.save(update_fields=["guide_reply", "updated_at"])
+        return Response(self.get_serializer(review).data)

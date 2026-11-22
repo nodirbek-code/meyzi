@@ -43,3 +43,13 @@ export function ReviewsReply({ listPath, replyPath, replyField }: { listPath: st
     </div>
   );
 }
+
+/** Agentlik turlari sharhlari */
+export function AgencyReviews() {
+  return <ReviewsReply listPath="/cabinet/reviews?page_size=100" replyPath={(id) => `/cabinet/reviews/${id}/reply`} replyField="agency_reply" />;
+}
+
+/** Gid sharhlari */
+export function GuideReviews() {
+  return <ReviewsReply listPath="/cabinet/guide/reviews?page_size=100" replyPath={(id) => `/cabinet/guide/reviews/${id}/reply`} replyField="guide_reply" />;
+}

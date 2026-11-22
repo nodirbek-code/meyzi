@@ -1,7 +1,7 @@
 import { HotelRooms } from "@/components/cabinet/HotelCabinet";
-import { requireUser } from "@/lib/session";
+import { requireRole } from "@/lib/roles";
 
 export default async function Page() {
-  await requireUser("/cabinet/hotel/rooms");
+  await requireRole("hotel", "/cabinet/hotel/rooms");
   return <HotelRooms />;
 }

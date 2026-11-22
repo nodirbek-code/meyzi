@@ -9,7 +9,7 @@ import { DOC_ACCEPT, fileError, IMAGE_ACCEPT, IMAGE_MAX_MB } from "@/lib/uploads
 
 import { phoneReady, VerifiedPhoneField, type VerifiedPhone } from "./PhoneField";
 
-function Checks({ options, value, onChange }: { options: Record<string, string>; value: string[]; onChange: (v: string[]) => void }) {
+export function Checks({ options, value, onChange }: { options: Record<string, string>; value: string[]; onChange: (v: string[]) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
       {Object.entries(options).map(([k, l]) => {
@@ -41,12 +41,12 @@ function Done({ text }: { text: string }) {
   );
 }
 
-function Req() {
+export function Req() {
   return <span className="text-clay-500"> *</span>;
 }
 
 /** Fayl tanlash: format va hajm darhol tekshiriladi (xato bo'lsa fayl qabul qilinmaydi). */
-function FilePick({
+export function FilePick({
   label,
   accept,
   kind,
@@ -54,7 +54,9 @@ function FilePick({
   file,
   onChange,
   preview,
+  optional,
 }: {
+  optional?: boolean;
   label: string;
   accept: string;
   kind: "image" | "document";
@@ -75,7 +77,7 @@ function FilePick({
     <label className="block">
       <span className="label">
         {label}
-        <Req />
+        {!optional && <Req />}
       </span>
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -84,7 +86,7 @@ function FilePick({
           className="input py-2"
           type="file"
           accept={accept}
-          required={!file}
+          required={!optional && !file}
           onChange={(e) => {
             const f = e.target.files?.[0] ?? null;
             const err = f ? fileError(f, kind) : null;

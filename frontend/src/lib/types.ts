@@ -11,6 +11,8 @@ export type User = {
   phone_verified: boolean;
   role: "tourist" | "agency" | "guide" | "business" | "admin";
   language: "uz" | "ru" | "en";
+  /** Admin (Django admin paneliga kira oladi) */
+  is_staff?: boolean;
 };
 
 export type DestinationShort = { id: number; name: string; slug: string };

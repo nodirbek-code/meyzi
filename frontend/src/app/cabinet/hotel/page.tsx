@@ -1,11 +1,7 @@
-import { notFound } from "next/navigation";
-
 import { HotelCabinet } from "@/components/cabinet/HotelCabinet";
-import { getRoles } from "@/lib/roles";
-import { requireUser } from "@/lib/session";
+import { requireRole } from "@/lib/roles";
 
 export default async function Page() {
-  await requireUser("/cabinet/hotel");
-  if (!(await getRoles()).hotel) notFound();
+  await requireRole("hotel", "/cabinet/hotel");
   return <HotelCabinet />;
 }

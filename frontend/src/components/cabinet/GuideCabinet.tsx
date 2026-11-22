@@ -35,13 +35,11 @@ const DURATION: Record<string, string> = { half_day: "Yarim kun", full_day: "To'
 export function GuideCabinet() {
   const profile = useData<Profile>("/guides/me");
   const bookings = useData<Paginated<Row>>("/cabinet/guide/bookings?page_size=100");
-  const busy = useData<Busy[]>("/cabinet/guide/unavailable-dates");
   const act = useAction();
   const [reason, setReason] = useState<Record<string, string>>({});
-  const [newBusy, setNewBusy] = useState("");
   const p = profile.data;
   const approved = p?.status === "approved";
-  const doAct = (path: string, body?: unknown) => act.run(async () => { await api.post(path, body); bookings.reload(); busy.reload(); });
+  const doAct = (path: string, body?: unknown) => act.run(async () => { await api.post(path, body); bookings.reload(); });
 
   return (
     <div className="space-y-6">
@@ -114,7 +112,19 @@ export function GuideCabinet() {
           })}
         </div>
       </Panel>
-      {p && <MeetingPoints cities={p.destinations} />}
+    </div>
+  );
+}
+
+
+/** Gidning ishlamaydigan kunlari (turistlar bu kunlarga bron qila olmaydi). */
+export function GuideSchedule() {
+  const busy = useData<Busy[]>("/cabinet/guide/unavailable-dates");
+  const act = useAction();
+  const [newBusy, setNewBusy] = useState("");
+  return (
+    <div className="space-y-4">
+      <ErrorText text={act.error || busy.error} />
       <Panel title="Ishlamaydigan kunlarim">
         <form className="mb-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); act.run(async () => { await api.post("/cabinet/guide/unavailable-dates", { date: newBusy }); setNewBusy(""); busy.reload(); }); }}>
           <input className="input w-auto" type="date" required value={newBusy} onChange={(e) => setNewBusy(e.target.value)} />
@@ -130,6 +140,21 @@ export function GuideCabinet() {
           {busy.data && !busy.data.length && <span className="text-sm text-ink-mute">Belgilanmagan.</span>}
         </div>
       </Panel>
+    </div>
+  );
+}
+
+/** Uchrashuv joylari — gid ishlaydigan shaharlar bo'yicha. */
+export function GuideMeetingPoints() {
+  const profile = useData<Profile>("/guides/me");
+  if (!profile.data) return profile.error ? <ErrorText text={profile.error} /> : <Loading />;
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-ink-mute">
+        Turist bron qilganda shu joylardan birini tanlaydi. Yangi joy qo&apos;shsangiz yoki o&apos;zgartirsangiz — profil qayta
+        tekshiruvga yuboriladi.
+      </p>
+      <MeetingPoints cities={profile.data.destinations} />
     </div>
   );
 }
