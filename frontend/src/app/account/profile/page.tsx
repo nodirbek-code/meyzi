@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AttachEmail, ProfileForm } from "@/components/ProfileForms";
+import { AddPhoneViaTelegram, AttachEmail, ProfileForm } from "@/components/ProfileForms";
 import { Badge } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 
@@ -27,7 +27,10 @@ export default async function ProfilePage() {
           <h2 className="text-lg font-bold">Telefon</h2>
           {user.phone && <Badge tone={user.phone_verified ? "green" : "gold"}>{user.phone_verified ? "Tasdiqlangan" : "Tasdiqlanmagan"}</Badge>}
         </div>
-        <p className="text-sm text-ink-soft">{user.phone || "Telefon ulanmagan."}</p>
+        <p className="text-sm text-ink-soft">
+          {user.phone || "Telefon raqam ulanmagan. Qo'shsangiz, bron va to'lov xabarlari Telegram'ga keladi va saytga raqam bilan ham kira olasiz."}
+        </p>
+        {!user.phone && <AddPhoneViaTelegram />}
       </section>
     </div>
   );

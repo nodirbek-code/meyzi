@@ -321,6 +321,36 @@ class TelegramLoginView(_CodeView):
         return Response(_tokens(user, request, is_new=created))
 
 
+class TelegramPhoneLinkView(APIView):
+    """Kirgan foydalanuvchi (masalan Google orqali) uchun "Telefon raqam qo'shish" bot havolasi.
+
+    Bot havoladagi bir martalik token orqali foydalanuvchini taniydi va faqat telefon raqamini so'raydi
+    (Telegram kontakti — raqam shu Telegram akkauntiniki ekanini Telegram kafolatlaydi).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth"
+
+    @extend_schema(request=None, responses={200: dict})
+    def post(self, request):
+        if not (settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_BOT_USERNAME):
+            return Response(
+                {"detail": "Telegram bot hozircha sozlanmagan."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        if request.user.phone:
+            return Response(
+                {"detail": "Akkauntingizda telefon raqam allaqachon bor."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        token = telegram_bot.issue_phone_link(request.user)
+        return Response(
+            {
+                "url": telegram_bot.phone_link_url(token),
+                "expires_in": settings.MEYZI_TELEGRAM_LOGIN_TTL_MINUTES * 60,
+            }
+        )
+
+
 @extend_schema(exclude=True)
 class TelegramWebhookView(APIView):
     """Telegram Bot API webhook (prod). Telegram `X-Telegram-Bot-Api-Secret-Token` sarlavhasini yuboradi —

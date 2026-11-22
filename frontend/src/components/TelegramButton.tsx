@@ -6,7 +6,7 @@ import { api } from "@/lib/client";
 
 type TelegramLogin = { enabled: boolean; bot_username: string | null; url: string | null };
 
-function TelegramLogo() {
+export function TelegramLogo() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
       <circle cx="12" cy="12" r="12" fill="#229ED9" />

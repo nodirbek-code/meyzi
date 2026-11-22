@@ -25,5 +25,6 @@ urlpatterns = [
     path("phone-check/verify/", views.PhoneCheckVerifyView.as_view(), name="auth-phone-check-verify"),
     path("google/", views.GoogleLoginView.as_view(), name="auth-google"),
     path("telegram/login/", views.TelegramLoginView.as_view(), name="auth-telegram-login"),
+    path("me/phone/telegram-link/", views.TelegramPhoneLinkView.as_view(), name="auth-me-phone-tg-link"),
     path("telegram/webhook/", views.TelegramWebhookView.as_view(), name="auth-telegram-webhook"),
 ]

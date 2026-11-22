@@ -372,3 +372,106 @@ def test_attach_email_when_already_verified(tg_user_api):
 
 def test_attach_email_requires_login(api):
     assert api.post(EMAIL_REQ, {"email": "a@example.com"}, format="json").status_code == 401
+
+
+# ---------- Google orqali kirganlarga "Telefon raqam qo'shish" (bot faqat raqam so'raydi) ----------
+
+PHONE_LINK = "/api/v1/auth/me/phone/telegram-link/"
+
+
+@pytest.fixture
+def google_user_api(db):
+    from rest_framework.test import APIClient
+
+    u = User.objects.create_user(email="ali@gmail.com", first_name="Ali", email_verified=True)
+    client = APIClient()
+    client.force_authenticate(u)
+    return u, client
+
+
+def _phone_link_token(client) -> str:
+    r = client.post(PHONE_LINK)
+    assert r.status_code == 200, r.data
+    url = r.data["url"]
+    assert url.startswith("https://t.me/meyzi_test_bot?start=phone_")
+    return url.split("start=", 1)[1]
+
+
+def test_google_user_adds_phone_via_bot(bot, google_user_api):
+    user, client = google_user_api
+    start_arg = _phone_link_token(client)
+    assert len(start_arg) <= 64  # Telegram start parametri chegarasi
+
+    telegram_bot.handle_update(msg(f"/start {start_arg}"))
+    assert "ali@gmail.com" in bot[-1]["text"]
+    assert bot[-1]["reply_markup"]["keyboard"][0][0]["request_contact"] is True
+    session = TelegramBotSession.objects.get(telegram_id=TG_ID)
+    assert session.step == TelegramBotSession.Step.LINK_PHONE and session.link_user == user
+
+    telegram_bot.handle_update(msg(contact=contact("+998 90 765 43 21")))
+    user.refresh_from_db()
+    assert user.phone == "+998907654321" and user.phone_verified and user.telegram_id == TG_ID
+    assert user.email == "ali@gmail.com" and user.first_name == "Ali"  # boshqa ma'lumotlar o'zgarmaydi
+    assert not TelegramBotSession.objects.filter(telegram_id=TG_ID).exists()
+    assert bot[-1]["reply_markup"]["inline_keyboard"][0][0]["url"] == "https://meyzi.uz/account/profile"
+    # ism-familiya yoki parol so'ralmadi
+    assert not any("parol o'rnating" in (p.get("text") or "") for p in bot)
+
+
+def test_phone_link_is_single_use(bot, google_user_api):
+    _, client = google_user_api
+    start_arg = _phone_link_token(client)
+    telegram_bot.handle_update(msg(f"/start {start_arg}"))
+    telegram_bot.handle_update(msg(f"/start {start_arg}", tg_id=TG_ID + 1))
+    assert "yaroqsiz" in bot[-1]["text"]
+
+
+def test_phone_link_token_case_sensitive_and_expires(bot, google_user_api):
+    from apps.accounts.models import TelegramPhoneLink
+
+    _, client = google_user_api
+    start_arg = _phone_link_token(client)
+    telegram_bot.handle_update(msg("/start phone_" + start_arg.removeprefix("phone_").swapcase()))
+    assert "yaroqsiz" in bot[-1]["text"]
+    TelegramPhoneLink.objects.update(expires_at=timezone.now() - timedelta(seconds=1))
+    telegram_bot.handle_update(msg(f"/start {start_arg}"))
+    assert "yaroqsiz" in bot[-1]["text"]
+
+
+def test_phone_link_rejects_someone_elses_contact(bot, google_user_api):
+    user, client = google_user_api
+    telegram_bot.handle_update(msg(f"/start {_phone_link_token(client)}"))
+    telegram_bot.handle_update(msg(contact=contact(user_id=999)))
+    user.refresh_from_db()
+    assert user.phone is None or user.phone == ""
+    assert TelegramBotSession.objects.get(telegram_id=TG_ID).step == TelegramBotSession.Step.LINK_PHONE
+
+
+def test_phone_link_number_taken_by_other_account(bot, google_user_api):
+    User.objects.create_user(email=None, phone="+998901234567", first_name="Vali")
+    user, client = google_user_api
+    telegram_bot.handle_update(msg(f"/start {_phone_link_token(client)}"))
+    telegram_bot.handle_update(msg(contact=contact("+998901234567")))
+    user.refresh_from_db()
+    assert not user.phone
+    assert "boshqa" in bot[-1]["text"]
+
+
+def test_phone_link_telegram_linked_to_other_account(bot, google_user_api):
+    User.objects.create_user(email=None, phone="+998901111111", first_name="Vali", telegram_id=TG_ID)
+    _, client = google_user_api
+    telegram_bot.handle_update(msg(f"/start {_phone_link_token(client)}"))
+    assert "boshqa" in bot[-1]["text"]
+    assert not TelegramBotSession.objects.filter(telegram_id=TG_ID).exists()
+
+
+def test_phone_link_api_rules(bot, api, google_user_api, settings):
+    assert api.post(PHONE_LINK).status_code == 401
+    user, client = google_user_api
+    user.phone = "+998901234567"
+    user.save()
+    assert client.post(PHONE_LINK).status_code == 400
+    settings.TELEGRAM_BOT_TOKEN = ""
+    user.phone = None
+    user.save()
+    assert client.post(PHONE_LINK).status_code == 503

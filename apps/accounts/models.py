@@ -133,6 +133,7 @@ class TelegramBotSession(models.Model):
         NAME = "name", "Ism-familiyani kutmoqda"
         PASSWORD = "password", "Parolni kutmoqda"
         PASSWORD2 = "password2", "Parolni qayta kiritishni kutmoqda"
+        LINK_PHONE = "link_phone", "Saytdagi akkauntga raqam qo'shish: raqamni kutmoqda"
 
     telegram_id = models.BigIntegerField("Telegram ID", primary_key=True)
     step = models.CharField("qadam", max_length=10, choices=Step.choices)
@@ -140,6 +141,10 @@ class TelegramBotSession(models.Model):
     first_name = models.CharField("ism", max_length=100, blank=True)
     last_name = models.CharField("familiya", max_length=100, blank=True)
     password_hash = models.CharField("parol xeshi", max_length=128, blank=True)
+    # LINK_PHONE qadamida: raqam qaysi sayt akkauntiga yoziladi (masalan Google orqali kirgan foydalanuvchi)
+    link_user = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True, related_name="+", verbose_name="akkaunt"
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -163,6 +168,28 @@ class TelegramLoginLink(models.Model):
     class Meta:
         verbose_name = "Telegram kirish havolasi"
         verbose_name_plural = "Telegram kirish havolalari"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} — {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class TelegramPhoneLink(models.Model):
+    """ "Telefon raqam qo'shish" tugmasi bergan bir martalik bot havolasi: `t.me/<bot>?start=phone_<token>`.
+
+    Bot shu token orqali foydalanuvchini taniydi va faqat telefon raqamini so'raydi.
+    Bazada faqat tokenning SHA-256 xeshi saqlanadi.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="telegram_phone_links")
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Telegram raqam qo'shish havolasi"
+        verbose_name_plural = "Telegram raqam qo'shish havolalari"
         ordering = ["-created_at"]
 
     def __str__(self):

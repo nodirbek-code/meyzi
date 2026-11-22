@@ -42,7 +42,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.notifications import telegram
 
-from .models import TelegramBotSession, TelegramLoginLink, User
+from .models import TelegramBotSession, TelegramLoginLink, TelegramPhoneLink, User
 from .phones import normalize_phone
 
 log = logging.getLogger("meyzi.telegram_bot")
@@ -103,6 +103,32 @@ def exchange_login_link(token: str) -> tuple[User, bool]:
     if not link.user.is_active:
         raise ValidationError({"detail": "Akkaunt bloklangan."})
     return link.user, link.is_new_user
+
+
+# ---------- "Telefon raqam qo'shish" havolalari (masalan Google orqali kirganlar uchun) ----------
+
+PHONE_LINK_PREFIX = "phone_"
+PHONE_LINK_INVALID = (
+    "Havola yaroqsiz yoki muddati o'tgan. "
+    "Saytda <b>Profil → Telefon raqam qo'shish</b> tugmasini qayta bosing."
+)
+
+
+def issue_phone_link(user: User) -> str:
+    """Bot uchun bir martalik token (foydalanuvchining eski ishlatilmagan havolalari bekor bo'ladi)."""
+    now = timezone.now()
+    token = secrets.token_urlsafe(24)  # 32 belgi: A-Z a-z 0-9 _ - (Telegram start parametri uchun yaroqli)
+    TelegramPhoneLink.objects.filter(user=user, used_at__isnull=True).update(used_at=now)
+    TelegramPhoneLink.objects.create(
+        user=user,
+        token_hash=_hash(token),
+        expires_at=now + timedelta(minutes=settings.MEYZI_TELEGRAM_LOGIN_TTL_MINUTES),
+    )
+    return token
+
+
+def phone_link_url(token: str) -> str:
+    return f"https://t.me/{settings.TELEGRAM_BOT_USERNAME}?start={PHONE_LINK_PREFIX}{token}"
 
 
 # ---------- Bot xabarlari ----------
@@ -385,6 +411,116 @@ def _on_contact(chat_id: int, tg_user: dict, contact: dict) -> None:
     _ask_name(chat_id, tg_user)
 
 
+def _on_phone_link_start(chat_id: int, tg_user: dict, token: str) -> None:
+    """ "Telefon raqam qo'shish" havolasi: foydalanuvchini token orqali taniymiz, faqat raqam so'raymiz."""
+    now = timezone.now()
+    with transaction.atomic():
+        link = (
+            TelegramPhoneLink.objects.select_for_update()
+            .select_related("user")
+            .filter(token_hash=_hash(token.strip()), used_at__isnull=True, expires_at__gt=now)
+            .first()
+        )
+        if link is None:
+            _send(chat_id, PHONE_LINK_INVALID, REMOVE_KEYBOARD)
+            return
+        user = link.user
+        link.used_at = now
+        link.save(update_fields=["used_at"])
+    if not user.is_active:
+        _send(chat_id, BLOCKED, REMOVE_KEYBOARD)
+        return
+    if user.phone:
+        _send(chat_id, f"Akkauntingizda raqam allaqachon bor: <b>{_esc(user.phone)}</b>.", REMOVE_KEYBOARD)
+        return
+    if User.objects.filter(telegram_id=tg_user["id"]).exclude(pk=user.pk).exists():
+        _send(
+            chat_id,
+            f"Bu Telegram akkaunt boshqa {settings.BRAND_NAME} akkauntiga ulangan. "
+            "O'sha akkauntga telefon raqam va parol bilan kiring "
+            "yoki boshqa Telegram akkauntdan foydalaning.",
+            REMOVE_KEYBOARD,
+        )
+        return
+    TelegramBotSession.objects.update_or_create(
+        telegram_id=tg_user["id"],
+        defaults={
+            "step": Step.LINK_PHONE,
+            "link_user": user,
+            "phone": "",
+            "first_name": "",
+            "last_name": "",
+            "password_hash": "",
+        },
+    )
+    name = _esc(user.first_name or "do'stim")
+    account = f" (<b>{_esc(user.email)}</b>)" if user.email else ""
+    _send(
+        chat_id,
+        f"Assalomu alaykum, {name}! {settings.BRAND_NAME} akkauntingizga{account} "
+        "telefon raqam qo'shamiz.\n\n"
+        "Pastdagi <b>📱 Telefon raqamni yuborish</b> tugmasini bosing.",
+        CONTACT_KEYBOARD,
+    )
+
+
+def _on_link_phone_contact(chat_id: int, tg_user: dict, session: TelegramBotSession, contact: dict) -> None:
+    if contact.get("user_id") != tg_user["id"]:
+        _send(
+            chat_id,
+            "Iltimos, <b>o'zingizning</b> raqamingizni pastdagi tugma orqali yuboring.",
+            CONTACT_KEYBOARD,
+        )
+        return
+    try:
+        phone = normalize_phone(contact.get("phone_number", ""))
+    except ValidationError:
+        TelegramBotSession.objects.filter(telegram_id=tg_user["id"]).delete()
+        _send(
+            chat_id,
+            "Kechirasiz, hozircha faqat O'zbekiston raqamlari (+998) qabul qilinadi.",
+            REMOVE_KEYBOARD,
+        )
+        return
+    with transaction.atomic():
+        user = User.objects.select_for_update().filter(pk=session.link_user_id).first()
+        TelegramBotSession.objects.filter(telegram_id=tg_user["id"]).delete()
+        if user is None or not user.is_active:
+            _send(chat_id, BLOCKED if user else PHONE_LINK_INVALID, REMOVE_KEYBOARD)
+            return
+        if user.phone:
+            _send(
+                chat_id, f"Akkauntingizda raqam allaqachon bor: <b>{_esc(user.phone)}</b>.", REMOVE_KEYBOARD
+            )
+            return
+        if User.objects.filter(phone=phone).exclude(pk=user.pk).exists():
+            _send(
+                chat_id,
+                f"<b>{_esc(phone)}</b> raqami boshqa {settings.BRAND_NAME} akkauntiga tegishli. "
+                "Saytga shu raqam va parolingiz bilan kiring (parolni unutgan bo'lsangiz — /parol).",
+                REMOVE_KEYBOARD,
+            )
+            return
+        if User.objects.filter(telegram_id=tg_user["id"]).exclude(pk=user.pk).exists():
+            _send(chat_id, "Bu Telegram akkaunt boshqa akkauntga ulangan.", REMOVE_KEYBOARD)
+            return
+        user.phone, user.phone_verified, user.telegram_id = phone, True, tg_user["id"]
+        try:
+            with transaction.atomic():
+                user.save(update_fields=["phone", "phone_verified", "telegram_id"])
+        except IntegrityError:  # parallel so'rov shu raqamni band qilib ulgurdi
+            _send(chat_id, "Bu raqam boshqa akkauntga tegishli.", REMOVE_KEYBOARD)
+            return
+    _send(chat_id, f"✅ Raqam akkauntingizga qo'shildi: <b>{_esc(phone)}</b>", REMOVE_KEYBOARD)
+    _send_with_button(
+        chat_id,
+        "Saytdagi profilingizni yangilang. "
+        "Parol bilan ham kirmoqchi bo'lsangiz — /parol buyrug'ini yuboring.",
+        f"🌐 {settings.BRAND_NAME}: profilga qaytish",
+        f"{settings.MEYZI_FRONTEND_URL}/account/profile",
+    )
+
+
 def _on_name(chat_id: int, session: TelegramBotSession, text: str) -> None:
     parsed = parse_full_name(text)
     if parsed is None:
@@ -459,18 +595,33 @@ def handle_update(update: dict) -> None:
     parts = text.split()
     command = parts[0].split("@")[0].lower() if text.startswith("/") else ""
 
-    if command in {"/start", "/login"}:
-        _on_start(chat_id, tg_user, parts[1].lower() if len(parts) > 1 else "")
+    arg = parts[1] if len(parts) > 1 else ""
+    if command in {"/start", "/login"} and arg.startswith(PHONE_LINK_PREFIX):
+        _on_phone_link_start(
+            chat_id, tg_user, arg[len(PHONE_LINK_PREFIX) :]
+        )  # token katta-kichik harfga sezgir
+    elif command in {"/start", "/login"}:
+        _on_start(chat_id, tg_user, arg.lower())
     elif command in {"/parol", "/password"}:
         _on_reset_password(chat_id, tg_user)
     elif command == "/id":
         _send(chat_id, f"Chat ID: <code>{chat_id}</code>")
     elif message.get("contact"):
-        _on_contact(chat_id, tg_user, message["contact"])
+        session = TelegramBotSession.objects.filter(telegram_id=tg_user["id"]).first()
+        if session is not None and session.step == Step.LINK_PHONE:
+            _on_link_phone_contact(chat_id, tg_user, session, message["contact"])
+        else:
+            _on_contact(chat_id, tg_user, message["contact"])
     else:
         session = TelegramBotSession.objects.filter(telegram_id=tg_user["id"]).first()
         step = session.step if session else None
-        if step == Step.NAME and text and not command:
+        if step == Step.LINK_PHONE:
+            _send(
+                chat_id,
+                "Raqamni pastdagi <b>📱 Telefon raqamni yuborish</b> tugmasi orqali yuboring.",
+                CONTACT_KEYBOARD,
+            )
+        elif step == Step.NAME and text and not command:
             _on_name(chat_id, session, text)
         elif step == Step.PASSWORD and raw_text and not command:
             _on_password(chat_id, session, raw_text, message_id)
