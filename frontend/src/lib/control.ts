@@ -122,3 +122,27 @@ export const SPECIAL_FIELDS = new Set([
   "destination", "destinations", "places", "installment", "meeting_latitude", "meeting_longitude", "is_platform",
   "auto_publish", "is_verified", "is_certified", "published_at", "warnings_count", "no_show_count", "user",
 ]);
+
+// ---------- Boshqarish (CRUD) ----------
+
+export type CrudField = {
+  name: string;
+  label: string;
+  type: "text" | "textarea" | "number" | "checkbox" | "select" | "fk" | "multiselect" | "tags" | "image" | "file" | "date" | "time" | "datetime" | "email" | "url";
+  required: boolean;
+  help: string;
+  options?: [string, string][];
+  extra?: boolean;
+};
+
+export type CrudMeta = { key: string; title: string; group: string; can_create: boolean; can_delete: boolean; hint: string; columns: string[]; count?: number };
+
+export type CrudList = CrudMeta & {
+  schema: CrudField[];
+  results: { id: number; cells: string[]; editable: boolean; moderation_url: string }[];
+  count: number;
+  page: number;
+  pages: number;
+};
+
+export type CrudDetail = CrudMeta & { schema: CrudField[]; id: number; name: string; editable: boolean; data: Record<string, unknown> };

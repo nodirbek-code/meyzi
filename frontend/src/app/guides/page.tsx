@@ -30,9 +30,6 @@ export default async function GuidesPage({ searchParams }: { searchParams: Promi
           <h1 className="text-3xl sm:text-4xl">Shaxsiy gidlar</h1>
           <p className="mt-1 text-ink-soft">Sertifikatlangan mahalliy gidlar — yarim kun, to&apos;liq kun yoki bir necha kunga.</p>
         </div>
-        <Link href="/hamkorlik?turi=gid" className="btn-ghost">
-          Gid bo&apos;lmoqchimisiz? ›
-        </Link>
       </div>
       <SimpleFilters
         fields={[

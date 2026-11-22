@@ -34,9 +34,6 @@ export default async function HotelsPage({ searchParams }: { searchParams: Promi
           <h1 className="text-3xl sm:text-4xl">Qayerda qolasiz?</h1>
           <p className="mt-1 text-ink-soft">Tog&apos; etagidagi mehmon uylaridan shahar mehmonxonalarigacha.</p>
         </div>
-        <Link href="/hamkorlik?turi=mehmonxona" className="btn-ghost">
-          Mehmonxonangizni qo&apos;shing ›
-        </Link>
       </div>
       <SimpleFilters
         fields={[

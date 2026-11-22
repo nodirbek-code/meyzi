@@ -10,6 +10,7 @@ export function ControlNav({ queue }: { queue: QueueCard[] }) {
   const path = usePathname();
   const links = [
     { href: "/control", label: "Dashboard", icon: "📊", count: 0, exact: true },
+    { href: "/control/manage", label: "Boshqarish", icon: "⚙️", count: 0, exact: false },
     ...queue.map((q) => ({ href: `/control/queue/${q.kind}`, label: q.title, icon: q.icon, count: q.count, exact: false })),
   ];
   const active = (href: string, exact: boolean) => (exact ? path === href : path === href || path.startsWith(href + "/"));
@@ -37,9 +38,9 @@ export function ControlNav({ queue }: { queue: QueueCard[] }) {
       <nav className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:hidden">{links.map((l) => item(l, true))}</nav>
       <aside className="hidden lg:block">
         <nav className="card sticky top-24 space-y-1 p-3">
-          {links.slice(0, 1).map((l) => item(l))}
+          {links.slice(0, 2).map((l) => item(l))}
           <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-mute">Tekshiruv</p>
-          {links.slice(1).map((l) => item(l))}
+          {links.slice(2).map((l) => item(l))}
           <div className="mt-3 border-t border-sand-200 pt-3">
             <a href="/control/admin" target="_blank" className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-sand-100">
               <span>🛠️</span>

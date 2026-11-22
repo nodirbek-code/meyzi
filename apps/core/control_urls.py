@@ -1,8 +1,11 @@
 from django.urls import path
 
-from . import control
+from . import control, control_crud
 
 urlpatterns = [
+    path("manage/", control_crud.CrudIndexView.as_view(), name="control-manage"),
+    path("manage/<str:res>/", control_crud.CrudListView.as_view(), name="control-manage-list"),
+    path("manage/<str:res>/<int:pk>/", control_crud.CrudDetailView.as_view(), name="control-manage-detail"),
     path("login/", control.ControlLoginView.as_view(), name="control-login"),
     path("dashboard/", control.ControlDashboardView.as_view(), name="control-dashboard"),
     path(
