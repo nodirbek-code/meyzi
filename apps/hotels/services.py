@@ -141,7 +141,7 @@ def create_booking(
     pending = HotelBooking.objects.filter(
         user=user, status=HotelBooking.Status.PENDING_PAYMENT, expires_at__gt=now
     ).count()
-    if pending >= settings.LAZURI_MAX_PENDING_BOOKINGS:
+    if pending >= settings.MEYZI_MAX_PENDING_BOOKINGS:
         raise ValidationError({"detail": "To'lanmagan bronlaringiz juda ko'p."})
 
     total = room_type.price_per_night_uzs * nights * rooms
@@ -166,7 +166,7 @@ def create_booking(
         contact_phone=contact_phone,
         contact_email=contact_email,
         note=note,
-        expires_at=now + timedelta(minutes=settings.LAZURI_BOOKING_HOLD_MINUTES),
+        expires_at=now + timedelta(minutes=settings.MEYZI_BOOKING_HOLD_MINUTES),
     )
     notify.hotel_booking_created(booking)
     return booking

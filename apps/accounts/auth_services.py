@@ -20,7 +20,7 @@ from .models import OneTimeCode, User
 from .phones import make_phone_token
 
 P = OneTimeCode.Purpose
-log = logging.getLogger("lazuri.auth")
+log = logging.getLogger("meyzi.auth")
 
 
 class CodeNotDelivered(APIException):
@@ -51,7 +51,7 @@ def _send_phone_code(purpose: str, target: str, phone: str) -> None:
     """Kod yaratadi va Telegram orqali `phone` ga yuboradi. Yuborilmasa — kod bekor qilinadi (503)."""
     code = otp.issue(purpose, target)
     try:
-        telegram_codes.send_code(phone, code, ttl_seconds=settings.LAZURI_OTP_TTL_MINUTES * 60)
+        telegram_codes.send_code(phone, code, ttl_seconds=settings.MEYZI_OTP_TTL_MINUTES * 60)
     except telegram_codes.CodeDeliveryError as exc:
         log.warning("Telegram kod yuborilmadi (%s): %s", phone, exc)
         # yetkazilmagan kod "qayta yuborish — 60 s" cheklovini yoqmasin

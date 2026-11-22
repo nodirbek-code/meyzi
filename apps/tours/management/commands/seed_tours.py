@@ -116,8 +116,8 @@ class Command(BaseCommand):
                 defaults={"name": name, "region": region, "short_description": desc, "sort_order": 10},
             )
 
-        lazuri, _ = Agency.objects.update_or_create(
-            slug="lazuri",
+        meyzi, _ = Agency.objects.update_or_create(
+            slug="meyzi",
             defaults={
                 "name": settings.BRAND_NAME,
                 "description": f"{settings.BRAND_NAME} platformasining o'z turlari.",
@@ -135,7 +135,7 @@ class Command(BaseCommand):
             tour, is_new = Tour.objects.update_or_create(
                 slug=slug,
                 defaults={
-                    "agency": lazuri,
+                    "agency": meyzi,
                     "destination": Destination.objects.get(slug=dest),
                     "title": title,
                     "duration_days": days,

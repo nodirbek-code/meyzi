@@ -11,7 +11,7 @@ import logging
 
 from django.conf import settings
 
-log = logging.getLogger("lazuri.sms")
+log = logging.getLogger("meyzi.sms")
 
 outbox: list[tuple[str, str]] = []
 

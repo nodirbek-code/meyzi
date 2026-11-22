@@ -1,18 +1,18 @@
 ---
-name: lazuri-verify
-description: LAZURI backend'ini tekshirish — testlar, ruff, migratsiyalar, deploy check va serverni ishga tushirish. Kod o'zgargandan keyin, "ishlayaptimi", "test qil", "ishga tushir" deyilganda yoki ish tugaganini e'lon qilishdan oldin ishlating.
+name: meyzi-verify
+description: MEYZI backend'ini tekshirish — testlar, ruff, migratsiyalar, deploy check va serverni ishga tushirish. Kod o'zgargandan keyin, "ishlayaptimi", "test qil", "ishga tushir" deyilganda yoki ish tugaganini e'lon qilishdan oldin ishlating.
 ---
 
-# LAZURI: tekshirish va ishga tushirish
+# MEYZI: tekshirish va ishga tushirish
 
-Loyiha: `/mnt/d/lazuri`. Natijani foydalanuvchiga o'zbekcha, qisqa ayting; test yiqilsa — chiqishini ko'rsating.
+Loyiha: `/mnt/d/meyzi`. Natijani foydalanuvchiga o'zbekcha, qisqa ayting; test yiqilsa — chiqishini ko'rsating.
 
 ## Asosiy usul — Docker + Postgres (2026-11-20 dan)
 
 Foydalanuvchi Docker Desktop'ni yoqqan; WSL'dan `docker` ishlaydi. **Doim Docker ichidagi Postgres'dan foydalaning.**
 
 ```bash
-cd /mnt/d/lazuri
+cd /mnt/d/meyzi
 docker compose ps                       # db (healthy), web, scheduler — Up bo'lishi kerak
 docker compose up -d                    # o'chiq bo'lsa
 ```
@@ -24,9 +24,9 @@ docker compose up -d                    # o'chiq bo'lsa
 ## Tekshiruvlar (shu tartibda)
 
 ```bash
-cd /mnt/d/lazuri
+cd /mnt/d/meyzi
 docker compose exec -T web python manage.py makemigrations <app>        # model o'zgargan bo'lsa; faylni o'qing
-docker compose exec -T -e TEST_DATABASE_URL=postgres://lazuri:lazuri@db:5432/lazuri web sh -c '
+docker compose exec -T -e TEST_DATABASE_URL=postgres://meyzi:meyzi@db:5432/meyzi web sh -c '
   pytest 2>&1 | tail -3
   ruff format . | tail -1
   ruff check --fix .
@@ -48,12 +48,12 @@ docker compose exec -T -e DJANGO_SECRET_KEY=$(python3 -c "import secrets;print(s
 
 ## Zaxira: Docker'siz (scratchpad venv + SQLite)
 
-Docker ishlamasa: venv'ni loyiha ichida emas, scratchpad'da yarating (`D:\lazuri\.venv` Windows venv bilan to'qnashadi):
+Docker ishlamasa: venv'ni loyiha ichida emas, scratchpad'da yarating (`D:\meyzi\.venv` Windows venv bilan to'qnashadi):
 
 ```bash
 V=<scratchpad>/venv
-[ -x $V/bin/python ] || { python3 -m venv $V && $V/bin/pip install -q -r /mnt/d/lazuri/requirements/dev.txt; }
-cd /mnt/d/lazuri && $V/bin/pytest && $V/bin/ruff check .
+[ -x $V/bin/python ] || { python3 -m venv $V && $V/bin/pip install -q -r /mnt/d/meyzi/requirements/dev.txt; }
+cd /mnt/d/meyzi && $V/bin/pytest && $V/bin/ruff check .
 find . -name __pycache__ -prune -exec rm -rf {} +
 ```
 
@@ -78,10 +78,10 @@ Alohida loyiha nomi va port bilan — dev bazaga tegmaydi. Env faylni scratchpad
 
 ```bash
 export PROD_ENV_FILE=<scratchpad>/prodtest.env
-docker compose -p lazuri-prodtest -f docker-compose.prod.yml --env-file $PROD_ENV_FILE up -d --build
+docker compose -p meyzi-prodtest -f docker-compose.prod.yml --env-file $PROD_ENV_FILE up -d --build
 # birinchi ishga tushishda migratsiyalar bir necha daqiqa — /api/health/ 200 bo'lguncha kuting
 curl localhost:8088/api/health/ ; curl -o /dev/null -w "%{http_code}" localhost:8088/static/admin/css/base.css
-docker compose -p lazuri-prodtest -f docker-compose.prod.yml --env-file $PROD_ENV_FILE down -v
+docker compose -p meyzi-prodtest -f docker-compose.prod.yml --env-file $PROD_ENV_FILE down -v
 rm -rf backups   # sinov dump'lari
 ```
 

@@ -90,7 +90,7 @@ def create_booking(
     pending = Booking.objects.filter(
         user=user, status=Booking.Status.PENDING_PAYMENT, expires_at__gt=now
     ).count()
-    if pending >= settings.LAZURI_MAX_PENDING_BOOKINGS:
+    if pending >= settings.MEYZI_MAX_PENDING_BOOKINGS:
         raise ValidationError(
             {"detail": "To'lanmagan bronlaringiz juda ko'p. Avval ularni to'lang yoki bekor qiling."}
         )
@@ -117,7 +117,7 @@ def create_booking(
         contact_phone=contact_phone,
         contact_email=contact_email,
         note=note,
-        expires_at=now + timedelta(minutes=settings.LAZURI_BOOKING_HOLD_MINUTES),
+        expires_at=now + timedelta(minutes=settings.MEYZI_BOOKING_HOLD_MINUTES),
     )
     Traveler.objects.bulk_create(Traveler(booking=booking, **t) for t in travelers)
     Departure.objects.filter(pk=departure.pk).update(seats_booked=F("seats_booked") + seats)

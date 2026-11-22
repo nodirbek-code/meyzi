@@ -10,7 +10,7 @@ import type { Departure, User } from "@/lib/types";
 import { accountPhone, phoneReady, VerifiedPhoneField, type VerifiedPhone } from "./PhoneField";
 import { Icon } from "./ui";
 
-const MARKUP = 1.44; // muddatli to'lov (backend bilan bir xil: settings.LAZURI_INSTALLMENT_MARKUP)
+const MARKUP = 1.44; // muddatli to'lov (backend bilan bir xil: settings.MEYZI_INSTALLMENT_MARKUP)
 const MONTHS = 12;
 const MON = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"];
 const WD = ["Yak", "Dush", "Sesh", "Chor", "Pay", "Jum", "Shan"];

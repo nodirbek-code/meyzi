@@ -26,7 +26,7 @@ def _money(value: int) -> str:
 
 
 def _admin_url(path: str) -> str:
-    return settings.LAZURI_SITE_URL.rstrip("/") + path
+    return settings.MEYZI_SITE_URL.rstrip("/") + path
 
 
 def _link(text: str, path: str) -> str:

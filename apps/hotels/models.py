@@ -18,7 +18,7 @@ def generate_hotel_booking_code():
 
 
 def default_hotel_commission():
-    return settings.LAZURI_HOTEL_COMMISSION_PERCENT
+    return settings.MEYZI_HOTEL_COMMISSION_PERCENT
 
 
 class Amenity(models.TextChoices):
@@ -35,7 +35,7 @@ class Amenity(models.TextChoices):
 
 
 class Hotel(TimeStampedModel):
-    """Mehmonxona / hostel / mehmon uyi. Ariza → LAZURI tekshiruvi → approved."""
+    """Mehmonxona / hostel / mehmon uyi. Ariza → MEYZI tekshiruvi → approved."""
 
     class Status(models.TextChoices):
         PENDING = "pending", "Tekshiruvda"

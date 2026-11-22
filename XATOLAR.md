@@ -1,4 +1,4 @@
-# LAZURI — xatolar va o'zgartirishlar ro'yxati
+# MEYZI — xatolar va o'zgartirishlar ro'yxati
 
 > **Holat (2026-11-21):** 1–5 bajarildi (backend + frontend). 6 — qismlab davom etmoqda.
 > Yangi xato aytilganda shu faylga qo'shiladi. Bajarilganda holati `✅` ga o'zgaradi.
@@ -29,7 +29,7 @@ gid so'rovi, mehmonxona broni, agentlik arizasi, gid arizasi, mehmonxona arizasi
 
 **Aniqlashtirish kerak:**
 - Bron formasidagi "aloqa telefoni" ham har safar kod bilan tasdiqlanadimi yoki akkauntdagi tasdiqlangan raqam ishlatiladimi?
-- Telegram'ga kod yuborish usuli: Telegram Gateway (rasmiy, raqamga to'g'ridan kod yuboradi, pullik) yoki LAZURI boti
+- Telegram'ga kod yuborish usuli: Telegram Gateway (rasmiy, raqamga to'g'ridan kod yuboradi, pullik) yoki MEYZI boti
   (foydalanuvchi avval botga kirib, kontaktini ulashishi kerak) — qaysi biri?
 
 ## 2. Uchrashuv joyi
@@ -71,7 +71,7 @@ ulardan birini **tanlaydi**mi? Joy xaritada (koordinata) bilan bo'lishi kerakmi?
 
 ## 6. Frontend dizayni — skrinshotlar asosida
 
-**Kerak:** foydalanuvchi `D:\lazuri\skrenshot\` papkasini yaratib, frontend qanday ko'rinishi kerakligi haqida rasmlar yuklaydi.
+**Kerak:** foydalanuvchi `D:\meyzi\skrenshot\` papkasini yaratib, frontend qanday ko'rinishi kerakligi haqida rasmlar yuklaydi.
 Frontend shu rasmlarni ko'rib chiqqan holda yoziladi.
 
 **Holat:** rasmlar yuklanishi kutilmoqda.

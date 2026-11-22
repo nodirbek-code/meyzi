@@ -120,7 +120,7 @@ def test_not_bookable(book, tour, departure, breaker):
 
 
 def test_pending_limit(book, settings, departure, tour):
-    settings.LAZURI_MAX_PENDING_BOOKINGS = 2
+    settings.MEYZI_MAX_PENDING_BOOKINGS = 2
     book(seats=1)
     book(seats=1)
     with pytest.raises(ValidationError):

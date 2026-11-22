@@ -70,7 +70,7 @@ def tour_booking_created(b) -> None:
         "aks holda bron bekor bo'ladi.",
         event="tour_booking_created",
         button_text="💳 To'lov qilish",
-        button_url=f"{settings.LAZURI_FRONTEND_URL}/account/bookings/{b.code}",
+        button_url=f"{settings.MEYZI_FRONTEND_URL}/account/bookings/{b.code}",
         immediate=True,
     )
 

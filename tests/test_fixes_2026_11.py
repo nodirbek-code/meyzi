@@ -118,7 +118,7 @@ def test_unverified_account_phone_still_needs_token(auth_api, user, departure):
 
 def test_expired_phone_token(auth_api, departure, settings):
     token = phone_token("+998901234567")
-    settings.LAZURI_PHONE_TOKEN_MAX_AGE = -1
+    settings.MEYZI_PHONE_TOKEN_MAX_AGE = -1
     res = auth_api.post(
         "/api/v1/bookings/",
         {

@@ -1,4 +1,4 @@
-# LAZURI frontend — production (Next.js standalone)
+# MEYZI frontend — production (Next.js standalone)
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./

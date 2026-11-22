@@ -153,7 +153,7 @@ def bot(settings, monkeypatch):
     from apps.notifications import telegram
 
     settings.TELEGRAM_BOT_TOKEN = "test-token"
-    settings.LAZURI_FRONTEND_URL = "https://lazuri.uz"
+    settings.MEYZI_FRONTEND_URL = "https://meyzi.uz"
     sent = []
     monkeypatch.setattr(telegram, "call", lambda method, payload=None, **kw: sent.append((method, payload)))
     return sent
@@ -177,14 +177,14 @@ def test_booking_created_sends_bot_message_with_pay_button(
     assert b.tour.title in payload["text"]
     assert f"{timezone.localtime(b.departure_at):%d.%m.%Y %H:%M}" in payload["text"]
     button = payload["reply_markup"]["inline_keyboard"][0][0]
-    assert button["url"] == f"https://lazuri.uz/account/bookings/{b.code}"
+    assert button["url"] == f"https://meyzi.uz/account/bookings/{b.code}"
     assert "To'lov" in button["text"]
 
 
 def test_booking_bot_message_localhost_link_in_text(
     bot, settings, user, departure, django_capture_on_commit_callbacks
 ):
-    settings.LAZURI_FRONTEND_URL = "http://localhost:3000"
+    settings.MEYZI_FRONTEND_URL = "http://localhost:3000"
     user.telegram_id = 555002
     user.save(update_fields=["telegram_id"])
     with django_capture_on_commit_callbacks(execute=True):

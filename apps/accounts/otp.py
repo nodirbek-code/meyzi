@@ -1,7 +1,7 @@
 """
 Bir martalik tasdiqlash kodlari (6 raqam). Kodning o'zi bazada saqlanmaydi — faqat HMAC xeshi.
 
-Cheklovlar: amal qilish muddati (LAZURI_OTP_TTL_MINUTES), 5 ta noto'g'ri urinish,
+Cheklovlar: amal qilish muddati (MEYZI_OTP_TTL_MINUTES), 5 ta noto'g'ri urinish,
 qayta yuborish — 60 soniyadan keyin,
 bitta manzilga soatiga 5 tadan ko'p emas.
 """
@@ -34,10 +34,10 @@ def issue(purpose: str, target: str) -> str:
         purpose=purpose, target=target, created_at__gte=now - timedelta(hours=1)
     )
     last = recent.order_by("-created_at").first()
-    if last and (now - last.created_at).total_seconds() < settings.LAZURI_OTP_RESEND_SECONDS:
-        wait = settings.LAZURI_OTP_RESEND_SECONDS - int((now - last.created_at).total_seconds())
+    if last and (now - last.created_at).total_seconds() < settings.MEYZI_OTP_RESEND_SECONDS:
+        wait = settings.MEYZI_OTP_RESEND_SECONDS - int((now - last.created_at).total_seconds())
         raise Throttled(wait=wait, detail=f"Kodni qayta so'rash uchun {wait} soniya kuting.")
-    if recent.count() >= settings.LAZURI_OTP_MAX_PER_HOUR:
+    if recent.count() >= settings.MEYZI_OTP_MAX_PER_HOUR:
         raise Throttled(detail="Juda ko'p urinish. Bir soatdan keyin qayta urinib ko'ring.")
 
     OneTimeCode.objects.filter(purpose=purpose, target=target, used_at__isnull=True).update(used_at=now)
@@ -46,7 +46,7 @@ def issue(purpose: str, target: str) -> str:
         purpose=purpose,
         target=target,
         code_hash=_hash(code, target, purpose),
-        expires_at=now + timedelta(minutes=settings.LAZURI_OTP_TTL_MINUTES),
+        expires_at=now + timedelta(minutes=settings.MEYZI_OTP_TTL_MINUTES),
     )
     return code
 
@@ -64,7 +64,7 @@ def verify(purpose: str, target: str, code: str) -> None:
             .order_by("-created_at")
             .first()
         )
-        if not otp or otp.attempts >= settings.LAZURI_OTP_MAX_ATTEMPTS:
+        if not otp or otp.attempts >= settings.MEYZI_OTP_MAX_ATTEMPTS:
             raise ValidationError({"code": INVALID})
         if not hmac.compare_digest(otp.code_hash, _hash(str(code).strip(), target, purpose)):
             otp.attempts += 1

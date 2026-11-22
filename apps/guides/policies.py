@@ -1,5 +1,5 @@
 """
-Individual gid qoidalari (LAZURI taqdimoti, 11-slayd). Turlarga emas, faqat gid bronlariga tegishli.
+Individual gid qoidalari (MEYZI taqdimoti, 11-slayd). Turlarga emas, faqat gid bronlariga tegishli.
 
 Turist bekor qilsa (boshlanishigacha qolgan vaqt):  >=48s — 100%, 24–48s — 50%, 12–24s — 25%, <12s — 0%.
 Gid bekor qilsa: turistga doim 100%. Gidga jarima: >=72s — yo'q, 48–72s — $5, 24–48s — $10 + 1 ogohlantirish,

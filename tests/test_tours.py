@@ -208,7 +208,7 @@ def test_submit_flow_moderation_and_auto_publish(agency_api, agency, samarqand, 
     res = agency_api.post(f"/api/v1/cabinet/tours/{slug}/submit/")
     assert res.data["status"] == "pending_review"
 
-    # auto_publish agentlik (masalan LAZURI) — darhol e'lon
+    # auto_publish agentlik (masalan MEYZI) — darhol e'lon
     agency.auto_publish = True
     agency.save()
     Tour.objects.filter(slug=slug).update(status=Tour.Status.DRAFT)
@@ -254,9 +254,9 @@ def test_cabinet_stats(agency_api, tour, departure):
 def test_seed_tours_idempotent(api):
     call_command("seed_tours")
     call_command("seed_tours")
-    assert Tour.objects.filter(agency__slug="lazuri", status=Tour.Status.PUBLISHED).count() == 3
-    lazuri = Agency.objects.get(slug="lazuri")
-    assert lazuri.is_platform and lazuri.auto_publish and lazuri.commission_percent == 0
+    assert Tour.objects.filter(agency__slug="meyzi", status=Tour.Status.PUBLISHED).count() == 3
+    meyzi = Agency.objects.get(slug="meyzi")
+    assert meyzi.is_platform and meyzi.auto_publish and meyzi.commission_percent == 0
     assert api.get("/api/v1/tours/?category=tog").data["count"] == 2
 
 

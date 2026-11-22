@@ -1,15 +1,15 @@
 ---
-name: lazuri-business-rules
-description: LAZURI biznes qoidalari — TripHub (triphub.uz) modeli bo'yicha agentlik → tur → jo'nash sanasi → bron → to'lov; komissiya, muddatli to'lov, bekor qilish siyosatlari, 30 daqiqalik band qilish, moderatsiya, LAZURI'ning o'z turlari. Agentliklar, turlar, bronlar, to'lovlar, sharhlar kodini yozishda albatta ishlating.
+name: meyzi-business-rules
+description: MEYZI biznes qoidalari — TripHub (triphub.uz) modeli bo'yicha agentlik → tur → jo'nash sanasi → bron → to'lov; komissiya, muddatli to'lov, bekor qilish siyosatlari, 30 daqiqalik band qilish, moderatsiya, MEYZI'ning o'z turlari. Agentliklar, turlar, bronlar, to'lovlar, sharhlar kodini yozishda albatta ishlating.
 ---
 
-# LAZURI: biznes qoidalari
+# MEYZI: biznes qoidalari
 
 **Asosiy model — [triphub.uz](https://www.triphub.uz/)** (foydalanuvchi qarori, 2026-11-20): "TripHub qanday ishlasa,
-shunday qilamiz". Ustiga LAZURI'ning o'z qo'shimchalari: platforma faqat agregator emas — **o'zi ham tur yaratadi**
+shunday qilamiz". Ustiga MEYZI'ning o'z qo'shimchalari: platforma faqat agregator emas — **o'zi ham tur yaratadi**
 va yangi xizmatlar qo'shadi.
 
-Raqamlarni kodga qattiq yozmang: sozlama (`config/settings/base.py` → `LAZURI_*`), model maydoni yoki
+Raqamlarni kodga qattiq yozmang: sozlama (`config/settings/base.py` → `MEYZI_*`), model maydoni yoki
 `apps/<app>/policies.py` konstantasi qiling va test bilan mahkamlang. Noaniq joyda foydalanuvchidan so'rang.
 
 ## Ishtirokchilar
@@ -18,7 +18,7 @@ Raqamlarni kodga qattiq yozmang: sozlama (`config/settings/base.py` → `LAZURI_
 |---|---|---|
 | Turist | `User(role=tourist)` | Qidiradi, bron qiladi, to'laydi, sharh yozadi |
 | Turagentlik | `Agency` + `AgencyMember(user, role=owner/manager)` | Turlarni o'tkazadi. Bitta user — bitta agentlik |
-| LAZURI | `Agency(is_platform=True, auto_publish=True, commission_percent=0)` | Platformaning o'z turlari (`seed_tours` yaratadi) |
+| MEYZI | `Agency(is_platform=True, auto_publish=True, commission_percent=0)` | Platformaning o'z turlari (`seed_tours` yaratadi) |
 | Admin | `User(is_staff=True)` | Arizalar, moderatsiya, komissiya |
 
 ## Agentlik onboarding'i (amalda)
@@ -65,10 +65,10 @@ Jo'nash vaqti = `Departure.date` + `Tour.departure_time` (Asia/Tashkent); vaqt b
 ## Bron (amalda — `apps/bookings/services.py`)
 
 1. Turist sana (`departure` id) va joylar sonini tanlaydi; kontakt (ism, telefon) majburiy; sayohatchilar ro'yxati
-   ixtiyoriy (LAZURI qo'shimchasi), berilsa soni = joylar soni.
+   ixtiyoriy (MEYZI qo'shimchasi), berilsa soni = joylar soni.
 2. `create_booking` sanani `select_for_update` bilan qulflaydi, avval shu sanadagi eskirgan bronlarni bo'shatadi,
    so'ng joy yetarliligini tekshiradi va `seats_booked` ni oshiradi. Holat `pending_payment`,
-   `expires_at = now + LAZURI_BOOKING_HOLD_MINUTES (30)`. Bir userda ≤ `LAZURI_MAX_PENDING_BOOKINGS (3)` to'lanmagan bron.
+   `expires_at = now + MEYZI_BOOKING_HOLD_MINUTES (30)`. Bir userda ≤ `MEYZI_MAX_PENDING_BOOKINGS (3)` to'lanmagan bron.
 3. Muddat o'tsa — `expired`, joylar qaytadi: `scheduler` konteyneri har 60 s `process_bookings`, qo'shimcha ravishda
    ro'yxat/batafsil so'rovlarida va yangi bronda "lazy" tekshiruv.
 4. To'lov o'tdi → `confirm_booking` → `confirmed` (idempotent). **Agentlik tasdig'i yo'q.** Muddati o'tgan bronni
@@ -134,7 +134,7 @@ Test sozlamalari tokenni majburan bo'shatadi.
 
 Foydalanuvchi qarori (2026-11-20): gidlar va mehmonxonalar **to'liq** ishlaydi, faqat AI marshrut "Tez kunda".
 - Profil: `/guides/me/` ariza → `pending` → admin `approve` (taqdimot: 48 soat). Rad etilgan profil tahrirlansa — qayta `pending`.
-- Narx: yarim/to'liq/ko'p kunlik (2–14 kun), guruh ≥ `LAZURI_GUIDE_GROUP_THRESHOLD` (5) → +`group_surcharge_percent` (20%).
+- Narx: yarim/to'liq/ko'p kunlik (2–14 kun), guruh ≥ `MEYZI_GUIDE_GROUP_THRESHOLD` (5) → +`group_surcharge_percent` (20%).
   Komissiya 15% (gid 85%). Narx so'rov paytida qotiriladi.
 - Oqim: `requested` (gid 24 soatda javob, aks holda `expired`) → `accepted` → to'lov (`mark_paid`, hozir admin) → `confirmed` →
   `completed`. Gid kunlari: `GuideUnavailableDate` + faol bronlar (ko'p kunlik — barcha kunlar). Gid qulfi `select_for_update`.
@@ -152,9 +152,9 @@ Foydalanuvchi qarori (2026-11-20): gidlar va mehmonxonalar **to'liq** ishlaydi, 
 - Bekor qilish: `apps/tours/policies.refund_ratio` (free/partial/non_refundable) kirish vaqtiga nisbatan; mehmonxona/admin → 100%.
 - `check_out` kuni o'tgach `completed` → sharh.
 
-## LAZURI qo'shimchalari (7-bosqich, `D:\proyekt\LAZURI.pptx` dan)
+## MEYZI qo'shimchalari (7-bosqich, `D:\proyekt\MEYZI.pptx` dan)
 
-TripHub'da yo'q, LAZURI o'zi qo'shadi (gidlar va mehmonxonalar — amalda, yuqorida),
+TripHub'da yo'q, MEYZI o'zi qo'shadi (gidlar va mehmonxonalar — amalda, yuqorida),
 diqqatga sazovor joylar katalogi (`catalog.Place`, audio-gid), ko'p tillilik,
 AI marshrut, oflayn rejim, mobil ilova. Taqdimotdagi gid jarimalari va 48/24/12 soat qoidasi faqat
 **individual gidlar** moduliga tegishli — turlarga emas.

@@ -17,7 +17,7 @@ import urllib.request
 
 from django.conf import settings
 
-log = logging.getLogger("lazuri.telegram_codes")
+log = logging.getLogger("meyzi.telegram_codes")
 
 GATEWAY_URL = "https://gatewayapi.telegram.org/sendVerificationMessage"
 TIMEOUT = 10

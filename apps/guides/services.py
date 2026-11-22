@@ -78,7 +78,7 @@ def quote(guide: GuideProfile, *, duration: str, days: int, group_size: int) -> 
         unit = guide.price_per_day_uzs
     base = unit * days
     surcharge = 0
-    if group_size >= settings.LAZURI_GUIDE_GROUP_THRESHOLD:
+    if group_size >= settings.MEYZI_GUIDE_GROUP_THRESHOLD:
         surcharge = _money(Decimal(base) * guide.group_surcharge_percent / 100)
     total = base + surcharge
     commission = _money(Decimal(total) * guide.commission_percent / 100)
@@ -174,8 +174,8 @@ def request_booking(
         days = 1
 
     starts_at = timezone.make_aware(datetime.combine(start_date, start_time))
-    if starts_at < now + timedelta(hours=settings.LAZURI_GUIDE_RESPONSE_HOURS):
-        hours = settings.LAZURI_GUIDE_RESPONSE_HOURS
+    if starts_at < now + timedelta(hours=settings.MEYZI_GUIDE_RESPONSE_HOURS):
+        hours = settings.MEYZI_GUIDE_RESPONSE_HOURS
         raise ValidationError(
             {"start_date": f"Gid javob berishi uchun kamida {hours} soat oldin bron qiling."}
         )
@@ -185,7 +185,7 @@ def request_booking(
         raise ValidationError({"start_date": "Gid bu kun(lar)da band."})
 
     pending = GuideBooking.objects.filter(user=user, status=GuideBooking.Status.REQUESTED).count()
-    if pending >= settings.LAZURI_MAX_PENDING_BOOKINGS:
+    if pending >= settings.MEYZI_MAX_PENDING_BOOKINGS:
         raise ValidationError({"detail": "Javob kutilayotgan so'rovlaringiz juda ko'p."})
 
     q = quote(guide, duration=duration, days=days, group_size=group_size)
@@ -214,7 +214,7 @@ def request_booking(
         note=note,
         contact_name=contact_name,
         contact_phone=contact_phone,
-        respond_by=min(now + timedelta(hours=settings.LAZURI_GUIDE_RESPONSE_HOURS), starts_at),
+        respond_by=min(now + timedelta(hours=settings.MEYZI_GUIDE_RESPONSE_HOURS), starts_at),
     )
     notify.guide_booking_created(booking)
     user_events.guide_request_created(booking)

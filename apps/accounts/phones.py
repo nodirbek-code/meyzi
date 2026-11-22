@@ -18,7 +18,7 @@ ALLOWED_CHARS_RE = re.compile(r"^[\d\s()+\-]*$")
 INVALID_TEXT = "Telefon raqami noto'g'ri. +998 dan keyin 9 ta raqam yozing, masalan: +998 90 123 45 67"
 NOT_VERIFIED_TEXT = "Telefon raqami tasdiqlanmagan. Telegram'ga yuborilgan kod bilan tasdiqlang."
 
-TOKEN_SALT = "lazuri.accounts.phone-token"
+TOKEN_SALT = "meyzi.accounts.phone-token"
 
 
 def normalize_phone(raw: str, field: str = "phone") -> str:
@@ -44,7 +44,7 @@ def make_phone_token(phone: str) -> str:
 
 def phone_from_token(token: str) -> str | None:
     try:
-        data = signing.loads(token, salt=TOKEN_SALT, max_age=settings.LAZURI_PHONE_TOKEN_MAX_AGE)
+        data = signing.loads(token, salt=TOKEN_SALT, max_age=settings.MEYZI_PHONE_TOKEN_MAX_AGE)
     except signing.BadSignature:  # muddati o'tgani (SignatureExpired) ham shu
         return None
     return data.get("p") if isinstance(data, dict) else None

@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('unit_price_uzs', models.PositiveIntegerField(verbose_name="1 kishi narxi (so'm)")),
                 ('total_uzs', models.PositiveBigIntegerField(verbose_name="jami (so'm)")),
                 ('commission_percent', models.DecimalField(decimal_places=2, max_digits=5, verbose_name='komissiya (%)')),
-                ('commission_uzs', models.PositiveBigIntegerField(verbose_name="LAZURI komissiyasi (so'm)")),
+                ('commission_uzs', models.PositiveBigIntegerField(verbose_name="MEYZI komissiyasi (so'm)")),
                 ('agency_amount_uzs', models.PositiveBigIntegerField(verbose_name="agentlikka (so'm)")),
                 ('cancellation_policy', models.CharField(choices=[('free', 'Bepul bekor qilish'), ('partial', 'Qisman qaytarish'), ('non_refundable', 'Qaytarilmaydi')], max_length=20, verbose_name='bekor qilish siyosati')),
                 ('departure_at', models.DateTimeField(verbose_name="jo'nash vaqti")),

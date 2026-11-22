@@ -1,11 +1,11 @@
-# LAZURI — Discover the Blue Road
+# MEYZI — Discover the Blue Road
 
-**LAZURI** — O'zbekiston bo'ylab turlar platformasi (backend — Django/DRF, frontend — Next.js). Tekshirilgan turagentliklar turlarini joylaydi,
-turist sana va joyni tanlab, onlayn to'laydi (karta yoki muddatli to'lov). **LAZURI'ning o'zi ham** tur yaratadi —
+**MEYZI** — O'zbekiston bo'ylab turlar platformasi (backend — Django/DRF, frontend — Next.js). Tekshirilgan turagentliklar turlarini joylaydi,
+turist sana va joyni tanlab, onlayn to'laydi (karta yoki muddatli to'lov). **MEYZI'ning o'zi ham** tur yaratadi —
 platforma faqat agregator emas. Ushbu repozitoriy — platformaning **backend (REST API)** qismi.
 
 > Ishlash modeli: [triphub.uz](https://www.triphub.uz/) (agentlik → tur → jo'nash sanasi → bron → to'lov).
-> Qo'shimcha g'oyalar (individual gidlar, mehmonxonalar, AI marshrut): `D:\proyekt\LAZURI.pptx`.
+> Qo'shimcha g'oyalar (individual gidlar, mehmonxonalar, AI marshrut): `D:\proyekt\MEYZI.pptx`.
 
 ---
 
@@ -55,14 +55,14 @@ platforma faqat agregator emas. Ushbu repozitoriy — platformaning **backend (R
 ## Tez boshlash (Docker)
 
 ```bash
-cd D:\lazuri                 # WSL'da: cd /mnt/d/lazuri
+cd D:\meyzi                 # WSL'da: cd /mnt/d/meyzi
 cp .env.example .env         # Windows CMD'da: copy .env.example .env
 docker compose up --build
 ```
 
 Bu buyruq uchta konteyner ko'taradi:
 
-- `db` — PostgreSQL 16 (`localhost:5432`, baza/foydalanuvchi/parol: `lazuri`);
+- `db` — PostgreSQL 16 (`localhost:5432`, baza/foydalanuvchi/parol: `meyzi`);
 - `web` — Django, avval `migrate` bajaradi, so'ng `http://localhost:8000` da ishga tushadi
   (kod papkasi konteynerga ulangan — o'zgarishlar darhol qo'llanadi);
 - `frontend` — Next.js (dev) `http://localhost:3000` — sayt shu yerda;
@@ -111,30 +111,30 @@ python manage.py runserver
 | `DJANGO_SECRET_KEY` | dev uchun vaqtinchalik kalit | **Prod'da majburiy**, uzun tasodifiy satr |
 | `DJANGO_DEBUG` | `False` | `dev` sozlamalari baribir `True` qiladi |
 | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | Vergul bilan ajratiladi |
-| `DATABASE_URL` | `postgres://lazuri:lazuri@localhost:5432/lazuri` | Docker'da `web` uchun avtomatik `db:5432` |
+| `DATABASE_URL` | `postgres://meyzi:meyzi@localhost:5432/meyzi` | Docker'da `web` uchun avtomatik `db:5432` |
 | `JWT_ACCESS_MINUTES` | `30` | Access token muddati (daqiqa) |
 | `JWT_REFRESH_DAYS` | `30` | Refresh token muddati (kun) |
 | `CORS_ALLOWED_ORIGINS` | bo'sh | Frontend manzillari; `dev` da hamma manzilga ruxsat |
 | `DJANGO_SECURE_SSL_REDIRECT` | `True` | Faqat `prod` — HTTPS'ga yo'naltirish |
 | `TEST_DATABASE_URL` | `sqlite:///:memory:` | Faqat testlar — Postgres'da sinash uchun |
-| `LAZURI_DEFAULT_COMMISSION_PERCENT` | `15` | Yangi agentlik uchun LAZURI komissiyasi (%), keyin har biriga alohida |
-| `LAZURI_INSTALLMENT_MARKUP` | `1.44` | Muddatli to'lov ustamasi: jami = narx × 1.44 |
-| `LAZURI_INSTALLMENT_MONTHS` | `12` | Muddatli to'lov oylari: oylik = jami ÷ 12 |
-| `LAZURI_BOOKING_HOLD_MINUTES` | `30` | To'lov uchun joylar shuncha daqiqa band turadi |
-| `LAZURI_MAX_PENDING_BOOKINGS` | `3` | Bitta foydalanuvchida bir vaqtda to'lanmagan bronlar chegarasi |
-| `LAZURI_GUIDE_COMMISSION_PERCENT` | `15` | Individual gid bronidan LAZURI ulushi (gid — 85%) |
-| `LAZURI_GUIDE_RESPONSE_HOURS` | `24` | Gid so'rovga javob berish muddati |
-| `LAZURI_GUIDE_GROUP_THRESHOLD` | `5` | Shu va undan katta guruhga gid ustamasi (sukut +20%) |
-| `LAZURI_HOTEL_COMMISSION_PERCENT` | `15` | Yangi mehmonxona uchun komissiya (har biriga alohida o'zgartiriladi) |
+| `MEYZI_DEFAULT_COMMISSION_PERCENT` | `15` | Yangi agentlik uchun MEYZI komissiyasi (%), keyin har biriga alohida |
+| `MEYZI_INSTALLMENT_MARKUP` | `1.44` | Muddatli to'lov ustamasi: jami = narx × 1.44 |
+| `MEYZI_INSTALLMENT_MONTHS` | `12` | Muddatli to'lov oylari: oylik = jami ÷ 12 |
+| `MEYZI_BOOKING_HOLD_MINUTES` | `30` | To'lov uchun joylar shuncha daqiqa band turadi |
+| `MEYZI_MAX_PENDING_BOOKINGS` | `3` | Bitta foydalanuvchida bir vaqtda to'lanmagan bronlar chegarasi |
+| `MEYZI_GUIDE_COMMISSION_PERCENT` | `15` | Individual gid bronidan MEYZI ulushi (gid — 85%) |
+| `MEYZI_GUIDE_RESPONSE_HOURS` | `24` | Gid so'rovga javob berish muddati |
+| `MEYZI_GUIDE_GROUP_THRESHOLD` | `5` | Shu va undan katta guruhga gid ustamasi (sukut +20%) |
+| `MEYZI_HOTEL_COMMISSION_PERCENT` | `15` | Yangi mehmonxona uchun komissiya (har biriga alohida o'zgartiriladi) |
 | `TELEGRAM_BOT_TOKEN` | bo'sh | Admin bildirishnomalari uchun bot tokeni (@BotFather). Bo'sh — o'chiq |
 | `TELEGRAM_ADMIN_CHAT_IDS` | bo'sh | Xabar oladigan admin chatlari, vergul bilan |
-| `LAZURI_SITE_URL` | `http://localhost:8000` | Telegram xabaridagi admin panel havolalari uchun |
+| `MEYZI_SITE_URL` | `http://localhost:8000` | Telegram xabaridagi admin panel havolalari uchun |
 | `EMAIL_URL` | `consolemail://` | Email: konsol (dev) yoki `smtp+tls://login:parol@smtp.server:587` |
-| `DEFAULT_FROM_EMAIL` | `LAZURI <no-reply@lazuri.uz>` | Jo'natuvchi |
+| `DEFAULT_FROM_EMAIL` | `MEYZI <no-reply@meyzi.uz>` | Jo'natuvchi |
 | `SMS_BACKEND` | `console` | `console` (kod server logida) / `disabled`. Provayder (Eskiz, Playmobile) shartnomadan keyin ulanadi |
 | `PRIVATE_MEDIA_ROOT` | `private_media/` | Yopiq fayllar (gid sertifikatlari) — veb orqali berilmaydi |
 | `SENTRY_DSN` | bo'sh | Xatolarni kuzatish (faqat prod) |
-| `CSRF_TRUSTED_ORIGINS` | bo'sh | Prod: `https://api.lazuri.uz` |
+| `CSRF_TRUSTED_ORIGINS` | bo'sh | Prod: `https://api.meyzi.uz` |
 
 Kalit yaratish:
 
@@ -154,12 +154,12 @@ python -c "import secrets; print(secrets.token_urlsafe(50))"
 ## Frontend (Next.js)
 
 `frontend/` — Next.js 15 (App Router) + TypeScript + Tailwind CSS. Tuzilish va foydalanuvchi yo'li — triphub.uz kabi,
-dizayn — LAZURI'ning o'zi: **lazurit ko'k** `#1E3A8A`, **oltin** `#C9A227`, qum fon `#F7F3EA`, girih naqshi,
+dizayn — MEYZI'ning o'zi: **meyzit ko'k** `#1E3A8A`, **oltin** `#C9A227`, qum fon `#F7F3EA`, girih naqshi,
 sarlavhalar Playfair Display, matn Inter (kirill ham bor).
 
 | Sahifa | Yo'l |
 |---|---|
-| Bosh sahifa: qidiruv, toifalar, mashhur turlar, yo'nalishlar, LAZURI turlari, "Tez kunda" | `/` |
+| Bosh sahifa: qidiruv, toifalar, mashhur turlar, yo'nalishlar, MEYZI turlari, "Tez kunda" | `/` |
 | Turlar (filtrlar, sahifalash) · tur sahifasi (galereya, dastur, sanalar, bron) | `/tours` · `/tours/[slug]` |
 | Yo'nalishlar · yo'nalish (turlar, diqqatga sazovor joylar) | `/destinations` · `/destinations/[slug]` |
 | Gidlar · gid (narx kalkulyatori, so'rov) · gid bo'lish | `/guides` · `/guides/[slug]` · `/guides/become` |
@@ -187,7 +187,7 @@ Hali yo'q (keyingi bosqich): agentlik, gid va mehmonxona **kabinetlari** fronten
 python manage.py makemigrations          # model o'zgargach
 python manage.py migrate
 python manage.py seed_catalog            # demo shaharlar va joylar (qayta ishga tushirish xavfsiz)
-python manage.py seed_tours              # seed_catalog + toifalar, LAZURI agentligi, 3 ta tur, sanalar
+python manage.py seed_tours              # seed_catalog + toifalar, MEYZI agentligi, 3 ta tur, sanalar
 python manage.py process_bookings        # muddati o'tgan bronlar → expired, tugaganlar → completed
 python manage.py seed_content            # FAQ (qayta ishga tushirish xavfsiz)
 python manage.py seed_demo               # seed_tours + seed_content + 2 demo gid + 2 demo mehmonxona
@@ -203,15 +203,15 @@ Docker'da har birining oldiga `docker compose exec web` qo'shing.
 - `seed_catalog` — 4 ta shahar (Toshkent, Samarqand, Buxoro, Xiva) va 12 ta joy. Koordinatalar taxminiy,
   kirish narxlari **namunaviy** — real narxlarni admin panel orqali yangilang.
 - `seed_tours` — yuqoridagilar + Chimyon, Zomin, Chorvoq; 4 ta toifa (Tog', Madaniy, Sarguzasht, Dam olish kuni);
-  **LAZURI** agentligi (platformaning o'zi, komissiyasiz, moderatsiyasiz); 3 ta tur kunlik dasturi bilan va
+  **MEYZI** agentligi (platformaning o'zi, komissiyasiz, moderatsiyasiz); 3 ta tur kunlik dasturi bilan va
   kelgusi 6 ta shanbaga jo'nash sanalari (20 joydan). Turlarda rasm yo'q — kabinet yoki admin orqali yuklang.
 
 ## Testlar va kod sifati
 
-**Asosiy usul — Docker ichida, Postgres bilan** (pytest alohida `test_lazuri` bazasini yaratadi, ish bazasiga tegmaydi):
+**Asosiy usul — Docker ichida, Postgres bilan** (pytest alohida `test_meyzi` bazasini yaratadi, ish bazasiga tegmaydi):
 
 ```bash
-docker compose exec -e TEST_DATABASE_URL=postgres://lazuri:lazuri@db:5432/lazuri web pytest
+docker compose exec -e TEST_DATABASE_URL=postgres://meyzi:meyzi@db:5432/meyzi web pytest
 docker compose exec web pytest tests/test_bookings.py     # bitta fayl (SQLite)
 docker compose exec web pytest -k cancel                  # nom bo'yicha
 docker compose exec web ruff check .                      # lint
@@ -230,7 +230,7 @@ DJANGO_SECRET_KEY=... python manage.py check --deploy --settings=config.settings
 ## Loyiha tuzilmasi
 
 ```
-lazuri/
+meyzi/
 ├── config/
 │   ├── settings/          base.py · dev.py · test.py · prod.py
 │   ├── urls.py            /admin/, /api/v1/, /api/docs/, /api/schema/
@@ -365,7 +365,7 @@ Faqat **e'lon qilingan** turlar, **faol** agentlik va e'lon qilingan yo'nalish b
 | `search` | `?search=zomin` | Nom, tavsif, yo'nalish, agentlik nomi |
 | `destination` | `?destination=zomin` | Yo'nalish slug'i |
 | `category` | `?category=tog,madaniy` | Toifa slug'i, vergul bilan bir nechta |
-| `agency` | `?agency=lazuri` | Agentlik slug'i |
+| `agency` | `?agency=meyzi` | Agentlik slug'i |
 | `min_price`, `max_price` | `?max_price=1000000` | Narx (so'm, 1 kishi) |
 | `min_days`, `max_days` | `?min_days=2` | Davomiylik (kun) |
 | `date` | `?date=2026-11-28` | Shu kuni bo'sh joyli jo'nash bor |
@@ -437,7 +437,7 @@ Tur yaratish namunasi:
 ```
 
 **Tur holatlari:** `draft` (qoralama) → `submit` → `pending_review` (moderatsiya) → admin tasdiqlaydi →
-`published`. `auto_publish` yoqilgan agentlik (masalan, LAZURI) uchun `submit` darhol `published` qiladi.
+`published`. `auto_publish` yoqilgan agentlik (masalan, MEYZI) uchun `submit` darhol `published` qiladi.
 Rad etilsa — `rejected` (`moderation_note` da sabab), tuzatib qayta yuborish mumkin. `archived` — katalogdan olinadi.
 
 ### Bronlar (turist)
@@ -560,7 +560,7 @@ yuridik matn, admin panelda `terms` va `privacy` slug'lari bilan yarating.
 Gid va turist telefonlari bir-biriga faqat to'lovdan keyin ko'rinadi.
 
 **Narx:** yarim kun (4 soat) / to'liq kun (8 soat) / ko'p kunlik (kun × narx, 2–14 kun). Guruh **5+** kishi —
-**+20%** (gid o'zgartiradi). LAZURI — **15%**, gid — **85%**.
+**+20%** (gid o'zgartiradi). MEYZI — **15%**, gid — **85%**.
 
 **Bekor qilish va jarimalar** (taqdimot, `apps/guides/policies.py`):
 
@@ -637,7 +637,7 @@ Saytda **"Telegram orqali kirish"** tugmasi → `t.me/<bot>?start=login` → bot
    raqamni qo'lda yozib bo'lmaydi; hozircha faqat +998);
 2. yangi foydalanuvchidan ism-familiyani so'raydi (Telegram'dagi ism tugma sifatida taklif qilinadi);
 3. foydalanuvchini bazaga yozadi — shu raqamli akkaunt bo'lsa, Telegram unga ulanadi (yangi akkaunt ochilmaydi);
-4. bir martalik havola yuboradi: `<LAZURI_FRONTEND_URL>/auth/telegram?code=...` (10 daqiqa, bir marta ishlaydi).
+4. bir martalik havola yuboradi: `<MEYZI_FRONTEND_URL>/auth/telegram?code=...` (10 daqiqa, bir marta ishlaydi).
    Havola bosilganda sayt `POST /api/v1/auth/telegram/login/ {"code": "..."}` orqali kiradi.
 
 Qaytgan foydalanuvchi `/start` bosishi bilan darhol yangi havola oladi. `/id` — chat ID'ni ko'rsatadi.
@@ -646,7 +646,7 @@ Qaytgan foydalanuvchi `/start` bosishi bilan darhol yangi havola oladi. `/id` �
 
 1. `.env`: `TELEGRAM_BOT_TOKEN=...`, `TELEGRAM_BOT_USERNAME=<bot username, @ siz>`
 2. Botni ishga tushiring (dev, long polling): `python manage.py telegram_bot` — alohida terminalda ishlab turadi.
-3. Prod: `TELEGRAM_WEBHOOK_SECRET` va `LAZURI_FRONTEND_URL` ni yozing, so'ng bir marta
+3. Prod: `TELEGRAM_WEBHOOK_SECRET` va `MEYZI_FRONTEND_URL` ni yozing, so'ng bir marta
    `python manage.py telegram_bot --set-webhook https://<domen>/api/v1/auth/telegram/webhook/`.
    Dev'ga qaytish: `python manage.py telegram_bot --delete-webhook`.
 
@@ -691,11 +691,11 @@ docker compose -f docker-compose.prod.yml exec web python manage.py createsuperu
 | `scheduler` | bronlar muddati, bildirishnomalar (15 s) |
 | `frontend` | Next.js (standalone, prod) |
 | `nginx` | 80-port: `/api/v1`, `/admin`, `/static` → backend; `/media/` — fayllar; qolgani → frontend. Yuklash ≤ 110 MB |
-| `backup` | har kuni `pg_dump` → `./backups/lazuri-YYYYMMDD-HHMM.dump`, 14 kun saqlanadi |
+| `backup` | har kuni `pg_dump` → `./backups/meyzi-YYYYMMDD-HHMM.dump`, 14 kun saqlanadi |
 
 - HTTPS'ni oldidagi proksi / load balancer yoki certbot beradi (`X-Forwarded-Proto` uzatilishi kerak).
 - Static fayllar — whitenoise (alohida server kerak emas). Konteynerlar root bo'lmagan foydalanuvchi (uid 1000) bilan.
-- Zaxiradan tiklash: `pg_restore -h db -U lazuri -d lazuri --clean backups/lazuri-....dump`
+- Zaxiradan tiklash: `pg_restore -h db -U meyzi -d meyzi --clean backups/meyzi-....dump`
 - **CI:** `.github/workflows/ci.yml` — har push'da ruff, migratsiya tekshiruvi, Postgres bilan pytest, `check --deploy`.
 
 ## Rollar va ruxsatlar
@@ -706,7 +706,7 @@ docker compose -f docker-compose.prod.yml exec web python manage.py createsuperu
 | `agency` | Turagentlik xodimi | + agentlik kabineti (ariza tasdiqlanganda avtomatik beriladi) |
 | `guide` | Individual gid | Turist bilan bir xil (gid profili — keyingi bosqichlarda) |
 | `business` | Mehmonxona, restoran va h.k. | Turist bilan bir xil (keyingi bosqichlarda) |
-| `admin` | LAZURI jamoasi | Admin panel: arizalar, moderatsiya, komissiya, katalog |
+| `admin` | MEYZI jamoasi | Admin panel: arizalar, moderatsiya, komissiya, katalog |
 
 `admin` rolini API orqali olib bo'lmaydi — faqat `createsuperuser` yoki admin panel orqali.
 Katalogga yozish va moderatsiya huquqi `is_staff=True` ga bog'liq. Kabinetga kirish — `AgencyMember` orqali
@@ -714,12 +714,12 @@ Katalogga yozish va moderatsiya huquqi `is_staff=True` ga bog'liq. Kabinetga kir
 
 ## Biznes qoidalari
 
-Joriy model — triphub.uz. Batafsil: `.claude/skills/lazuri-business-rules/SKILL.md`.
+Joriy model — triphub.uz. Batafsil: `.claude/skills/meyzi-business-rules/SKILL.md`.
 
 **Amalda (kodda bor):**
 
 - **Gidlar va mehmonxonalar:** yuqoridagi bo'limlarga qarang.
-- **LAZURI ham agentlik:** `is_platform=True`, komissiya 0%, `auto_publish=True` — o'z turlarini moderatsiyasiz chiqaradi.
+- **MEYZI ham agentlik:** `is_platform=True`, komissiya 0%, `auto_publish=True` — o'z turlarini moderatsiyasiz chiqaradi.
 - **Agentlik onboarding'i:** ariza → admin tekshiruvi (maqsad: 24 soat) → agentlik yaratiladi, "tekshirilgan" belgisi.
 - **Komissiya:** har bir agentlik uchun alohida `commission_percent`, sukut bo'yicha 15%.
 - **Narx:** 1 kishi uchun, so'mda. Sana uchun maxsus narx qo'yish mumkin (`Departure.price_uzs`).

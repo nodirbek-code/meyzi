@@ -23,7 +23,7 @@ def bot(settings, monkeypatch):
     """Bot yoqilgan, lekin tarmoqqa chiqmaydi — yuborilgan xabarlar ro'yxatga yoziladi."""
     settings.TELEGRAM_BOT_TOKEN = "123:TEST"
     settings.TELEGRAM_BOT_USERNAME = "meyzi_test_bot"
-    settings.LAZURI_FRONTEND_URL = "https://meyzi.uz"
+    settings.MEYZI_FRONTEND_URL = "https://meyzi.uz"
     sent = []
 
     def fake_call(method, payload=None, timeout=10):
@@ -272,7 +272,7 @@ def test_group_chats_ignored(bot):
 
 
 def test_localhost_link_sent_as_text(bot, settings):
-    settings.LAZURI_FRONTEND_URL = "http://localhost:3000"
+    settings.MEYZI_FRONTEND_URL = "http://localhost:3000"
     User.objects.create_user(email=None, phone="+998901234567", first_name="Ali", telegram_id=TG_ID)
     telegram_bot.handle_update(msg("/start"))
     telegram_bot.handle_update(msg(PASSWORD))

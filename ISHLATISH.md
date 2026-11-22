@@ -27,7 +27,7 @@ Texnik tafsilotlar (API, kod tuzilmasi) — `README.md` da.
 **Kerak:** Docker Desktop (yoqilgan), Git.
 
 ```bash
-cd D:\lazuri                  # WSL'da: cd /mnt/d/lazuri
+cd D:\meyzi                  # WSL'da: cd /mnt/d/meyzi
 copy .env.example .env        # WSL/Linux'da: cp .env.example .env
 docker compose up -d --build
 ```

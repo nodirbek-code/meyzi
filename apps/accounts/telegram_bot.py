@@ -45,7 +45,7 @@ from apps.notifications import telegram
 from .models import TelegramBotSession, TelegramLoginLink, User
 from .phones import normalize_phone
 
-log = logging.getLogger("lazuri.telegram_bot")
+log = logging.getLogger("meyzi.telegram_bot")
 Step = TelegramBotSession.Step
 
 NAME_RE = re.compile(r"^[^\W\d_]+(?:[\s'’`\-][^\W\d_]+)*$")
@@ -77,13 +77,13 @@ def issue_login_link(user: User, *, is_new: bool = False) -> str:
         user=user,
         token_hash=_hash(token),
         is_new_user=is_new,
-        expires_at=now + timedelta(minutes=settings.LAZURI_TELEGRAM_LOGIN_TTL_MINUTES),
+        expires_at=now + timedelta(minutes=settings.MEYZI_TELEGRAM_LOGIN_TTL_MINUTES),
     )
     return token
 
 
 def login_url(token: str) -> str:
-    return f"{settings.LAZURI_FRONTEND_URL}/auth/telegram?{urllib.parse.urlencode({'code': token})}"
+    return f"{settings.MEYZI_FRONTEND_URL}/auth/telegram?{urllib.parse.urlencode({'code': token})}"
 
 
 @transaction.atomic
@@ -130,7 +130,7 @@ def _esc(text: str) -> str:
 
 
 def _site_login_url() -> str:
-    return f"{settings.LAZURI_FRONTEND_URL}/login"
+    return f"{settings.MEYZI_FRONTEND_URL}/login"
 
 
 def _send_with_button(chat_id: int, text: str, button: str, url: str) -> None:
@@ -146,7 +146,7 @@ def _send_with_button(chat_id: int, text: str, button: str, url: str) -> None:
 
 def _send_login_link(chat_id: int, user: User, *, is_new: bool, intro: str) -> None:
     url = login_url(issue_login_link(user, is_new=is_new))
-    ttl = settings.LAZURI_TELEGRAM_LOGIN_TTL_MINUTES
+    ttl = settings.MEYZI_TELEGRAM_LOGIN_TTL_MINUTES
     phone = _esc(user.phone or "")
     text = (
         f"{intro}\n\nKeyingi safar saytga <b>{phone}</b> raqami va parolingiz bilan kirasiz.\n"

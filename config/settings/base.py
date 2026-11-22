@@ -1,4 +1,4 @@
-"""LAZURI — umumiy sozlamalar. Muhitga xos sozlamalar dev.py / test.py / prod.py da."""
+"""MEYZI — umumiy sozlamalar. Muhitga xos sozlamalar dev.py / test.py / prod.py da."""
 
 from datetime import timedelta
 from decimal import Decimal
@@ -77,7 +77,7 @@ TEMPLATES = [
     },
 ]
 
-DATABASES = {"default": env.db("DATABASE_URL", default="postgres://lazuri:lazuri@localhost:5432/lazuri")}
+DATABASES = {"default": env.db("DATABASE_URL", default="postgres://meyzi:meyzi@localhost:5432/meyzi")}
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 AUTH_USER_MODEL = "accounts.User"
@@ -185,26 +185,26 @@ SPECTACULAR_SETTINGS = {
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 
-# --- LAZURI biznes parametrlari ---
+# --- MEYZI biznes parametrlari ---
 # Agentlik uchun sukut bo'yicha komissiya (%). Har bir agentlikda alohida o'zgartiriladi.
-LAZURI_DEFAULT_COMMISSION_PERCENT = Decimal(env.str("LAZURI_DEFAULT_COMMISSION_PERCENT", default="15"))
+MEYZI_DEFAULT_COMMISSION_PERCENT = Decimal(env.str("MEYZI_DEFAULT_COMMISSION_PERCENT", default="15"))
 # Muddatli to'lov (Uzum Nasiya kabi): jami = narx x ustama, oylik = jami / oylar
-LAZURI_INSTALLMENT_MARKUP = Decimal(env.str("LAZURI_INSTALLMENT_MARKUP", default="1.44"))
-LAZURI_INSTALLMENT_MONTHS = env.int("LAZURI_INSTALLMENT_MONTHS", default=12)
+MEYZI_INSTALLMENT_MARKUP = Decimal(env.str("MEYZI_INSTALLMENT_MARKUP", default="1.44"))
+MEYZI_INSTALLMENT_MONTHS = env.int("MEYZI_INSTALLMENT_MONTHS", default=12)
 # Bron: to'lov uchun joylar shuncha daqiqaga band qilinadi
-LAZURI_BOOKING_HOLD_MINUTES = env.int("LAZURI_BOOKING_HOLD_MINUTES", default=30)
+MEYZI_BOOKING_HOLD_MINUTES = env.int("MEYZI_BOOKING_HOLD_MINUTES", default=30)
 # Bitta foydalanuvchida bir vaqtda to'lanmagan bronlar soni chegarasi
-LAZURI_MAX_PENDING_BOOKINGS = env.int("LAZURI_MAX_PENDING_BOOKINGS", default=3)
+MEYZI_MAX_PENDING_BOOKINGS = env.int("MEYZI_MAX_PENDING_BOOKINGS", default=3)
 
 # --- Individual gidlar (taqdimot qoidalari) ---
-LAZURI_GUIDE_COMMISSION_PERCENT = Decimal(env.str("LAZURI_GUIDE_COMMISSION_PERCENT", default="15"))
-LAZURI_GUIDE_RESPONSE_HOURS = env.int("LAZURI_GUIDE_RESPONSE_HOURS", default=24)  # gid javob berish muddati
-LAZURI_GUIDE_GROUP_THRESHOLD = env.int(
-    "LAZURI_GUIDE_GROUP_THRESHOLD", default=5
+MEYZI_GUIDE_COMMISSION_PERCENT = Decimal(env.str("MEYZI_GUIDE_COMMISSION_PERCENT", default="15"))
+MEYZI_GUIDE_RESPONSE_HOURS = env.int("MEYZI_GUIDE_RESPONSE_HOURS", default=24)  # gid javob berish muddati
+MEYZI_GUIDE_GROUP_THRESHOLD = env.int(
+    "MEYZI_GUIDE_GROUP_THRESHOLD", default=5
 )  # shundan katta guruh — ustama
 
 # --- Mehmonxonalar ---
-LAZURI_HOTEL_COMMISSION_PERCENT = Decimal(env.str("LAZURI_HOTEL_COMMISSION_PERCENT", default="15"))
+MEYZI_HOTEL_COMMISSION_PERCENT = Decimal(env.str("MEYZI_HOTEL_COMMISSION_PERCENT", default="15"))
 
 # --- Email va SMS (foydalanuvchilarga) ---
 # EMAIL_URL misollari: consolemail://  |  smtp+tls://user:parol@smtp.gmail.com:587
@@ -215,10 +215,10 @@ DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="MEYZI <no-reply@meyz
 # console | disabled  (provayder ulanganda — uning nomi)
 SMS_BACKEND = env.str("SMS_BACKEND", default="console")
 # Tasdiqlash kodi
-LAZURI_OTP_TTL_MINUTES = env.int("LAZURI_OTP_TTL_MINUTES", default=10)
-LAZURI_OTP_MAX_ATTEMPTS = 5
-LAZURI_OTP_RESEND_SECONDS = 60
-LAZURI_OTP_MAX_PER_HOUR = 5
+MEYZI_OTP_TTL_MINUTES = env.int("MEYZI_OTP_TTL_MINUTES", default=10)
+MEYZI_OTP_MAX_ATTEMPTS = 5
+MEYZI_OTP_RESEND_SECONDS = 60
+MEYZI_OTP_MAX_PER_HOUR = 5
 
 # --- Telefon tasdiqlash kodlari: Telegram Gateway (SMS emas) ---
 # console — kod server logiga chiqadi (dev) | locmem — testlar | gateway — https://gatewayapi.telegram.org
@@ -226,7 +226,7 @@ LAZURI_OTP_MAX_PER_HOUR = 5
 TELEGRAM_CODE_BACKEND = env.str("TELEGRAM_CODE_BACKEND", default="console")
 TELEGRAM_GATEWAY_TOKEN = env.str("TELEGRAM_GATEWAY_TOKEN", default="")
 # Kod bilan tasdiqlangan raqam formada shuncha vaqt "tasdiqlangan" hisoblanadi (soniya)
-LAZURI_PHONE_TOKEN_MAX_AGE = env.int("LAZURI_PHONE_TOKEN_MAX_AGE", default=3600)
+MEYZI_PHONE_TOKEN_MAX_AGE = env.int("MEYZI_PHONE_TOKEN_MAX_AGE", default=3600)
 
 # --- Google orqali kirish ---
 # Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application).
@@ -244,10 +244,10 @@ TELEGRAM_ADMIN_CHAT_IDS = env.list("TELEGRAM_ADMIN_CHAT_IDS", default=[])
 TELEGRAM_BOT_USERNAME = env.str("TELEGRAM_BOT_USERNAME", default="").lstrip("@")
 TELEGRAM_WEBHOOK_SECRET = env.str("TELEGRAM_WEBHOOK_SECRET", default="")
 # Bot yuboradigan "saytga kirish" havolasi shu manzilga olib boradi (Next.js sayt)
-LAZURI_FRONTEND_URL = env.str("LAZURI_FRONTEND_URL", default="http://localhost:3000").rstrip("/")
-LAZURI_TELEGRAM_LOGIN_TTL_MINUTES = env.int("LAZURI_TELEGRAM_LOGIN_TTL_MINUTES", default=10)
+MEYZI_FRONTEND_URL = env.str("MEYZI_FRONTEND_URL", default="http://localhost:3000").rstrip("/")
+MEYZI_TELEGRAM_LOGIN_TTL_MINUTES = env.int("MEYZI_TELEGRAM_LOGIN_TTL_MINUTES", default=10)
 # Xabardagi admin panel havolalari uchun
-LAZURI_SITE_URL = env.str("LAZURI_SITE_URL", default="http://localhost:8000")
+MEYZI_SITE_URL = env.str("MEYZI_SITE_URL", default="http://localhost:8000")
 
 # --- Loglar (stdout — docker logs) ---
 LOGGING = {

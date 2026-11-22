@@ -9,11 +9,11 @@ from apps.core.models import TimeStampedModel
 
 
 def default_commission():
-    return settings.LAZURI_DEFAULT_COMMISSION_PERCENT
+    return settings.MEYZI_DEFAULT_COMMISSION_PERCENT
 
 
 class Agency(TimeStampedModel):
-    """Tur o'tkazuvchi tashkilot. LAZURI'ning o'zi ham agentlik sifatida (is_platform=True) tur yaratadi."""
+    """Tur o'tkazuvchi tashkilot. MEYZI'ning o'zi ham agentlik sifatida (is_platform=True) tur yaratadi."""
 
     class Status(models.TextChoices):
         ACTIVE = "active", "Faol"

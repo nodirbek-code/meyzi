@@ -16,7 +16,7 @@ def generate_guide_booking_code():
 
 
 def default_guide_commission():
-    return settings.LAZURI_GUIDE_COMMISSION_PERCENT
+    return settings.MEYZI_GUIDE_COMMISSION_PERCENT
 
 
 class SpokenLanguage(models.TextChoices):
@@ -48,7 +48,7 @@ class Specialization(models.TextChoices):
 
 
 class GuideProfile(TimeStampedModel):
-    """Individual gid. Ariza → LAZURI tekshiruvi (48 soat) → approved."""
+    """Individual gid. Ariza → MEYZI tekshiruvi (48 soat) → approved."""
 
     class Status(models.TextChoices):
         PENDING = "pending", "Tekshiruvda"

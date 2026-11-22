@@ -9,7 +9,7 @@ from apps.hotels.models import Hotel, RoomType
 
 GUIDES = [
     {
-        "email": "demo.gid.aziz@lazuri.local",
+        "email": "demo.gid.aziz@meyzi.local",
         "slug": "aziz-karimov",
         "display_name": "Aziz Karimov",
         "bio": "Samarqand tarixi bo'yicha 8 yillik tajribali gid.",
@@ -20,7 +20,7 @@ GUIDES = [
         "prices": (300_000, 500_000, 450_000),
     },
     {
-        "email": "demo.gid.dilnoza@lazuri.local",
+        "email": "demo.gid.dilnoza@meyzi.local",
         "slug": "dilnoza-rahimova",
         "display_name": "Dilnoza Rahimova",
         "bio": "Tog' sayohatlari va milliy taomlar bo'yicha gid.",

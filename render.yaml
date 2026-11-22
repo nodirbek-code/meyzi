@@ -1,15 +1,15 @@
 # Render Blueprint: Dashboard → New → Blueprint → shu repo.
-# Eslatma: agar "lazuri-api" / "lazuri-web" nomlari band bo'lsa, Render URL'ga qo'shimcha qo'shadi —
+# Eslatma: agar "meyzi-api" / "meyzi-web" nomlari band bo'lsa, Render URL'ga qo'shimcha qo'shadi —
 # unda quyidagi *.onrender.com manzillarni haqiqiysiga almashtiring.
 databases:
-  - name: lazuri-db
+  - name: meyzi-db
     plan: free
-    databaseName: lazuri
-    user: lazuri
+    databaseName: meyzi
+    user: meyzi
 
 services:
   - type: web
-    name: lazuri-api
+    name: meyzi-api
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
@@ -28,20 +28,20 @@ services:
         value: config.settings.prod
       - key: DATABASE_URL
         fromDatabase:
-          name: lazuri-db
+          name: meyzi-db
           property: connectionString
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_ALLOWED_HOSTS
-        value: lazuri-api.onrender.com
+        value: meyzi-api.onrender.com
       - key: CSRF_TRUSTED_ORIGINS
-        value: https://lazuri-api.onrender.com,https://lazuri-web.onrender.com
+        value: https://meyzi-api.onrender.com,https://meyzi-web.onrender.com
       - key: CORS_ALLOWED_ORIGINS
-        value: https://lazuri-web.onrender.com
-      - key: LAZURI_SITE_URL
-        value: https://lazuri-api.onrender.com
-      - key: LAZURI_FRONTEND_URL
-        value: https://lazuri-web.onrender.com
+        value: https://meyzi-web.onrender.com
+      - key: MEYZI_SITE_URL
+        value: https://meyzi-api.onrender.com
+      - key: MEYZI_FRONTEND_URL
+        value: https://meyzi-web.onrender.com
       - key: SERVE_MEDIA
         value: "True"
       - key: EMAIL_URL
@@ -60,7 +60,7 @@ services:
         sync: false
 
   - type: web
-    name: lazuri-web
+    name: meyzi-web
     runtime: docker
     plan: free
     dockerfilePath: ./frontend/Dockerfile
@@ -68,6 +68,6 @@ services:
     envVars:
       # Build paytida ham kerak (Render env'larni Docker build-arg sifatida beradi)
       - key: NEXT_PUBLIC_API_URL
-        value: https://lazuri-api.onrender.com
+        value: https://meyzi-api.onrender.com
       - key: API_INTERNAL_URL
-        value: https://lazuri-api.onrender.com
+        value: https://meyzi-api.onrender.com

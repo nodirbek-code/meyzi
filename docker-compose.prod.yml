@@ -4,13 +4,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-lazuri}
-      POSTGRES_USER: ${POSTGRES_USER:-lazuri}
+      POSTGRES_DB: ${POSTGRES_DB:-meyzi}
+      POSTGRES_USER: ${POSTGRES_USER:-meyzi}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env.prod da majburiy}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-lazuri} -d $${POSTGRES_DB:-lazuri}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-meyzi} -d $${POSTGRES_DB:-meyzi}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -29,7 +29,7 @@ services:
     env_file: ${PROD_ENV_FILE:-.env.prod}
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
-      DATABASE_URL: postgres://${POSTGRES_USER:-lazuri}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-lazuri}
+      DATABASE_URL: postgres://${POSTGRES_USER:-meyzi}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-meyzi}
     volumes:
       - media:/app/media
       - private_media:/app/private_media
@@ -90,9 +90,9 @@ services:
       - -c
       - |
         while true; do
-          f=/backups/lazuri-$$(date +%Y%m%d-%H%M).dump
-          pg_dump -h db -U ${POSTGRES_USER:-lazuri} -d ${POSTGRES_DB:-lazuri} -Fc -f "$$f" && echo "zaxira: $$f"
-          find /backups -name 'lazuri-*.dump' -mtime +14 -delete
+          f=/backups/meyzi-$$(date +%Y%m%d-%H%M).dump
+          pg_dump -h db -U ${POSTGRES_USER:-meyzi} -d ${POSTGRES_DB:-meyzi} -Fc -f "$$f" && echo "zaxira: $$f"
+          find /backups -name 'meyzi-*.dump' -mtime +14 -delete
           sleep 86400
         done
     depends_on:

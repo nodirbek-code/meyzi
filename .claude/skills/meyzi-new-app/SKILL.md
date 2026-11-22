@@ -1,11 +1,11 @@
 ---
-name: lazuri-new-app
-description: LAZURI loyihasiga yangi Django ilova (app) yoki yangi model/endpoint qo'shish tartibi — gidlar, mehmonxonalar, bronlar, to'lovlar va h.k. Yangi bosqichni boshlashda, model, serializer, viewset, URL, admin yoki test yozishda ishlating.
+name: meyzi-new-app
+description: MEYZI loyihasiga yangi Django ilova (app) yoki yangi model/endpoint qo'shish tartibi — gidlar, mehmonxonalar, bronlar, to'lovlar va h.k. Yangi bosqichni boshlashda, model, serializer, viewset, URL, admin yoki test yozishda ishlating.
 ---
 
-# LAZURI: yangi ilova / endpoint qo'shish
+# MEYZI: yangi ilova / endpoint qo'shish
 
-Loyiha: `/mnt/d/lazuri` (Windows: `D:\lazuri`). Django 5.2 + DRF. Foydalanuvchi bilan **o'zbek tilida** gaplashing.
+Loyiha: `/mnt/d/meyzi` (Windows: `D:\meyzi`). Django 5.2 + DRF. Foydalanuvchi bilan **o'zbek tilida** gaplashing.
 Kod izohlari, `verbose_name`, xato xabarlari ham o'zbekcha (lotin).
 
 ## 1. Ilova yaratish
@@ -88,7 +88,7 @@ So'ng:
 
 ## 6. Yakunlash
 
-1. `python manage.py makemigrations <nom>` (test sozlamalari bilan — `lazuri-verify` skill'iga qarang).
-2. `lazuri-verify` skill'idagi tekshiruvlarni bajaring.
+1. `python manage.py makemigrations <nom>` (test sozlamalari bilan — `meyzi-verify` skill'iga qarang).
+2. `meyzi-verify` skill'idagi tekshiruvlarni bajaring.
 3. `README.md` ni yangilang: API jadvali, filtrlar, yo'l xaritasidagi belgi `[x]`.
 4. Foydalanuvchi so'ramaguncha commit qilmang.
