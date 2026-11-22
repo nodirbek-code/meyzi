@@ -70,7 +70,8 @@ def reject_hotel(hotel: Hotel, note: str) -> Hotel:
 
 def set_review_published(review: HotelReview, published: bool) -> HotelReview:
     review.is_published = published
-    review.save(update_fields=["is_published"])
+    review.is_moderated = True
+    review.save(update_fields=["is_published", "is_moderated"])
     recalculate_rating(review.hotel_id)
     return review
 

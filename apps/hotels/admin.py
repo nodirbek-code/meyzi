@@ -1,7 +1,7 @@
 from django.contrib import admin, messages
 from rest_framework.exceptions import ValidationError
 
-from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, return_with_note
+from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, log_action, return_with_note
 from apps.notifications import user_events
 
 from . import services
@@ -48,6 +48,7 @@ class HotelAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
     def approve(self, request, queryset):
         for h in queryset:
             services.approve_hotel(h)
+            log_action(self, request, h, "✅ Tasdiqlandi")
         self.message_user(request, f"{queryset.count()} ta mehmonxona tasdiqlandi.", messages.SUCCESS)
 
     @admin.action(description="↩️ Qaytarish (kamchiliklarni yozib)")
@@ -63,6 +64,7 @@ class HotelAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
             h.status = Hotel.Status.SUSPENDED
             h.save(update_fields=["status", "updated_at"])
             user_events.hotel_status(h)
+            log_action(self, request, h, "⛔ To'xtatildi")
             n += 1
         self.message_user(request, f"{n} ta mehmonxona to'xtatildi.", messages.WARNING)
 
@@ -108,18 +110,20 @@ class HotelBookingAdmin(admin.ModelAdmin):
 class HotelReviewAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
     """Sharhlar admin tasdiqlagach saytga chiqadi (matnni admin o'zgartirmaydi)."""
 
-    list_display = ["hotel", "user", "rating", "is_published", "created_at"]
-    list_filter = ["is_published", "rating"]
+    list_display = ["hotel", "user", "rating", "is_moderated", "is_published", "created_at"]
+    list_filter = ["is_moderated", "is_published", "rating"]
     actions = ["publish", "hide"]
 
     @admin.action(description="✅ E'lon qilish")
     def publish(self, request, queryset):
         for r in queryset:
             services.set_review_published(r, True)
+            log_action(self, request, r, "✅ Sharh e'lon qilindi")
         self.message_user(request, f"{queryset.count()} ta sharh e'lon qilindi.", messages.SUCCESS)
 
     @admin.action(description="🚫 Yashirish")
     def hide(self, request, queryset):
         for r in queryset:
             services.set_review_published(r, False)
+            log_action(self, request, r, "🚫 Sharh yashirildi")
         self.message_user(request, f"{queryset.count()} ta sharh yashirildi.")

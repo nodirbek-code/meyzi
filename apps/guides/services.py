@@ -63,7 +63,8 @@ def reject_profile(profile: GuideProfile, note: str) -> GuideProfile:
 
 def set_review_published(review: GuideReview, published: bool) -> GuideReview:
     review.is_published = published
-    review.save(update_fields=["is_published"])
+    review.is_moderated = True
+    review.save(update_fields=["is_published", "is_moderated"])
     recalculate_rating(review.guide_id)
     return review
 

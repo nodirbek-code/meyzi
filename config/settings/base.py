@@ -17,12 +17,13 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 DJANGO_APPS = [
-    "django.contrib.admin",
+    "apps.core.admin_site.MeyziAdminConfig",  # django.contrib.admin + dashboard bosh sahifa
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",
 ]
 THIRD_PARTY_APPS = [
     "rest_framework",

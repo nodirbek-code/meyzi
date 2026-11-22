@@ -188,3 +188,37 @@ def test_partner_gets_telegram_message_with_note(owner, hotel, settings):  # noq
     hotel_services.reject_hotel(hotel, "Manzil noto'g'ri")
     msg = UserMessage.objects.get(channel=UserMessage.Channel.TELEGRAM)
     assert msg.recipient == "777" and "Manzil noto'g'ri" in msg.body
+
+
+# ---------- Admin dashboard ----------
+
+
+def test_admin_dashboard_shows_queue_money_and_actions(admin_client, hotel, tour, owner):  # noqa: F811
+    from apps.bookings.models import Booking
+
+    hotel.status = Hotel.Status.PENDING
+    hotel.save()
+    tour.status = Tour.Status.PENDING_REVIEW
+    tour.save()
+
+    page = admin_client.get("/admin/").content.decode()
+    assert "Tekshiruv navbati" in page and "komissiya" in page
+    assert "2 ta</b> narsa tasdiqlashingizni kutyapti" in page
+    assert "/admin/hotels/hotel/?status__exact=pending" in page
+    assert "/admin/tours/tour/?status__exact=pending_review" in page
+    assert Booking.objects.count() == 0  # bo'sh bazada ham sahifa ochiladi
+
+    # qaytarish amali "Oxirgi admin amallari" da ko'rinadi
+    admin_client.post(
+        "/admin/hotels/hotel/",
+        {"action": "return_to_owner", ACTION_CHECKBOX_NAME: [hotel.pk], "apply": "1", "note": "Telefon yo'q"},
+    )
+    page = admin_client.get("/admin/").content.decode()
+    assert "Qaytarildi: Telefon yo&#x27;q" in page
+    assert "1 ta</b> narsa" in page  # mehmonxona endi navbatda emas, faqat tur qoldi
+
+
+def test_dashboard_requires_staff(client, user):
+    assert client.get("/admin/").status_code == 302  # login sahifasiga
+    client.force_login(user)
+    assert client.get("/admin/").status_code == 302  # oddiy foydalanuvchi kira olmaydi

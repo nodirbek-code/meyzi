@@ -1,6 +1,6 @@
 from django.contrib import admin, messages
 
-from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, return_with_note
+from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, log_action, return_with_note
 from apps.notifications import user_events
 
 from .models import Departure, ItineraryDay, ItineraryItem, Tour, TourCategory, TourMedia
@@ -50,6 +50,7 @@ class TourAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
             tour.moderation_note = ""
             tour.save()
             user_events.tour_moderated(tour)
+            log_action(self, request, tour, "✅ Tasdiqlandi va e'lon qilindi")
             n += 1
         self.message_user(request, f"{n} ta tur e'lon qilindi.", messages.SUCCESS)
 

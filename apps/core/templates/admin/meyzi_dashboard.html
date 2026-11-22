@@ -1,0 +1,128 @@
+{% extends "admin/index.html" %}
+{% load humanize %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .mz { margin-bottom: 28px; }
+  .mz h2 { font-size: 15px; margin: 0 0 10px; font-weight: 600; color: var(--body-quiet-color); text-transform: uppercase; letter-spacing: .04em; }
+  .mz-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .mz-card { display: block; padding: 14px 16px; border-radius: 10px; background: var(--darkened-bg); border: 1px solid var(--hairline-color); color: var(--body-fg) !important; text-decoration: none !important; }
+  a.mz-card:hover { border-color: var(--link-fg); }
+  .mz-card .n { font-size: 28px; font-weight: 700; line-height: 1.1; }
+  .mz-card .t { font-size: 13px; margin-top: 4px; }
+  .mz-card .s { font-size: 12px; color: var(--body-quiet-color); margin-top: 6px; }
+  .mz-card.todo { border-left: 4px solid #d9a441; }
+  .mz-card.late { border-left: 4px solid #c1623a; }
+  .mz-card.late .s { color: #c1623a; font-weight: 600; }
+  .mz-card.done { opacity: .6; }
+  .mz-banner { padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; font-size: 14px; }
+  .mz-banner.ok { background: rgba(79,154,107,.12); }
+  .mz-banner.todo { background: rgba(217,164,65,.16); }
+  .mz-money { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .mz-chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding: 10px 12px 0; background: var(--darkened-bg); border-radius: 10px; border: 1px solid var(--hairline-color); }
+  .mz-chart .bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+  .mz-chart .bar i { display: block; width: 100%; background: #4f9a6b; border-radius: 4px 4px 0 0; min-height: 2px; }
+  .mz-chart .bar span { font-size: 10px; color: var(--body-quiet-color); padding: 4px 0; }
+  .mz-list { margin: 0; padding: 0; list-style: none; }
+  .mz-list li { padding: 8px 12px; border-radius: 8px; background: var(--darkened-bg); margin-bottom: 6px; border-left: 4px solid #c1623a; }
+  .mz-cols { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 1100px) { .mz-cols { grid-template-columns: 2fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+  {# ---------- 1. Tekshiruv navbati ---------- #}
+  <section class="mz">
+    <h2>✅ Tekshiruv navbati</h2>
+    {% if queue_total %}
+      <div class="mz-banner todo">
+        <b>{{ queue_total }} ta</b> narsa tasdiqlashingizni kutyapti. Kartani bosing → ro'yxatda belgilang →
+        «Amal» dan <b>✅ Tasdiqlash</b> yoki <b>↩️ Qaytarish</b> (izoh bilan) ni tanlang.
+      </div>
+    {% else %}
+      <div class="mz-banner ok">Hammasi ko'rib chiqilgan — tekshiruv kutayotgan narsa yo'q. 🎉</div>
+    {% endif %}
+    <div class="mz-grid">
+      {% for q in queue %}
+        <a class="mz-card {% if q.count and q.overdue %}late{% elif q.count %}todo{% else %}done{% endif %}" href="{{ q.url }}">
+          <div class="n">{{ q.count }}</div>
+          <div class="t">{{ q.icon }} {{ q.title }}</div>
+          {% if q.count %}<div class="s">Eng eskisi: {{ q.oldest }}{% if q.overdue %} — kechikyapti{% endif %}</div>{% endif %}
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ---------- 2. Pul ---------- #}
+  <section class="mz">
+    <h2>💰 To'lovlar va komissiya</h2>
+    <div class="mz-money">
+      <div class="mz-card"><div class="n">{{ money.today.commission|intcomma }}</div><div class="t">Bugungi komissiya (so'm)</div><div class="s">{{ money.today.count }} ta to'langan bron · aylanma {{ money.today.total|intcomma }}</div></div>
+      <div class="mz-card"><div class="n">{{ money.week.commission|intcomma }}</div><div class="t">7 kunlik komissiya</div><div class="s">{{ money.week.count }} ta bron · aylanma {{ money.week.total|intcomma }}</div></div>
+      <div class="mz-card"><div class="n">{{ money.month.commission|intcomma }}</div><div class="t">30 kunlik komissiya</div><div class="s">{{ money.month.count }} ta bron · aylanma {{ money.month.total|intcomma }}</div></div>
+      <div class="mz-card"><div class="n">{{ money.new_today }}</div><div class="t">Bugun yangi bronlar</div><div class="s">To'lov kutilmoqda: {{ money.pending_payment }} · bugun bekor: {{ money.cancelled_today }}</div></div>
+    </div>
+    <p style="margin:14px 0 6px;font-size:13px;color:var(--body-quiet-color)">Oxirgi 14 kun — kunlik komissiya</p>
+    <div class="mz-chart">
+      {% for d in money.chart %}
+        <div class="bar" title="{{ d.day|date:'d.m' }}: {{ d.value|intcomma }} so'm"><i style="height: {{ d.pct }}%"></i><span>{{ d.day|date:"d" }}</span></div>
+      {% endfor %}
+    </div>
+    <p style="margin-top:10px;font-size:13px">
+      {% for k in money.by_kind %}{{ k.label }}: <b>{{ k.count }}</b> bron, {{ k.commission|intcomma }} so'm{% if not forloop.last %} · {% endif %}{% endfor %}
+      <span style="color:var(--body-quiet-color)">(30 kun)</span>
+    </p>
+  </section>
+
+  <div class="mz-cols">
+    <div>
+      {# ---------- 3. Ogohlantirishlar ---------- #}
+      <section class="mz">
+        <h2>⚠️ E'tibor talab qiladi</h2>
+        {% if alerts %}
+          <ul class="mz-list">
+            {% for a in alerts %}<li>{% if a.url %}<a href="{{ a.url }}">{{ a.text }}</a>{% else %}{{ a.text }}{% endif %}</li>{% endfor %}
+          </ul>
+        {% else %}
+          <div class="mz-banner ok">Ogohlantirish yo'q.</div>
+        {% endif %}
+      </section>
+
+      {# ---------- 4. Platforma ---------- #}
+      <section class="mz">
+        <h2>📊 Platforma</h2>
+        <div class="mz-grid">
+          {% for p in platform %}<a class="mz-card" href="{{ p.url }}"><div class="n">{{ p.value|intcomma }}</div><div class="t">{{ p.label }}</div></a>{% endfor %}
+        </div>
+      </section>
+    </div>
+
+    {# ---------- 5. Oxirgi amallar (barcha adminlar) ---------- #}
+    <section class="mz">
+      <h2>🕘 Oxirgi admin amallari</h2>
+      {% if recent_actions %}
+        <ul class="mz-list">
+          {% for e in recent_actions %}
+            <li style="border-left-color: var(--hairline-color)">
+              <b>{{ e.user.get_full_name|default:e.user.email }}</b> — {{ e.object_repr }}
+              <div style="font-size:12px;color:var(--body-quiet-color)">{{ e.get_change_message|default:"o'zgartirildi" }} · {{ e.action_time|date:"d.m H:i" }}</div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p style="color:var(--body-quiet-color)">Hali amal yo'q.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  {# ---------- 6. Barcha bo'limlar ---------- #}
+  <section class="mz">
+    <h2>🗂 Barcha bo'limlar</h2>
+    {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+  </section>
+</div>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}

@@ -1,7 +1,7 @@
 from django.contrib import admin, messages
 from rest_framework.exceptions import ValidationError
 
-from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, return_with_note
+from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, log_action, return_with_note
 
 from . import services
 from .models import Agency, AgencyApplication, AgencyMember
@@ -39,6 +39,7 @@ class AgencyAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
     def approve(self, request, queryset):
         for a in queryset:
             services.approve_agency(a)
+            log_action(self, request, a, "✅ Profil tasdiqlandi")
         self.message_user(request, f"{queryset.count()} ta agentlik tasdiqlandi.", messages.SUCCESS)
 
     @admin.action(description="↩️ Qaytarish (kamchiliklarni yozib)")
@@ -67,7 +68,11 @@ class AgencyApplicationAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
 
     @admin.action(description="✅ Tasdiqlash (agentlik yaratiladi)")
     def approve(self, request, queryset):
-        self._run(request, queryset, lambda a: services.approve_application(a, request.user))
+        def approve(application):
+            services.approve_application(application, request.user)
+            log_action(self, request, application, "✅ Ariza tasdiqlandi, agentlik yaratildi")
+
+        self._run(request, queryset, approve)
 
     @admin.action(description="↩️ Rad etish (sababini yozib)")
     def return_application(self, request, queryset):

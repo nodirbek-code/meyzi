@@ -72,6 +72,11 @@ class ReturnNoteForm(forms.Form):
     )
 
 
+def log_action(modeladmin, request, obj, message: str) -> None:
+    """Admin amalini tarixga yozadi (dashboard → "Oxirgi admin amallari")."""
+    modeladmin.log_change(request, obj, message)
+
+
 def return_with_note(modeladmin, request, queryset, *, apply, title: str):
     """Admin action: izoh so'raydigan oraliq sahifa → `apply(obj, note)` har bir yozuv uchun."""
     if "apply" in request.POST:
@@ -81,6 +86,7 @@ def return_with_note(modeladmin, request, queryset, *, apply, title: str):
             n = 0
             for obj in queryset:
                 apply(obj, note)
+                log_action(modeladmin, request, obj, f"↩️ Qaytarildi: {note}")
                 n += 1
             modeladmin.message_user(request, f"{n} ta qaytarildi, izoh yuborildi.", messages.WARNING)
             return None
