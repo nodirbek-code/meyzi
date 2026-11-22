@@ -30,6 +30,7 @@ export async function apiGet<T>(path: string, opts: Options = {}): Promise<T> {
     if (token) headers.Authorization = `Bearer ${token}`;
   }
   const res = await fetch(url, {
+    signal: AbortSignal.timeout(20_000), // API uxlab qolsa sahifa cheksiz kutmasin
     headers,
     ...(opts.auth || opts.revalidate === false ? { cache: "no-store" } : { next: { revalidate: opts.revalidate ?? 60 } }),
   });

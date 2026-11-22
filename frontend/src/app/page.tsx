@@ -10,7 +10,8 @@ import { apiGet } from "@/lib/api";
 import { BRAND } from "@/lib/brand";
 import type { ArticleCard, Category, Destination, Features, Paginated, Review, TourCard as Tour } from "@/lib/types";
 
-export const revalidate = 60;
+// Build paytida emas, so'rov kelganda render qilinadi (build vaqtida API hali ishlamasligi mumkin)
+export const dynamic = "force-dynamic";
 
 const COIN_STEPS = [
   { title: "Sayohat qiling", text: "Meyzi orqali sayohat turini tanlang va bron qiling." },

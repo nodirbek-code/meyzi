@@ -7,6 +7,7 @@ import { dateLong } from "@/lib/format";
 import type { ArticleCard, Paginated } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Qo'llanmalar" };
+export const dynamic = "force-dynamic";
 
 export default async function ArticlesPage() {
   const data = await apiGet<Paginated<ArticleCard>>("/articles/", { query: { page_size: 30 } });
