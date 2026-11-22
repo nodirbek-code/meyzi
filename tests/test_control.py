@@ -58,13 +58,14 @@ def test_dashboard_queue_and_list(staff_api, hotel, tour):  # noqa: F811
     hotel.status = Hotel.Status.PENDING
     hotel.save()
     data = staff_api.get(C + "dashboard/").data
-    q = {i["kind"]: i["count"] for i in data["queue"]}
-    assert q["hotel"] == 1 and q["tour"] == 0 and data["queue_total"] == 1
+    q = {i["kind"]: i for i in data["queue"]}
+    # yangi ariza avval moderatorda: adminning "tasdiqlash kerak" navbatida emas, "moderatorda" sonida
+    assert q["hotel"]["count"] == 0 and q["hotel"]["with_moderator"] == 1 and q["tour"]["count"] == 0
     assert {"today", "week", "month", "chart"} <= set(data["money"])
 
-    rows = staff_api.get(C + "items/hotel/").data
+    rows = staff_api.get(C + "items/hotel/?state=precheck").data
     assert [r["title"] for r in rows["results"]] == ["Registon Plaza"]
-    assert rows["counts"]["pending"] == 1
+    assert rows["counts"]["precheck"] == 1 and rows["counts"]["pending"] == 0
     assert staff_api.get(C + "items/hotel/?state=approved").data["results"] == []
     assert staff_api.get(C + "items/nima/").status_code == 404
 
@@ -73,7 +74,10 @@ def test_hotel_detail_and_return_with_note(staff_api, hotel, owner):  # noqa: F8
     hotel.status = Hotel.Status.PENDING
     hotel.save()
     d = staff_api.get(C + f"items/hotel/{hotel.pk}/").data
-    assert d["name"] == "Registon Plaza" and d["state"] == "pending"
+    assert d["name"] == "Registon Plaza" and d["state"] == "precheck"
+    assert {"approve", "precheck", "return"} <= set(
+        d["actions"]
+    )  # admin moderatorni kutmasdan ham hal qila oladi
     assert {"media", "rooms", "members"} <= set(d["data"])
 
     url = C + f"items/hotel/{hotel.pk}/return/"
@@ -98,7 +102,7 @@ def test_tour_approve_and_suspend_rules(staff_api, tour):
     assert staff_api.post(C + f"items/tour/{tour.pk}/approve/").data["state"] == "approved"
     tour.refresh_from_db()
     assert tour.status == "published"
-    assert staff_api.post(C + f"items/tour/{tour.pk}/suspend/").status_code == 400  # turga qo'llanmaydi
+    assert staff_api.post(C + f"items/tour/{tour.pk}/suspend/").status_code == 403  # turga qo'llanmaydi
 
 
 def test_guide_suspend_activate_and_certificate(staff_api, guide):  # noqa: F811

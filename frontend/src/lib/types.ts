@@ -13,6 +13,8 @@ export type User = {
   language: "uz" | "ru" | "en";
   /** Admin (Django admin paneliga kira oladi) */
   is_staff?: boolean;
+  /** "" — asosiy admin; "hotels" / "guides" — soha moderatori */
+  staff_area?: "" | "hotels" | "guides";
 };
 
 export type DestinationShort = { id: number; name: string; slug: string };

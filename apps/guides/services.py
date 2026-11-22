@@ -35,13 +35,24 @@ def unique_guide_slug(name: str) -> str:
     return slug
 
 
+def clear_precheck(obj) -> list[str]:
+    """Moderator tekshiruvini bekor qiladi (hamkor o'zgartirdi yoki admin qaytardi) — qayta boshidan."""
+    obj.prechecked_by = None
+    obj.prechecked_at = None
+    obj.precheck_note = ""
+    return ["prechecked_by", "prechecked_at", "precheck_note"]
+
+
 @transaction.atomic
 def submit_profile(profile: GuideProfile, *, is_new: bool, details: str = "") -> GuideProfile:
     """Yangi profil yoki tahrir (tasdiqlangan/qaytarilgan) — tekshiruvga; tekshiruvda saytdan yashirin."""
     was = profile.status
+    if was == GuideProfile.Status.PENDING and profile.prechecked_at and not is_new:
+        # moderator tekshirib bo'lgan edi — gid yana o'zgartirdi: qayta moderatorga
+        profile.save(update_fields=["updated_at", *clear_precheck(profile)])
     if is_new or was in (GuideProfile.Status.REJECTED, GuideProfile.Status.APPROVED):
         profile.status = GuideProfile.Status.PENDING
-        profile.save(update_fields=["status", "updated_at"])
+        profile.save(update_fields=["status", "updated_at", *clear_precheck(profile)])
         if profile.user.role == User.Role.TOURIST:
             profile.user.role = User.Role.GUIDE
             profile.user.save(update_fields=["role"])
@@ -56,7 +67,7 @@ def reject_profile(profile: GuideProfile, note: str) -> GuideProfile:
     """Admin qaytaradi: izoh gidga yuboriladi, u tuzatib qayta yuboradi."""
     profile.status = GuideProfile.Status.REJECTED
     profile.moderation_note = note
-    profile.save(update_fields=["status", "moderation_note", "updated_at"])
+    profile.save(update_fields=["status", "moderation_note", "updated_at", *clear_precheck(profile)])
     user_events.guide_profile_status(profile)
     return profile
 

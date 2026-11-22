@@ -259,9 +259,43 @@ def review_created(review) -> None:
     )
 
 
+STAFF_AREA = {"hotels.hotel": "hotels", "guides.guideprofile": "guides"}
+
+
+def notify_reviewers(obj, event: str, text: str) -> int:
+    """Soha moderatorlariga (mehmonxona / gid) Telegram orqali; moderator bo'lmasa — adminlarga."""
+    from apps.accounts.models import User
+
+    meta = obj._meta
+    area = STAFF_AREA.get(f"{meta.app_label}.{meta.model_name}")
+    if not area:
+        return notify_admins(event, text)
+    staff = User.objects.filter(is_staff=True, is_active=True, staff_area=area)
+    sent = 0
+    for u in staff:
+        if u.telegram_id:
+            queue_telegram(u.telegram_id, text, event=event)
+            sent += 1
+        elif u.email:
+            queue_email(u.email, f"{settings.BRAND_NAME}: tekshiruv kerak", text, event=event)
+            sent += 1
+    return sent or notify_admins(event, text)
+
+
+def precheck_done(what: str, name: str, obj, by, note: str = "") -> None:
+    """Moderator tekshirdi — yakuniy tasdiq uchun asosiy adminga."""
+    who = escape(by.full_name or by.email or "moderator")
+    notify_admins(
+        "precheck_done",
+        f"🟢 <b>{escape(what)}: moderator tekshirdi — tasdiqlash kerak</b>\n"
+        f"{_obj_link(name, obj)}\n👤 {who}" + (f"\n📝 {escape(note)}" if note else ""),
+    )
+
+
 def changes_submitted(what: str, name: str, obj, details: str = "") -> None:
     """Tasdiqlangan hamkor ma'lumotlarini o'zgartirdi — saytdan yashirildi, qayta tekshiruv kerak."""
-    notify_admins(
+    notify_reviewers(
+        obj,
         "changes_submitted",
         f"✏️ <b>{escape(what)}: o'zgarishlar tekshiruvga</b>\n"
         f"{_obj_link(name, obj)}" + (f"\n📝 {escape(details)}" if details else ""),
@@ -284,7 +318,8 @@ def partner_review_created(review, about: str) -> None:
 
 def guide_application(profile) -> None:
     langs = ", ".join(profile.languages)
-    notify_admins(
+    notify_reviewers(
+        profile,
         "guide_application",
         "🧑‍💼 <b>Gid arizasi</b> (tekshiruv kerak)\n"
         f"{_obj_link(profile.display_name, profile)}\n"
@@ -331,7 +366,8 @@ def guide_booking_cancelled(booking) -> None:
 
 
 def hotel_application(hotel) -> None:
-    notify_admins(
+    notify_reviewers(
+        hotel,
         "hotel_application",
         "🏨 <b>Mehmonxona arizasi</b> (tekshiruv kerak)\n"
         f"{_obj_link(hotel.name, hotel)} — {escape(hotel.destination.name)}\n"

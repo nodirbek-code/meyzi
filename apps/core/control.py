@@ -17,7 +17,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, serializers, status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
@@ -105,6 +105,8 @@ class Kind:
     status_of: Callable = field(default=lambda o: getattr(o, "status", ""))
     waiting_field: str = "updated_at"
     public_url: Callable = field(default=lambda o: None)
+    area: str = ""  # "hotels" | "guides" — soha moderatori ko'radi; bo'sh — faqat asosiy admin
+    two_stage: bool = False  # moderator tekshiradi → asosiy admin yakuniy tasdiqlaydi
 
 
 def _hotel_kind() -> Kind:
@@ -395,23 +397,140 @@ def _kind(name: str) -> Kind:
 # ---------- View'lar ----------
 
 
+# ---------- Rollar: asosiy admin va soha moderatorlari ----------
+
+REVIEW_KINDS = ("review", "hotel_review", "guide_review")
+AREA_TITLE = {"hotels": "Mehmonxonalar moderatori", "guides": "Gidlar moderatori", "admin": "Asosiy admin"}
+
+
+def staff_role(user) -> str:
+    """ "admin" (asosiy admin) | "hotels" | "guides" (soha moderatori)."""
+    if user.is_superuser or not getattr(user, "staff_area", ""):
+        return "admin"
+    return user.staff_area
+
+
+class IsMainAdmin(IsStaff):
+    message = "Bu bo'lim faqat asosiy admin uchun."
+
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and staff_role(request.user) == "admin"
+
+
+def _two_stage(k: Kind, area: str) -> Kind:
+    """Ikki bosqich: "precheck" — moderatorda, "pending" — moderator tekshirdi, admin tasdig'ida."""
+    k.area, k.two_stage = area, True
+    rest = {s: f for s, f in k.states.items() if s != "pending"}
+    k.states = {
+        "precheck": {"status": "pending", "prechecked_at__isnull": True},
+        "pending": {"status": "pending", "prechecked_at__isnull": False},
+        **rest,
+    }
+    base = k.status_of
+    k.status_of = lambda o: (
+        ("pending" if o.prechecked_at else "precheck") if o.status == "pending" else base(o)
+    )
+    return k
+
+
+def visible_kinds(user) -> dict[str, Kind]:
+    role = staff_role(user)
+    ks = kinds()
+    _two_stage(ks["hotel"], "hotels")
+    _two_stage(ks["guide"], "guides")
+    ks["hotel_review"].area = "hotels"
+    ks["guide_review"].area = "guides"
+    if role == "admin":
+        return ks
+    return {name: k for name, k in ks.items() if k.area == role}
+
+
+def _visible_kind(request, name: str) -> Kind:
+    k = visible_kinds(request.user).get(name)
+    if k is None:
+        raise Http404
+    return k
+
+
+def actionable_state(k: Kind, role: str) -> str:
+    """Navbatdagi "ish kutayotgan" holat: moderatorga — precheck, adminga — pending (moderator tekshirgan)."""
+    if k.two_stage and role != "admin":
+        return "precheck"
+    return "pending"
+
+
+def allowed_actions(name: str, k: Kind, obj, role: str) -> list[str]:
+    state = k.status_of(obj)
+    if role == "admin":
+        acts = []
+        if state != "approved":
+            acts.append("approve")
+        if k.two_stage and state == "precheck":
+            acts.append("precheck")
+        if name in REVIEW_KINDS:
+            if state != "rejected":
+                acts.append("return")
+        else:
+            acts.append("return")
+        if k.suspend is not None:
+            acts.append("activate" if state == "suspended" else "suspend")
+        return acts
+    if name in REVIEW_KINDS:  # sharhlar — soha moderatori o'zi hal qiladi
+        return [a for a, ok in (("approve", state != "approved"), ("return", state != "rejected")) if ok]
+    if k.two_stage and state == "precheck":
+        return ["precheck", "return"]
+    return []
+
+
+def _precheck_info(obj) -> dict | None:
+    if not getattr(obj, "prechecked_at", None):
+        return None
+    by = obj.prechecked_by
+    return {
+        "by": (by.full_name or by.email) if by else "—",
+        "at": obj.prechecked_at,
+        "note": obj.precheck_note,
+    }
+
+
 class _Staff(APIView):
     permission_classes = [IsStaff]
 
 
-class ControlDashboardView(_Staff):
-    """Bosh sahifa: tekshiruv navbati, pul, ogohlantirishlar, platforma, oxirgi amallar."""
+class ControlMeView(_Staff):
+    """Joriy ishchining roli — frontend menyu va tugmalarni shunga moslaydi."""
 
     @extend_schema(responses={200: dict})
     def get(self, request):
+        role = staff_role(request.user)
+        return Response(
+            {
+                "role": role,
+                "role_title": AREA_TITLE.get(role, role),
+                "kinds": list(visible_kinds(request.user)),
+            }
+        )
+
+
+class ControlDashboardView(_Staff):
+    """Bosh sahifa: o'z sohasidagi navbat; asosiy adminga — pul, ogohlantirishlar, platforma ham."""
+
+    @extend_schema(responses={200: dict})
+    def get(self, request):
+        role = staff_role(request.user)
         queue = []
-        for name, k in kinds().items():
-            qs = k.queryset().filter(**k.states["pending"])
+        for name, k in visible_kinds(request.user).items():
+            state = actionable_state(k, role)
+            qs = k.queryset().filter(**k.states[state])
             n = qs.count()
             oldest = (
                 qs.order_by(k.waiting_field).values_list(k.waiting_field, flat=True).first() if n else None
             )
             age, overdue = dashboard._age(oldest)
+            # adminga: moderatorda turganlar soni (ma'lumot uchun)
+            waiting_other = (
+                k.queryset().filter(**k.states["precheck"]).count() if k.two_stage and role == "admin" else 0
+            )
             queue.append(
                 {
                     "kind": name,
@@ -420,10 +539,13 @@ class ControlDashboardView(_Staff):
                     "count": n,
                     "oldest": age,
                     "overdue": overdue,
+                    "state": state,
+                    "with_moderator": waiting_other,
                 }
             )
-        money = dashboard.money()
-        money["chart"] = [{"day": d["day"], "value": d["value"], "pct": d["pct"]} for d in money["chart"]]
+        logs = LogEntry.objects.select_related("user").order_by("-action_time")
+        if role != "admin":
+            logs = logs.filter(user=request.user)
         actions = [
             {
                 "user": e.user.full_name or e.user.email,
@@ -431,34 +553,44 @@ class ControlDashboardView(_Staff):
                 "message": e.get_change_message() or "o'zgartirildi",
                 "at": e.action_time,
             }
-            for e in dashboard.recent_actions(15)
+            for e in logs[:15]
         ]
-        alerts = [{"text": a["text"]} for a in dashboard.alerts()]
-        platform = [{"label": p["label"], "value": p["value"]} for p in dashboard.platform()]
-        return Response(
-            {
-                "queue": queue,
-                "queue_total": sum(q["count"] for q in queue),
-                "money": money,
-                "alerts": alerts,
-                "platform": platform,
-                "recent_actions": actions,
-            }
-        )
+        data = {
+            "role": role,
+            "role_title": AREA_TITLE.get(role, role),
+            "queue": queue,
+            "queue_total": sum(q["count"] for q in queue),
+            "recent_actions": actions,
+            "money": None,
+            "alerts": [],
+            "platform": [],
+        }
+        if role == "admin":
+            money = dashboard.money()
+            money["chart"] = [{"day": d["day"], "value": d["value"], "pct": d["pct"]} for d in money["chart"]]
+            data["money"] = money
+            data["alerts"] = [{"text": a["text"]} for a in dashboard.alerts()]
+            data["platform"] = [{"label": p["label"], "value": p["value"]} for p in dashboard.platform()]
+        return Response(data)
 
 
 class ControlListView(_Staff):
-    """`?state=pending|rejected|approved|suspended` (standart — pending), `?q=` qidiruv."""
+    """`?state=precheck|pending|rejected|approved|suspended`, `?q=`. Standart — ish kutayotgan holat."""
 
     @extend_schema(responses={200: dict})
     def get(self, request, kind):
-        k = _kind(kind)
-        state = request.query_params.get("state", "pending")
+        role = staff_role(request.user)
+        k = _visible_kind(request, kind)
+        default = actionable_state(k, role)
+        state = request.query_params.get("state") or default
         if state not in k.states:
             raise ValidationError({"state": f"Mumkin: {', '.join(k.states)}"})
-        qs = k.queryset().filter(**k.states[state]).order_by(k.waiting_field)
-        if state != "pending":
-            qs = qs.order_by(f"-{k.waiting_field}")
+        qs = k.queryset().filter(**k.states[state])
+        qs = (
+            qs.order_by(k.waiting_field)
+            if state in ("precheck", "pending")
+            else qs.order_by(f"-{k.waiting_field}")
+        )
         rows = []
         for obj in qs[:200]:
             age, overdue = dashboard._age(getattr(obj, k.waiting_field))
@@ -468,7 +600,7 @@ class ControlListView(_Staff):
                     **k.row(obj),
                     "status": k.status_of(obj),
                     "waiting": age,
-                    "overdue": overdue and state == "pending",
+                    "overdue": overdue and state in ("precheck", "pending"),
                 }
             )
         q = (request.query_params.get("q") or "").strip().lower()
@@ -479,7 +611,10 @@ class ControlListView(_Staff):
                 "kind": kind,
                 "title": k.title,
                 "states": list(k.states),
-                "can_suspend": k.suspend is not None,
+                "state": state,
+                "default_state": default,
+                "two_stage": k.two_stage,
+                "can_suspend": k.suspend is not None and role == "admin",
                 "results": rows,
                 "counts": {s: k.queryset().filter(**f).count() for s, f in k.states.items()},
             }
@@ -489,14 +624,11 @@ class ControlListView(_Staff):
 class ControlItemView(_Staff):
     @extend_schema(responses={200: dict})
     def get(self, request, kind, pk):
-        k = _kind(kind)
+        role = staff_role(request.user)
+        k = _visible_kind(request, kind)
         obj = get_object_or_404(k.queryset(), pk=pk)
         history = [
-            {
-                "user": e.user.full_name or e.user.email,
-                "message": e.get_change_message(),
-                "at": e.action_time,
-            }
+            {"user": e.user.full_name or e.user.email, "message": e.get_change_message(), "at": e.action_time}
             for e in LogEntry.objects.filter(
                 content_type__app_label=obj._meta.app_label,
                 content_type__model=obj._meta.model_name,
@@ -512,8 +644,12 @@ class ControlItemView(_Staff):
                 "id": obj.pk,
                 "name": k.row(obj)["title"],
                 "state": k.status_of(obj),
+                "two_stage": k.two_stage,
+                "role": role,
+                "actions": allowed_actions(kind, k, obj, role),
+                "precheck": _precheck_info(obj) if k.two_stage else None,
                 "public_url": k.public_url(obj),
-                "can_suspend": k.suspend is not None,
+                "can_suspend": k.suspend is not None and role == "admin",
                 "data": k.detail(obj, request),
                 "history": history,
             }
@@ -525,10 +661,11 @@ class ControlActionSerializer(serializers.Serializer):
 
 
 class ControlActionView(_Staff):
-    """POST .../approve | return (izoh majburiy) | suspend | activate."""
+    """POST .../approve | precheck (moderator → admin) | return (izoh majburiy) | suspend | activate."""
 
     ACTIONS = {
         "approve": "✅ Tasdiqlandi",
+        "precheck": "🟢 Moderator tekshirdi — adminga yuborildi",
         "return": "↩️ Qaytarildi",
         "suspend": "⛔ To'xtatildi",
         "activate": "▶️ Faollashtirildi",
@@ -537,21 +674,33 @@ class ControlActionView(_Staff):
     @extend_schema(request=ControlActionSerializer, responses={200: dict})
     def post(self, request, kind, pk, action):
         from apps.agencies import services as agency_services
+        from apps.notifications import services as notify
 
-        k = _kind(kind)
+        role = staff_role(request.user)
+        k = _visible_kind(request, kind)
         if action not in self.ACTIONS:
             raise Http404
         obj = get_object_or_404(k.queryset(), pk=pk)
+        if action not in allowed_actions(kind, k, obj, role):
+            raise PermissionDenied(
+                "Bu amal sizga ruxsat etilmagan." if role != "admin" else "Bu holatda bu amal qo'llanmaydi."
+            )
         ser = ControlActionSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         note = ser.validated_data["note"].strip()
 
-        if action == "return" and kind not in ("review", "hotel_review", "guide_review") and len(note) < 5:
+        if action == "return" and kind not in REVIEW_KINDS and len(note) < 5:
             raise ValidationError(
                 {"note": "Qayerda kamchilik borligini yozing (kamida 5 belgi) — bu hamkorga yuboriladi."}
             )
 
-        if kind == "application":
+        if action == "precheck":
+            obj.prechecked_by = request.user
+            obj.prechecked_at = timezone.now()
+            obj.precheck_note = note
+            obj.save(update_fields=["prechecked_by", "prechecked_at", "precheck_note", "updated_at"])
+            notify.precheck_done(k.title, k.row(obj)["title"], obj, request.user, note)
+        elif kind == "application":
             if action == "approve":
                 agency_services.approve_application(obj, request.user)
             elif action == "return":
@@ -574,11 +723,12 @@ class ControlActionView(_Staff):
 
 
 class ControlCertificateView(_Staff):
-    """Gid sertifikati (yopiq fayl) — faqat admin."""
+    """Gid sertifikati (yopiq fayl) — asosiy admin va gidlar moderatori."""
 
     def get(self, request, pk):
         from apps.guides.models import GuideProfile
 
+        _visible_kind(request, "guide")
         g = get_object_or_404(GuideProfile, pk=pk)
         if not g.certificate_file:
             raise Http404

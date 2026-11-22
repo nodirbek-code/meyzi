@@ -27,8 +27,17 @@ export default async function ControlDashboard() {
       <Section title="✅ Tekshiruv navbati">
         {d.queue_total ? (
           <p className="rounded-xl bg-sun-50 px-4 py-3 text-sm">
-            <b>{d.queue_total} ta</b> narsa tasdiqlashingizni kutyapti. Kartani bosing → ko&apos;rib chiqing →{" "}
-            <b>Tasdiqlash</b> yoki <b>Qaytarish</b> (izoh bilan).
+            {d.role === "admin" ? (
+              <>
+                <b>{d.queue_total} ta</b> narsa yakuniy tasdig&apos;ingizni kutyapti. Kartani bosing → ko&apos;rib chiqing →{" "}
+                <b>Tasdiqlash</b> yoki <b>Qaytarish</b> (izoh bilan).
+              </>
+            ) : (
+              <>
+                <b>{d.queue_total} ta</b> ariza tekshiruvingizni kutyapti. Ma&apos;lumotlarni tekshiring → <b>Tekshirildi</b>{" "}
+                (adminga yuboriladi) yoki kamchilik bo&apos;lsa <b>Hamkorga qaytarish</b>.
+              </>
+            )}
           </p>
         ) : (
           <p className="rounded-xl bg-forest-50 px-4 py-3 text-sm text-forest-700">Hammasi ko&apos;rib chiqilgan — kutayotgan narsa yo&apos;q. 🎉</p>
@@ -37,7 +46,7 @@ export default async function ControlDashboard() {
           {d.queue.map((q) => (
             <Link
               key={q.kind}
-              href={`/control/queue/${q.kind}`}
+              href={`/control/queue/${q.kind}?state=${q.state}`}
               className={`card block p-4 transition hover:-translate-y-0.5 hover:shadow-lift ${q.count ? (q.overdue ? "border-l-4 border-l-clay-500" : "border-l-4 border-l-sun-500") : "opacity-70"}`}
             >
               <div className="text-3xl font-bold">{q.count}</div>
@@ -48,12 +57,14 @@ export default async function ControlDashboard() {
                   {q.overdue && " — kechikyapti"}
                 </div>
               )}
+              {q.with_moderator > 0 && <div className="mt-1 text-xs text-sky-700">Moderatorda: {q.with_moderator} ta</div>}
             </Link>
           ))}
         </div>
       </Section>
 
-      {/* 2. Pul */}
+      {/* 2. Pul — faqat asosiy admin */}
+      {m && (
       <Section title="💰 To'lovlar va komissiya">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
@@ -61,7 +72,7 @@ export default async function ControlDashboard() {
             ["7 kunlik komissiya", m.week],
             ["30 kunlik komissiya", m.month],
           ].map(([label, v]) => {
-            const x = v as Dashboard["money"]["today"];
+            const x = v as NonNullable<Dashboard["money"]>["today"];
             return (
               <div key={label as string} className="card p-4">
                 <div className="text-2xl font-bold">{money(x.commission)}</div>
@@ -97,9 +108,11 @@ export default async function ControlDashboard() {
           </p>
         </div>
       </Section>
+      )}
 
       <div className="grid gap-8 xl:grid-cols-[1fr_1fr]">
         {/* 3. Ogohlantirishlar va platforma */}
+        {d.role === "admin" && (
         <div className="space-y-8">
           <Section title="⚠️ E'tibor talab qiladi">
             {d.alerts.length ? (
@@ -123,9 +136,10 @@ export default async function ControlDashboard() {
             </div>
           </Section>
         </div>
+        )}
 
         {/* 4. Oxirgi amallar */}
-        <Section title="🕘 Oxirgi admin amallari">
+        <Section title={d.role === "admin" ? "🕘 Oxirgi admin amallari" : "🕘 Mening oxirgi amallarim"}>
           {d.recent_actions.length ? (
             <ul className="card divide-y divide-sand-200">
               {d.recent_actions.map((a, i) => (

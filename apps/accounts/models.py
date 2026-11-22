@@ -74,6 +74,19 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_active = models.BooleanField("faol", default=True)
     is_staff = models.BooleanField("admin panelga kirish", default=False)
+    # Ishchi (moderator): faqat o'z sohasidagi arizalarni tekshiradi, yakuniy tasdiq — asosiy admin.
+    # Bo'sh — asosiy admin (is_staff bo'lsa hammasiga kiradi).
+    staff_area = models.CharField(
+        "mas'ul sohasi",
+        max_length=20,
+        choices=[
+            ("", "Asosiy admin (hammasi)"),
+            ("hotels", "Mehmonxonalar moderatori"),
+            ("guides", "Gidlar moderatori"),
+        ],
+        default="",
+        blank=True,
+    )
     date_joined = models.DateTimeField("ro'yxatdan o'tgan", default=timezone.now)
 
     objects = UserManager()

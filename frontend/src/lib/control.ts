@@ -2,12 +2,17 @@
 
 export type ControlKind = "application" | "hotel" | "guide" | "tour" | "agency" | "review" | "hotel_review" | "guide_review";
 
-export type QueueCard = { kind: ControlKind; title: string; icon: string; count: number; oldest: string; overdue: boolean };
+export type QueueCard = { kind: ControlKind; title: string; icon: string; count: number; oldest: string; overdue: boolean; state: string; with_moderator: number };
+
+/** "admin" — asosiy admin; "hotels" / "guides" — soha moderatori */
+export type StaffRole = "admin" | "hotels" | "guides";
 
 export type Dashboard = {
+  role: StaffRole;
+  role_title: string;
   queue: QueueCard[];
   queue_total: number;
-  money: {
+  money: null | {
     today: Money;
     week: Money;
     month: Money;
@@ -24,7 +29,7 @@ export type Dashboard = {
 type Money = { count: number; total: number; commission: number };
 
 export type ListRow = { id: number; title: string; subtitle: string; status: string; waiting: string; overdue: boolean };
-export type ListResponse = { kind: ControlKind; title: string; states: string[]; can_suspend: boolean; results: ListRow[]; counts: Record<string, number> };
+export type ListResponse = { kind: ControlKind; title: string; states: string[]; state: string; default_state: string; two_stage: boolean; can_suspend: boolean; results: ListRow[]; counts: Record<string, number> };
 
 export type Item = {
   kind: ControlKind;
@@ -34,6 +39,11 @@ export type Item = {
   state: string;
   public_url: string | null;
   can_suspend: boolean;
+  two_stage: boolean;
+  role: StaffRole;
+  /** Joriy ishchiga ruxsat etilgan amallar: approve | precheck | return | suspend | activate */
+  actions: string[];
+  precheck: { by: string; at: string; note: string } | null;
   data: Record<string, unknown>;
   history: { user: string; message: string; at: string }[];
 };
@@ -41,6 +51,7 @@ export type Item = {
 export const REVIEW_KINDS: ControlKind[] = ["review", "hotel_review", "guide_review"];
 
 export const STATE_LABEL: Record<string, string> = {
+  precheck: "Moderatorda",
   pending: "Tekshiruvda",
   rejected: "Qaytarilgan",
   approved: "Tasdiqlangan",
@@ -49,7 +60,17 @@ export const STATE_LABEL: Record<string, string> = {
 /** Sharhlarda "qaytarish" — yashirish */
 export const REVIEW_STATE_LABEL: Record<string, string> = { pending: "Tekshiruvda", rejected: "Yashirilgan", approved: "E'lon qilingan" };
 
-export const STATE_TONE: Record<string, "gold" | "red" | "green" | "gray"> = {
+/** Ikki bosqichli bo'limlar (mehmonxona, gid): moderator → admin */
+export const TWO_STAGE_LABEL: Record<string, string> = {
+  precheck: "Moderator tekshiruvida",
+  pending: "Admin tasdig'ida",
+  rejected: "Qaytarilgan",
+  approved: "Tasdiqlangan",
+  suspended: "To'xtatilgan",
+};
+
+export const STATE_TONE: Record<string, "gold" | "red" | "green" | "gray" | "blue"> = {
+  precheck: "blue",
   pending: "gold",
   rejected: "red",
   approved: "green",

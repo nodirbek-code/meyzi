@@ -15,12 +15,12 @@ export default async function ControlLayout({ children }: { children: React.Reac
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">Boshqaruv paneli</p>
-          <h1 className="mt-1 text-2xl sm:text-3xl">Admin</h1>
+          <h1 className="mt-1 text-2xl sm:text-3xl">{d.role_title}</h1>
         </div>
         <p className="text-sm text-ink-mute">{user.full_name || user.email}</p>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr] lg:gap-8">
-        <ControlNav queue={d.queue} />
+        <ControlNav queue={d.queue} role={d.role} />
         <div className="min-w-0">{children}</div>
       </div>
     </div>

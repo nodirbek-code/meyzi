@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui";
-import { REVIEW_KINDS, REVIEW_STATE_LABEL, STATE_LABEL, STATE_TONE, type ControlKind, type ListResponse } from "@/lib/control";
+import { REVIEW_KINDS, REVIEW_STATE_LABEL, STATE_LABEL, STATE_TONE, TWO_STAGE_LABEL, type ControlKind, type ListResponse } from "@/lib/control";
 import { controlGet, requireStaff } from "@/lib/control-server";
 
 export default async function ControlQueue({
@@ -13,9 +13,10 @@ export default async function ControlQueue({
 }) {
   await requireStaff();
   const { kind } = await params;
-  const { state = "pending", q = "" } = await searchParams;
-  const data = await controlGet<ListResponse>(`/items/${kind}/`, { state, q });
-  const labels = REVIEW_KINDS.includes(kind) ? REVIEW_STATE_LABEL : STATE_LABEL;
+  const { state: asked, q = "" } = await searchParams;
+  const data = await controlGet<ListResponse>(`/items/${kind}/`, { state: asked, q });
+  const state = data.state;
+  const labels = REVIEW_KINDS.includes(kind) ? REVIEW_STATE_LABEL : data.two_stage ? TWO_STAGE_LABEL : STATE_LABEL;
 
   return (
     <div className="space-y-5">
@@ -51,7 +52,7 @@ export default async function ControlQueue({
                 </div>
                 {r.waiting && (
                   <span className={`text-xs ${r.overdue ? "font-semibold text-clay-700" : "text-ink-mute"}`}>
-                    {state === "pending" ? `kutyapti: ${r.waiting}` : r.waiting}
+                    {state === data.default_state ? `kutyapti: ${r.waiting}` : r.waiting}
                   </span>
                 )}
                 <Badge tone={STATE_TONE[r.status] ?? "gray"}>{labels[r.status] ?? r.status}</Badge>
@@ -62,7 +63,7 @@ export default async function ControlQueue({
         </ul>
       ) : (
         <p className="card p-8 text-center text-sm text-ink-mute">
-          {state === "pending" ? "Tekshiruv kutayotgan narsa yo'q. 🎉" : "Bo'sh."}
+          {state === data.default_state ? "Tekshiruv kutayotgan narsa yo'q. 🎉" : "Bo'sh."}
         </p>
       )}
     </div>

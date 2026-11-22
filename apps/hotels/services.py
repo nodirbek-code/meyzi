@@ -50,12 +50,23 @@ def register_hotel(*, user, **fields) -> Hotel:
     return hotel
 
 
+def clear_precheck(obj) -> list[str]:
+    """Moderator tekshiruvini bekor qiladi (hamkor o'zgartirdi yoki admin qaytardi) — qayta boshidan."""
+    obj.prechecked_by = None
+    obj.prechecked_at = None
+    obj.precheck_note = ""
+    return ["prechecked_by", "prechecked_at", "precheck_note"]
+
+
 def resubmit_hotel(hotel: Hotel, details: str = "") -> Hotel:
     """Hamkor o'zgartirdi: tasdiqlangan yoki qaytarilgan bo'lsa — qayta tekshiruvga (saytdan yashiriladi)."""
     if hotel.status in (Hotel.Status.APPROVED, Hotel.Status.REJECTED):
         hotel.status = Hotel.Status.PENDING
-        hotel.save(update_fields=["status", "updated_at"])
+        hotel.save(update_fields=["status", "updated_at", *clear_precheck(hotel)])
         notify.changes_submitted("Mehmonxona", hotel.name, hotel, details)
+    elif hotel.status == Hotel.Status.PENDING and hotel.prechecked_at:
+        # moderator tekshirib bo'lgan edi — hamkor yana o'zgartirdi: qayta moderatorga
+        hotel.save(update_fields=["updated_at", *clear_precheck(hotel)])
     return hotel
 
 
@@ -63,7 +74,7 @@ def reject_hotel(hotel: Hotel, note: str) -> Hotel:
     """Admin qaytaradi: izoh hamkorga yuboriladi, u tuzatib qayta yuboradi."""
     hotel.status = Hotel.Status.REJECTED
     hotel.moderation_note = note
-    hotel.save(update_fields=["status", "moderation_note", "updated_at"])
+    hotel.save(update_fields=["status", "moderation_note", "updated_at", *clear_precheck(hotel)])
     user_events.hotel_status(hotel)
     return hotel
 

@@ -26,8 +26,16 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .control import _Staff
+from .control import IsMainAdmin
+
+
+class _Staff(APIView):
+    """Boshqarish — faqat asosiy admin (moderatorlar kira olmaydi)."""
+
+    permission_classes = [IsMainAdmin]
+
 
 # ---------- Yordamchilar ----------
 
@@ -654,14 +662,18 @@ def resources() -> dict[str, Resource]:
             "Foydalanuvchilar",
             U,
             User,
-            ["first_name", "last_name", "role", "is_active", "is_staff"],
-            ["email", "phone", "first_name", "role", "is_active", "is_staff"],
+            ["first_name", "last_name", "role", "is_active", "is_staff", "staff_area"],
+            ["email", "phone", "first_name", "role", "is_active", "is_staff", "staff_area"],
             ["email", "phone", "first_name", "last_name"],
             can_create=False,
             can_delete=False,
             before_save=no_self_demote,
             ordering=("-date_joined",),
-            hint="Bloklash yoki admin qilish. Email va telefonni foydalanuvchining o'zi o'zgartiradi.",
+            hint=(
+                "Bloklash, admin yoki ishchi qilish: «admin panelga kirish» + «mas'ul sohasi» "
+                "(mehmonxona/gid moderatori). Soha bo'sh — asosiy admin. "
+                "Email/telefonni foydalanuvchining o'zi o'zgartiradi."
+            ),
         ),
     ]
     return {r.key: r for r in items}

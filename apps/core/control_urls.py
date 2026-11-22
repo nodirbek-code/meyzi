@@ -7,6 +7,7 @@ urlpatterns = [
     path("manage/<str:res>/", control_crud.CrudListView.as_view(), name="control-manage-list"),
     path("manage/<str:res>/<int:pk>/", control_crud.CrudDetailView.as_view(), name="control-manage-detail"),
     path("login/", control.ControlLoginView.as_view(), name="control-login"),
+    path("me/", control.ControlMeView.as_view(), name="control-me"),
     path("dashboard/", control.ControlDashboardView.as_view(), name="control-dashboard"),
     path(
         "items/guide/<int:pk>/certificate/",

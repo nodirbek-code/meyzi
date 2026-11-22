@@ -96,6 +96,17 @@ class GuideProfile(TimeStampedModel):
 
     status = models.CharField("holat", max_length=20, choices=Status.choices, default=Status.PENDING)
     moderation_note = models.TextField("moderator izohi", blank=True)
+    # Ikki bosqichli tekshiruv: moderator tekshiradi (prechecked_*) → asosiy admin yakuniy tasdiqlaydi
+    prechecked_by = models.ForeignKey(
+        "accounts.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name="tekshirgan",
+    )
+    prechecked_at = models.DateTimeField("moderator tekshirgan", null=True, blank=True)
+    precheck_note = models.TextField("moderator izohi (adminga)", blank=True)
     approved_at = models.DateTimeField("tasdiqlangan", null=True, blank=True)
     commission_percent = models.DecimalField(
         "Platforma komissiyasi (%)", max_digits=5, decimal_places=2, default=default_guide_commission

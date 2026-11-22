@@ -2,7 +2,7 @@ import "server-only";
 
 import { notFound, redirect } from "next/navigation";
 
-import { apiGet } from "./api";
+import { apiGet, ApiError } from "./api";
 import type { User } from "./types";
 import { getUser } from "./session";
 
@@ -14,6 +14,12 @@ export async function requireStaff(): Promise<User> {
   return user;
 }
 
-export function controlGet<T>(path: string, query?: Record<string, string | number | undefined>) {
-  return apiGet<T>(`/control${path}`, { auth: true, revalidate: false, query });
+/** Backend'dan o'qish; ishchiga tegishli bo'lmagan bo'lim (403/404) — 404 sahifasi. */
+export async function controlGet<T>(path: string, query?: Record<string, string | number | undefined>): Promise<T> {
+  try {
+    return await apiGet<T>(`/control${path}`, { auth: true, revalidate: false, query });
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 403 || e.status === 404)) notFound();
+    throw e;
+  }
 }
