@@ -241,6 +241,26 @@ def review_created(review) -> None:
     )
 
 
+def changes_submitted(what: str, name: str, obj, details: str = "") -> None:
+    """Tasdiqlangan hamkor ma'lumotlarini o'zgartirdi — saytdan yashirildi, qayta tekshiruv kerak."""
+    notify_admins(
+        "changes_submitted",
+        f"✏️ <b>{escape(what)}: o'zgarishlar tekshiruvga</b>\n"
+        f"{_obj_link(name, obj)}" + (f"\n📝 {escape(details)}" if details else ""),
+    )
+
+
+def partner_review_created(review, about: str) -> None:
+    """Mehmonxona yoki gid haqida yangi sharh — admin tasdiqlagach saytga chiqadi."""
+    stars = "⭐" * review.rating
+    text = escape(review.text[:300]) + ("…" if len(review.text) > 300 else "")
+    notify_admins(
+        "review_created",
+        f"💬 <b>Yangi sharh</b> {stars} (tasdiqlash kerak)\n{_obj_link(about, review)}"
+        + (f"\n«{text}»" if text else ""),
+    )
+
+
 # ---------- Individual gidlar ----------
 
 

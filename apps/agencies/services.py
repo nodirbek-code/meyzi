@@ -4,6 +4,7 @@ from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import User
+from apps.notifications import services as notify
 from apps.notifications import user_events
 
 from .models import Agency, AgencyApplication, AgencyMember
@@ -62,6 +63,33 @@ def reject_application(application: AgencyApplication, reviewer: User, note: str
     application.save()
     user_events.agency_application_reviewed(application)
     return application
+
+
+def submit_agency_changes(agency: Agency) -> Agency:
+    """Agentlik profilini o'zgartirdi — qayta tekshiruvga (platformaning o'z agentligi bundan mustasno)."""
+    if agency.is_platform:
+        return agency
+    if agency.moderation_status != Agency.Moderation.PENDING:
+        agency.moderation_status = Agency.Moderation.PENDING
+        agency.save(update_fields=["moderation_status", "updated_at"])
+        notify.changes_submitted("Agentlik profili", agency.name, agency)
+    return agency
+
+
+def approve_agency(agency: Agency) -> Agency:
+    agency.moderation_status = Agency.Moderation.APPROVED
+    agency.moderation_note = ""
+    agency.save(update_fields=["moderation_status", "moderation_note", "updated_at"])
+    user_events.agency_moderated(agency)
+    return agency
+
+
+def return_agency(agency: Agency, note: str) -> Agency:
+    agency.moderation_status = Agency.Moderation.REJECTED
+    agency.moderation_note = note
+    agency.save(update_fields=["moderation_status", "moderation_note", "updated_at"])
+    user_events.agency_moderated(agency)
+    return agency
 
 
 def get_user_agency(user) -> Agency | None:

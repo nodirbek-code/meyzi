@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p>Quyidagilar hamkorga qaytariladi. Qayerda kamchilik borligini aniq yozing — bu matn ularga
+email va Telegram orqali yuboriladi, kabinetida ham ko'rinadi. Ular tuzatib, qayta tekshiruvga yuboradi.</p>
+<ul>{% for obj in objects %}<li><b>{{ obj }}</b></li>{% endfor %}</ul>
+<form method="post">{% csrf_token %}
+  {% for pk in selected %}<input type="hidden" name="_selected_action" value="{{ pk }}">{% endfor %}
+  <input type="hidden" name="action" value="{{ action }}">
+  <input type="hidden" name="apply" value="1">
+  {{ form.as_p }}
+  <input type="submit" class="default" value="↩️ Qaytarish va izohni yuborish">
+  <a href="" class="button cancel-link">Bekor qilish</a>
+</form>
+{% endblock %}

@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 
+from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, return_with_note
 from apps.notifications import user_events
 
 from .models import Departure, ItineraryDay, ItineraryItem, Tour, TourCategory, TourMedia
@@ -7,43 +8,41 @@ from .models import Departure, ItineraryDay, ItineraryItem, Tour, TourCategory, 
 
 @admin.register(TourCategory)
 class TourCategoryAdmin(admin.ModelAdmin):
+    """Toifalar — platformaning o'z ma'lumoti (admin boshqaradi)."""
+
     list_display = ["name", "slug", "icon", "sort_order", "is_active"]
     list_editable = ["sort_order", "is_active"]
     prepopulated_fields = {"slug": ("name",)}
 
 
-class TourMediaInline(admin.TabularInline):
+class TourMediaInline(ReadOnlyInline):
     model = TourMedia
-    extra = 0
+    fields = ["kind", "file", "caption", "is_cover"]
 
 
-class DepartureInline(admin.TabularInline):
+class DepartureInline(ReadOnlyInline):
     model = Departure
-    extra = 0
     fields = ["date", "seats_total", "seats_booked", "price_uzs", "status"]
-    readonly_fields = ["seats_booked"]
 
 
-class ItineraryDayInline(admin.StackedInline):
+class ItineraryDayInline(ReadOnlyInline):
     model = ItineraryDay
-    extra = 0
-    show_change_link = True
+    fields = ["day_number", "title"]
 
 
 @admin.register(Tour)
-class TourAdmin(admin.ModelAdmin):
+class TourAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
+    """Turni faqat agentlik o'zgartiradi. Admin — tasdiqlaydi yoki izoh bilan qaytaradi."""
+
+    admin_editable_fields = ("is_featured",)
     list_display = ["title", "agency", "destination", "price_uzs", "duration_days", "status", "is_featured"]
     list_filter = ["status", "agency", "destination", "categories", "cancellation_policy", "is_featured"]
     list_editable = ["is_featured"]
     search_fields = ["title", "agency__name"]
-    prepopulated_fields = {"slug": ("title",)}
-    autocomplete_fields = ["agency", "destination"]
-    filter_horizontal = ["categories", "places"]
-    readonly_fields = ["published_at", "rating", "reviews_count"]
     inlines = [TourMediaInline, ItineraryDayInline, DepartureInline]
-    actions = ["approve", "reject"]
+    actions = ["approve", "return_to_agency"]
 
-    @admin.action(description="Tasdiqlash va e'lon qilish")
+    @admin.action(description="✅ Tasdiqlash va e'lon qilish")
     def approve(self, request, queryset):
         n = 0
         for tour in queryset.exclude(status=Tour.Status.PUBLISHED):
@@ -54,30 +53,31 @@ class TourAdmin(admin.ModelAdmin):
             n += 1
         self.message_user(request, f"{n} ta tur e'lon qilindi.", messages.SUCCESS)
 
-    @admin.action(description="Rad etish (izohni tur sahifasida yozing)")
-    def reject(self, request, queryset):
-        n = 0
-        for tour in queryset.filter(status=Tour.Status.PENDING_REVIEW):
-            tour.status = Tour.Status.REJECTED
-            tour.save(update_fields=["status", "updated_at"])
-            user_events.tour_moderated(tour)
-            n += 1
-        self.message_user(request, f"{n} ta tur rad etildi.", messages.WARNING)
+    @admin.action(description="↩️ Qaytarish (kamchiliklarni yozib)")
+    def return_to_agency(self, request, queryset):
+        from .views import reject_tour
+
+        return return_with_note(
+            self,
+            request,
+            queryset.exclude(status=Tour.Status.DRAFT),
+            apply=reject_tour,
+            title="Turni agentlikka qaytarish",
+        )
 
 
-class ItineraryItemInline(admin.TabularInline):
+class ItineraryItemInline(ReadOnlyInline):
     model = ItineraryItem
-    extra = 0
 
 
 @admin.register(ItineraryDay)
-class ItineraryDayAdmin(admin.ModelAdmin):
+class ItineraryDayAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
     list_display = ["tour", "day_number", "title"]
     inlines = [ItineraryItemInline]
 
 
 @admin.register(Departure)
-class DepartureAdmin(admin.ModelAdmin):
+class DepartureAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
     list_display = ["tour", "date", "seats_total", "seats_booked", "status"]
     list_filter = ["status", "date"]
     search_fields = ["tour__title"]

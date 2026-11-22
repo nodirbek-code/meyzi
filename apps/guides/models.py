@@ -287,7 +287,7 @@ class GuideReview(TimeStampedModel):
     guide = models.ForeignKey(GuideProfile, on_delete=models.PROTECT, related_name="reviews")
     rating = models.PositiveSmallIntegerField("baho", validators=[MinValueValidator(1), MaxValueValidator(5)])
     text = models.TextField("matn", blank=True)
-    is_published = models.BooleanField("e'lon qilingan", default=True)
+    is_published = models.BooleanField("e'lon qilingan", default=False)  # admin tasdig'idan keyin
     guide_reply = models.TextField("gid javobi", blank=True)
 
     class Meta:

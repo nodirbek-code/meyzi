@@ -36,16 +36,36 @@ def unique_guide_slug(name: str) -> str:
 
 
 @transaction.atomic
-def submit_profile(profile: GuideProfile, *, is_new: bool) -> GuideProfile:
-    """Yangi profil yoki rad etilgandan keyin tahrir — qayta tekshiruvga."""
-    if is_new or profile.status == GuideProfile.Status.REJECTED:
+def submit_profile(profile: GuideProfile, *, is_new: bool, details: str = "") -> GuideProfile:
+    """Yangi profil yoki tahrir (tasdiqlangan/qaytarilgan) — tekshiruvga; tekshiruvda saytdan yashirin."""
+    was = profile.status
+    if is_new or was in (GuideProfile.Status.REJECTED, GuideProfile.Status.APPROVED):
         profile.status = GuideProfile.Status.PENDING
         profile.save(update_fields=["status", "updated_at"])
         if profile.user.role == User.Role.TOURIST:
             profile.user.role = User.Role.GUIDE
             profile.user.save(update_fields=["role"])
-        notify.guide_application(profile)
+        if is_new:
+            notify.guide_application(profile)
+        else:
+            notify.changes_submitted("Gid", profile.display_name, profile, details)
     return profile
+
+
+def reject_profile(profile: GuideProfile, note: str) -> GuideProfile:
+    """Admin qaytaradi: izoh gidga yuboriladi, u tuzatib qayta yuboradi."""
+    profile.status = GuideProfile.Status.REJECTED
+    profile.moderation_note = note
+    profile.save(update_fields=["status", "moderation_note", "updated_at"])
+    user_events.guide_profile_status(profile)
+    return profile
+
+
+def set_review_published(review: GuideReview, published: bool) -> GuideReview:
+    review.is_published = published
+    review.save(update_fields=["is_published"])
+    recalculate_rating(review.guide_id)
+    return review
 
 
 def approve_profile(profile: GuideProfile) -> GuideProfile:
@@ -410,6 +430,6 @@ def create_review(*, user, booking: GuideBooking, rating: int, text: str = "") -
         raise ValidationError({"detail": "Bu bron uchun sharh allaqachon qoldirilgan."})
     review = GuideReview.objects.create(
         booking=booking, user=user, guide=booking.guide, rating=rating, text=text
-    )
-    recalculate_rating(booking.guide_id)
+    )  # is_published=False — admin tasdiqlagach saytga chiqadi
+    notify.partner_review_created(review, booking.guide.display_name)
     return review

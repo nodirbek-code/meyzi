@@ -1,31 +1,33 @@
 from django.contrib import admin, messages
 from rest_framework.exceptions import ValidationError
 
+from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, return_with_note
 from apps.notifications import user_events
 
 from . import services
 from .models import Hotel, HotelBooking, HotelImage, HotelMember, HotelReview, RoomType
 
 
-class RoomTypeInline(admin.TabularInline):
+class RoomTypeInline(ReadOnlyInline):
     model = RoomType
-    extra = 0
-    fields = ["name", "capacity", "price_per_night_uzs", "total_rooms", "is_active"]
+    fields = ["name", "capacity", "beds", "price_per_night_uzs", "total_rooms", "image", "is_active"]
 
 
-class HotelImageInline(admin.TabularInline):
+class HotelImageInline(ReadOnlyInline):
     model = HotelImage
-    extra = 0
+    fields = ["kind", "image", "caption", "is_cover"]
 
 
-class HotelMemberInline(admin.TabularInline):
+class HotelMemberInline(ReadOnlyInline):
     model = HotelMember
-    extra = 0
-    autocomplete_fields = ["user"]
+    fields = ["user", "role"]
 
 
 @admin.register(Hotel)
-class HotelAdmin(admin.ModelAdmin):
+class HotelAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
+    """Mehmonxona ma'lumotlarini faqat egasi o'zgartiradi. Admin — tasdiqlaydi yoki izoh bilan qaytaradi."""
+
+    admin_editable_fields = ("commission_percent", "is_featured")
     list_display = [
         "name",
         "destination",
@@ -39,27 +41,20 @@ class HotelAdmin(admin.ModelAdmin):
     list_filter = ["status", "kind", "stars", "destination"]
     list_editable = ["commission_percent", "is_featured"]
     search_fields = ["name", "address", "phone"]
-    prepopulated_fields = {"slug": ("name",)}
-    autocomplete_fields = ["destination"]
-    readonly_fields = ["rating", "reviews_count"]
     inlines = [RoomTypeInline, HotelImageInline, HotelMemberInline]
-    actions = ["approve", "reject", "suspend"]
+    actions = ["approve", "return_to_owner", "suspend"]
 
-    @admin.action(description="✅ Tasdiqlash")
+    @admin.action(description="✅ Tasdiqlash (saytga chiqadi)")
     def approve(self, request, queryset):
         for h in queryset:
             services.approve_hotel(h)
         self.message_user(request, f"{queryset.count()} ta mehmonxona tasdiqlandi.", messages.SUCCESS)
 
-    @admin.action(description="❌ Rad etish (sababni «moderator izohi» ga yozing)")
-    def reject(self, request, queryset):
-        n = 0
-        for h in queryset:
-            h.status = Hotel.Status.REJECTED
-            h.save(update_fields=["status", "updated_at"])
-            user_events.hotel_status(h)
-            n += 1
-        self.message_user(request, f"{n} ta ariza rad etildi.")
+    @admin.action(description="↩️ Qaytarish (kamchiliklarni yozib)")
+    def return_to_owner(self, request, queryset):
+        return return_with_note(
+            self, request, queryset, apply=services.reject_hotel, title="Mehmonxonani qaytarish"
+        )
 
     @admin.action(description="⛔ To'xtatish")
     def suspend(self, request, queryset):
@@ -110,11 +105,21 @@ class HotelBookingAdmin(admin.ModelAdmin):
 
 
 @admin.register(HotelReview)
-class HotelReviewAdmin(admin.ModelAdmin):
+class HotelReviewAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
+    """Sharhlar admin tasdiqlagach saytga chiqadi (matnni admin o'zgartirmaydi)."""
+
     list_display = ["hotel", "user", "rating", "is_published", "created_at"]
     list_filter = ["is_published", "rating"]
-    readonly_fields = ["booking", "user", "hotel", "rating", "text"]
+    actions = ["publish", "hide"]
 
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        services.recalculate_rating(obj.hotel_id)
+    @admin.action(description="✅ E'lon qilish")
+    def publish(self, request, queryset):
+        for r in queryset:
+            services.set_review_published(r, True)
+        self.message_user(request, f"{queryset.count()} ta sharh e'lon qilindi.", messages.SUCCESS)
+
+    @admin.action(description="🚫 Yashirish")
+    def hide(self, request, queryset):
+        for r in queryset:
+            services.set_review_published(r, False)
+        self.message_user(request, f"{queryset.count()} ta sharh yashirildi.")

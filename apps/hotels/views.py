@@ -168,9 +168,7 @@ class MyHotelView(generics.GenericAPIView):
         ser = self.get_serializer(hotel, data=request.data, partial=True)
         ser.is_valid(raise_exception=True)
         hotel = ser.save()
-        if hotel.status == Hotel.Status.REJECTED:
-            hotel.status = Hotel.Status.PENDING
-            hotel.save(update_fields=["status", "updated_at"])
+        services.resubmit_hotel(hotel, "profil tahrirlandi")  # o'zgarishlar admin tasdig'idan keyin chiqadi
         return Response(self.get_serializer(hotel).data)
 
 
@@ -249,12 +247,18 @@ class CabinetRoomTypeViewSet(viewsets.ModelViewSet):
         return RoomType.objects.filter(hotel=self.request.hotel)
 
     def perform_create(self, serializer):
-        serializer.save(hotel=self.request.hotel)
+        room = serializer.save(hotel=self.request.hotel)
+        services.resubmit_hotel(self.request.hotel, f"yangi xona turi: {room.name}")
+
+    def perform_update(self, serializer):
+        room = serializer.save()
+        services.resubmit_hotel(self.request.hotel, f"xona turi o'zgardi: {room.name}")
 
     def perform_destroy(self, room_type):
         if room_type.bookings.exists():
             raise ValidationError({"detail": "Bronlari bor xona turini o'chirib bo'lmaydi — sotuvdan oling."})
         room_type.delete()
+        services.resubmit_hotel(self.request.hotel, f"xona turi o'chirildi: {room_type.name}")
 
 
 class CabinetHotelImageViewSet(
@@ -281,6 +285,11 @@ class CabinetHotelImageViewSet(
             HotelImage.objects.filter(hotel=image.hotel, is_cover=True).exclude(pk=image.pk).update(
                 is_cover=False
             )
+        services.resubmit_hotel(self.request.hotel, f"yangi {image.get_kind_display().lower()} yuklandi")
+
+    def perform_destroy(self, image):
+        image.delete()
+        services.resubmit_hotel(self.request.hotel, "rasm/video o'chirildi")
 
 
 class CabinetHotelBookingViewSet(viewsets.ReadOnlyModelViewSet):

@@ -39,6 +39,27 @@ def _to_org(*, emails, phone: str, subject: str, body: str, event: str, sms_text
         queue_sms(phone, f"{settings.BRAND_NAME}: {sms_text}", event=event)
 
 
+def _tg(users, text: str, *, event: str, button_text: str = "", path: str = "") -> None:
+    """Telegram bot orqali (botga ulangan foydalanuvchilarga)."""
+    url = f"{settings.MEYZI_FRONTEND_URL}{path}" if path else ""
+    for tg_id in {u.telegram_id for u in users if u and u.telegram_id}:
+        queue_telegram(tg_id, text, event=event, button_text=button_text, button_url=url)
+
+
+def _members(org):
+    return [m.user for m in org.members.select_related("user")]
+
+
+def _moderation_text(name: str, approved: bool, note: str, what: str) -> str:
+    if approved:
+        return f"✅ {what} «{name}» tasdiqlandi va saytda ko'rinmoqda."
+    return (
+        f"↩️ {what} «{name}» qaytarildi — tuzatish kerak.\n\n"
+        f"Admin izohi:\n{note or '—'}\n\n"
+        "Kabinetda tuzating — o'zgarishlar qayta tekshiruvga yuboriladi."
+    )
+
+
 def _agency_emails(agency):
     return [agency.email, *(m.user.email for m in agency.members.select_related("user"))]
 
@@ -145,17 +166,28 @@ def agency_application_reviewed(application) -> None:
 
 def tour_moderated(tour) -> None:
     approved = tour.status == "published"
+    text = _moderation_text(tour.title, approved, tour.moderation_note, "Tur")
     _to_org(
         emails=_agency_emails(tour.agency),
         phone="",
-        subject=f"Tur {'e’lon qilindi' if approved else 'rad etildi'}: {tour.title}",
-        body=(
-            f"«{tour.title}» turi tasdiqlandi va katalogda ko'rinmoqda."
-            if approved
-            else f"«{tour.title}» turi rad etildi.\nIzoh: {tour.moderation_note or '—'}\nTuzatib qayta yuboring."
-        ),
+        subject=f"Tur {'e’lon qilindi' if approved else 'qaytarildi'}: {tour.title}",
+        body=text,
         event="tour_moderated",
     )
+    _tg(_members(tour.agency), text, event="tour_moderated", button_text="Kabinet", path="/cabinet/agency")
+
+
+def agency_moderated(agency) -> None:
+    approved = agency.moderation_status == "approved"
+    text = _moderation_text(agency.name, approved, agency.moderation_note, "Agentlik profili")
+    _to_org(
+        emails=_agency_emails(agency),
+        phone="",
+        subject=f"{settings.BRAND_NAME}: agentlik profili",
+        body=text,
+        event=f"agency_moderation_{agency.moderation_status}",
+    )
+    _tg(_members(agency), text, event="agency_moderated", button_text="Kabinet", path="/cabinet/agency")
 
 
 # ---------- Individual gidlar ----------
@@ -235,8 +267,8 @@ def guide_booking_cancelled(b) -> None:
 
 def guide_profile_status(profile) -> None:
     texts = {
-        "approved": "Tabriklaymiz! Gid profilingiz tasdiqlandi va katalogda ko'rinmoqda.",
-        "rejected": f"Gid profilingiz rad etildi. Izoh: {profile.moderation_note or '—'}. Tuzatib qayta yuboring.",
+        "approved": _moderation_text(profile.display_name, True, "", "Gid profili"),
+        "rejected": _moderation_text(profile.display_name, False, profile.moderation_note, "Gid profili"),
         "suspended": f"Gid profilingiz vaqtincha to'xtatildi. Sabab: {profile.moderation_note or '—'}.",
     }
     if profile.status in texts:
@@ -245,6 +277,13 @@ def guide_profile_status(profile) -> None:
             f"{settings.BRAND_NAME}: gid profili",
             texts[profile.status],
             event=f"guide_profile_{profile.status}",
+        )
+        _tg(
+            [profile.user],
+            texts[profile.status],
+            event="guide_profile",
+            button_text="Kabinet",
+            path="/cabinet/guide",
         )
 
 
@@ -296,8 +335,8 @@ def hotel_booking_cancelled(b) -> None:
 
 def hotel_status(hotel) -> None:
     texts = {
-        "approved": f"«{hotel.name}» tasdiqlandi va katalogda ko'rinmoqda. Xona turlarini qo'shishni unutmang.",
-        "rejected": f"«{hotel.name}» arizasi rad etildi. Izoh: {hotel.moderation_note or '—'}.",
+        "approved": _moderation_text(hotel.name, True, "", "Mehmonxona"),
+        "rejected": _moderation_text(hotel.name, False, hotel.moderation_note, "Mehmonxona"),
         "suspended": f"«{hotel.name}» vaqtincha to'xtatildi. {settings.BRAND_NAME} bilan bog'laning.",
     }
     if hotel.status in texts:
@@ -307,4 +346,11 @@ def hotel_status(hotel) -> None:
             subject=f"{settings.BRAND_NAME}: mehmonxona holati",
             body=texts[hotel.status],
             event=f"hotel_{hotel.status}",
+        )
+        _tg(
+            _members(hotel),
+            texts[hotel.status],
+            event="hotel_status",
+            button_text="Kabinet",
+            path="/cabinet/hotel",
         )

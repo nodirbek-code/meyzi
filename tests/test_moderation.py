@@ -1,0 +1,190 @@
+"""Moderatsiya: saytga yuklanadigan hamma narsa admin tasdig'idan keyin chiqadi.
+
+- Hamkor tasdiqlangan ma'lumotini o'zgartirsa — qayta tekshiruvga, tasdiqlanguncha saytdan yashirin.
+- Admin qaytarsa — izoh hamkorga boradi (email/Telegram), kabinetda ham ko'rinadi.
+- Admin hamkor ma'lumotlarini O'ZGARTIRA OLMAYDI — faqat tasdiqlaydi yoki qaytaradi.
+- Sharhlar ham admin tasdiqlagach chiqadi.
+"""
+
+import pytest
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client
+from rest_framework.test import APIClient
+
+from apps.agencies import services as agency_services
+from apps.agencies.models import Agency
+from apps.guides.models import GuideProfile
+from apps.hotels import services as hotel_services
+from apps.hotels.models import Hotel
+from apps.notifications.models import UserMessage
+from apps.tours.models import Tour
+
+from .media_samples import PNG
+from .test_guides import guide, guide_api, guide_user  # noqa: F401 — fixture'lar
+from .test_hotels import hotel, owner, owner_api  # noqa: F401
+
+pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def media_dirs(settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path / "media"
+
+
+@pytest.fixture
+def admin_client(admin_user):
+    c = Client()
+    c.force_login(admin_user)
+    return c
+
+
+def messages_text() -> str:
+    return "\n".join(UserMessage.objects.values_list("body", flat=True))
+
+
+# ---------- Mehmonxona ----------
+
+
+def test_hotel_edit_goes_back_to_review_and_hides(owner_api, hotel):  # noqa: F811
+    public = APIClient()
+    assert public.get("/api/v1/hotels/registon-plaza/").status_code == 200
+    res = owner_api.patch("/api/v1/hotels/me/", {"description": "Yangi tavsif"}, format="json")
+    assert res.status_code == 200, res.data
+    hotel.refresh_from_db()
+    assert hotel.status == Hotel.Status.PENDING
+    assert public.get("/api/v1/hotels/registon-plaza/").status_code == 404  # tasdiqlanguncha yashirin
+
+    hotel_services.approve_hotel(hotel)
+    assert public.get("/api/v1/hotels/registon-plaza/").status_code == 200
+
+
+def test_hotel_new_photo_goes_to_review(owner_api, hotel):  # noqa: F811
+    res = owner_api.post(
+        "/api/v1/cabinet/hotel/images/", {"image": SimpleUploadedFile("a.png", PNG)}, format="multipart"
+    )
+    assert res.status_code == 201, res.data
+    hotel.refresh_from_db()
+    assert hotel.status == Hotel.Status.PENDING
+
+
+def test_admin_returns_hotel_with_note(admin_client, hotel, owner):  # noqa: F811
+    url = "/admin/hotels/hotel/"
+    data = {"action": "return_to_owner", ACTION_CHECKBOX_NAME: [hotel.pk]}
+    res = admin_client.post(url, data)
+    assert res.status_code == 200 and "Kamchiliklar" in res.content.decode()  # izoh so'raladi
+    res = admin_client.post(url, {**data, "apply": "1", "note": "Rasmlar xira, narxlar yo'q"})
+    assert res.status_code == 302
+    hotel.refresh_from_db()
+    assert hotel.status == Hotel.Status.REJECTED
+    assert hotel.moderation_note == "Rasmlar xira, narxlar yo'q"
+    assert "Rasmlar xira, narxlar yo'q" in messages_text()  # hamkorga xabar ketdi
+
+
+def test_admin_cannot_edit_hotel_data(admin_client, hotel):  # noqa: F811
+    page = admin_client.get(f"/admin/hotels/hotel/{hotel.pk}/change/").content.decode()
+    assert 'name="name"' not in page  # nomi — faqat o'qish uchun
+    assert 'name="commission_percent"' in page  # platforma sozlamasi — tahrirlanadi
+    admin_client.post(
+        f"/admin/hotels/hotel/{hotel.pk}/change/",
+        {"name": "Admin o'zgartirdi", "commission_percent": "12", "_save": "1"},
+    )
+    hotel.refresh_from_db()
+    assert hotel.name == "Registon Plaza"
+    assert admin_client.get("/admin/hotels/hotel/add/").status_code == 403
+    assert admin_client.get("/admin/hotels/roomtype/").status_code in (403, 404)  # alohida bo'lim yo'q
+
+
+# ---------- Gid ----------
+
+
+def test_guide_edit_goes_back_to_review(guide_api, guide):  # noqa: F811
+    assert APIClient().get("/api/v1/guides/aziz/").status_code == 200
+    res = guide_api.patch("/api/v1/guides/me/", {"languages": ["uz", "en", "de", "fr"]}, format="json")
+    assert res.status_code == 200, res.data
+    guide.refresh_from_db()
+    assert guide.status == GuideProfile.Status.PENDING
+    assert APIClient().get("/api/v1/guides/aziz/").status_code == 404
+
+
+def test_admin_cannot_edit_guide_languages(admin_client, guide):  # noqa: F811
+    admin_client.post(
+        f"/admin/guides/guideprofile/{guide.pk}/change/",
+        {"languages": '["uz"]', "display_name": "X", "commission_percent": "10", "_save": "1"},
+    )
+    guide.refresh_from_db()
+    assert guide.languages == ["uz", "en", "de"] and guide.display_name == "Aziz"
+
+
+# ---------- Tur va agentlik ----------
+
+
+def test_published_tour_edit_goes_back_to_review(agency_api, tour):
+    assert APIClient().get(f"/api/v1/tours/{tour.slug}/").status_code == 200
+    res = agency_api.patch(f"/api/v1/cabinet/tours/{tour.slug}/", {"price_uzs": 990_000}, format="json")
+    assert res.status_code == 200, res.data
+    tour.refresh_from_db()
+    assert tour.status == Tour.Status.PENDING_REVIEW
+    assert APIClient().get(f"/api/v1/tours/{tour.slug}/").status_code == 404
+
+
+def test_tour_new_media_goes_back_to_review(agency_api, tour):
+    url = f"/api/v1/cabinet/tours/{tour.slug}/media/"
+    assert (
+        agency_api.post(url, {"file": SimpleUploadedFile("a.png", PNG)}, format="multipart").status_code
+        == 201
+    )
+    tour.refresh_from_db()
+    assert tour.status == Tour.Status.PENDING_REVIEW
+
+
+def test_admin_returns_tour_with_note(admin_client, tour, agency_user):
+    tour.status = Tour.Status.PENDING_REVIEW
+    tour.save()
+    res = admin_client.post(
+        "/admin/tours/tour/",
+        {
+            "action": "return_to_agency",
+            ACTION_CHECKBOX_NAME: [tour.pk],
+            "apply": "1",
+            "note": "Dastur to'liq emas",
+        },
+    )
+    assert res.status_code == 302
+    tour.refresh_from_db()
+    assert (tour.status, tour.moderation_note) == (Tour.Status.REJECTED, "Dastur to'liq emas")
+    assert "Dastur to'liq emas" in messages_text()
+
+
+def test_agency_profile_edit_hides_agency_until_approved(agency_api, agency, tour):
+    assert APIClient().get(f"/api/v1/agencies/{agency.slug}/").status_code == 200
+    res = agency_api.patch("/api/v1/cabinet/agency/", {"description": "Yangi tavsif"}, format="json")
+    assert res.status_code == 200, res.data
+    agency.refresh_from_db()
+    assert agency.moderation_status == Agency.Moderation.PENDING
+    assert APIClient().get(f"/api/v1/agencies/{agency.slug}/").status_code == 404
+    assert APIClient().get(f"/api/v1/tours/{tour.slug}/").status_code == 404  # turlari ham
+    assert agency_api.get("/api/v1/cabinet/tours/").status_code == 200  # kabinet ishlayveradi
+
+    agency_services.return_agency(agency, "Logotip yo'q")
+    assert "Logotip yo'q" in messages_text()
+    agency_services.approve_agency(agency)
+    assert APIClient().get(f"/api/v1/agencies/{agency.slug}/").status_code == 200
+
+
+def test_admin_cannot_add_or_delete_partner_data(admin_client, agency, tour):
+    assert admin_client.get("/admin/agencies/agency/add/").status_code == 403
+    assert admin_client.get("/admin/tours/tour/add/").status_code == 403
+    assert admin_client.get(f"/admin/tours/tour/{tour.pk}/delete/").status_code == 403
+    admin_client.post(f"/admin/tours/tour/{tour.pk}/change/", {"title": "Boshqa", "_save": "1"})
+    tour.refresh_from_db()
+    assert tour.title == "Samarqand 1 kun"
+
+
+def test_partner_gets_telegram_message_with_note(owner, hotel, settings):  # noqa: F811
+    settings.TELEGRAM_BOT_TOKEN = "123:TEST"
+    owner.telegram_id = 777
+    owner.save()
+    hotel_services.reject_hotel(hotel, "Manzil noto'g'ri")
+    msg = UserMessage.objects.get(channel=UserMessage.Channel.TELEGRAM)
+    assert msg.recipient == "777" and "Manzil noto'g'ri" in msg.body

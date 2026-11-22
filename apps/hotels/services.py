@@ -50,6 +50,31 @@ def register_hotel(*, user, **fields) -> Hotel:
     return hotel
 
 
+def resubmit_hotel(hotel: Hotel, details: str = "") -> Hotel:
+    """Hamkor o'zgartirdi: tasdiqlangan yoki qaytarilgan bo'lsa — qayta tekshiruvga (saytdan yashiriladi)."""
+    if hotel.status in (Hotel.Status.APPROVED, Hotel.Status.REJECTED):
+        hotel.status = Hotel.Status.PENDING
+        hotel.save(update_fields=["status", "updated_at"])
+        notify.changes_submitted("Mehmonxona", hotel.name, hotel, details)
+    return hotel
+
+
+def reject_hotel(hotel: Hotel, note: str) -> Hotel:
+    """Admin qaytaradi: izoh hamkorga yuboriladi, u tuzatib qayta yuboradi."""
+    hotel.status = Hotel.Status.REJECTED
+    hotel.moderation_note = note
+    hotel.save(update_fields=["status", "moderation_note", "updated_at"])
+    user_events.hotel_status(hotel)
+    return hotel
+
+
+def set_review_published(review: HotelReview, published: bool) -> HotelReview:
+    review.is_published = published
+    review.save(update_fields=["is_published"])
+    recalculate_rating(review.hotel_id)
+    return review
+
+
 def approve_hotel(hotel: Hotel) -> Hotel:
     hotel.status = Hotel.Status.APPROVED
     hotel.moderation_note = ""
@@ -274,6 +299,6 @@ def create_review(*, user, booking: HotelBooking, rating: int, text: str = "") -
         raise ValidationError({"detail": "Bu bron uchun sharh allaqachon qoldirilgan."})
     review = HotelReview.objects.create(
         booking=booking, user=user, hotel=booking.hotel, rating=rating, text=text
-    )
-    recalculate_rating(booking.hotel_id)
+    )  # is_published=False — admin tasdiqlagach saytga chiqadi
+    notify.partner_review_created(review, booking.hotel.name)
     return review

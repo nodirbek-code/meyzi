@@ -9,7 +9,13 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.guides import policies, services
-from apps.guides.models import GuideBooking, GuideMeetingPoint, GuideProfile, GuideUnavailableDate
+from apps.guides.models import (
+    GuideBooking,
+    GuideMeetingPoint,
+    GuideProfile,
+    GuideReview,
+    GuideUnavailableDate,
+)
 
 from .conftest import PASSWORD, phone_token
 from .media_samples import JPEG, PDF
@@ -378,6 +384,10 @@ def test_review_after_completion(auth_api, user, guide, samarqand):
     assert res.status_code == 201, res.data
     assert auth_api.post(url, {"rating": 4}, format="json").status_code == 400
     guide.refresh_from_db()
+    assert (guide.rating, guide.reviews_count) == (Decimal("0.00"), 0)  # tasdiqlanmagan — hisobga kirmaydi
+    assert APIClient().get("/api/v1/guides/aziz/reviews/").data["results"] == []
+    services.set_review_published(GuideReview.objects.get(), True)
+    guide.refresh_from_db()
     assert (guide.rating, guide.reviews_count) == (Decimal("5.00"), 1)
     assert APIClient().get("/api/v1/guides/aziz/reviews/").data["results"][0]["text"] == "Ajoyib gid"
 
@@ -388,7 +398,7 @@ def test_low_rating_suspends_after_min_reviews(guide, samarqand):
         b = confirmed(u, guide, samarqand, start_date=DAY + timedelta(days=i))
         GuideBooking.objects.filter(pk=b.pk).update(status="completed")
         b.refresh_from_db()
-        services.create_review(user=u, booking=b, rating=3)
+        services.set_review_published(services.create_review(user=u, booking=b, rating=3), True)
     guide.refresh_from_db()
     assert guide.rating == Decimal("3.00")
     assert guide.status == "suspended"

@@ -1,49 +1,83 @@
 from django.contrib import admin, messages
 from rest_framework.exceptions import ValidationError
 
+from apps.core.admin_moderation import PartnerDataReadOnlyMixin, ReadOnlyInline, return_with_note
+
 from . import services
 from .models import Agency, AgencyApplication, AgencyMember
 
 
-class AgencyMemberInline(admin.TabularInline):
+class AgencyMemberInline(ReadOnlyInline):
     model = AgencyMember
-    extra = 0
-    autocomplete_fields = ["user"]
+    fields = ["user", "role"]
 
 
 @admin.register(Agency)
-class AgencyAdmin(admin.ModelAdmin):
+class AgencyAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
+    """Agentlik profilini faqat agentlik o'zgartiradi; o'zgarishlar admin tasdig'idan keyin saytga chiqadi.
+
+    Admin o'zgartira oladigani — platforma qarorlari: komissiya, "tekshirilgan", avto e'lon (faqat platforma).
+    """
+
+    admin_editable_fields = ("commission_percent", "is_verified", "auto_publish")
     list_display = [
         "name",
+        "moderation_status",
         "status",
         "is_verified",
         "is_platform",
-        "auto_publish",
         "commission_percent",
         "rating",
     ]
-    list_filter = ["status", "is_verified", "is_platform"]
-    list_editable = ["status", "is_verified", "auto_publish", "commission_percent"]
+    list_filter = ["moderation_status", "status", "is_verified", "is_platform"]
+    list_editable = ["is_verified", "commission_percent"]
     search_fields = ["name", "phone", "inn"]
-    prepopulated_fields = {"slug": ("name",)}
     inlines = [AgencyMemberInline]
+    actions = ["approve", "return_to_agency", "suspend", "activate"]
+
+    @admin.action(description="✅ Profil o'zgarishlarini tasdiqlash")
+    def approve(self, request, queryset):
+        for a in queryset:
+            services.approve_agency(a)
+        self.message_user(request, f"{queryset.count()} ta agentlik tasdiqlandi.", messages.SUCCESS)
+
+    @admin.action(description="↩️ Qaytarish (kamchiliklarni yozib)")
+    def return_to_agency(self, request, queryset):
+        return return_with_note(
+            self, request, queryset, apply=services.return_agency, title="Agentlik profilini qaytarish"
+        )
+
+    @admin.action(description="⛔ To'xtatish (sayt va kabinet yopiladi)")
+    def suspend(self, request, queryset):
+        n = queryset.update(status=Agency.Status.SUSPENDED)
+        self.message_user(request, f"{n} ta agentlik to'xtatildi.", messages.WARNING)
+
+    @admin.action(description="▶️ Faollashtirish")
+    def activate(self, request, queryset):
+        n = queryset.update(status=Agency.Status.ACTIVE)
+        self.message_user(request, f"{n} ta agentlik faollashtirildi.", messages.SUCCESS)
 
 
 @admin.register(AgencyApplication)
-class AgencyApplicationAdmin(admin.ModelAdmin):
+class AgencyApplicationAdmin(PartnerDataReadOnlyMixin, admin.ModelAdmin):
     list_display = ["agency_name", "contact_person", "phone", "status", "created_at"]
     list_filter = ["status"]
     search_fields = ["agency_name", "contact_person", "phone"]
-    readonly_fields = ["user", "reviewed_by", "reviewed_at", "agency"]
-    actions = ["approve", "reject"]
+    actions = ["approve", "return_application"]
 
-    @admin.action(description="Tasdiqlash (agentlik yaratiladi)")
+    @admin.action(description="✅ Tasdiqlash (agentlik yaratiladi)")
     def approve(self, request, queryset):
         self._run(request, queryset, lambda a: services.approve_application(a, request.user))
 
-    @admin.action(description="Rad etish")
-    def reject(self, request, queryset):
-        self._run(request, queryset, lambda a: services.reject_application(a, request.user))
+    @admin.action(description="↩️ Rad etish (sababini yozib)")
+    def return_application(self, request, queryset):
+        def apply(application, note):
+            try:
+                services.reject_application(application, request.user, note)
+            except ValidationError as exc:
+                self.message_user(request, f"{application}: {exc.detail}", messages.WARNING)
+
+        return return_with_note(self, request, queryset, apply=apply, title="Agentlik arizasini rad etish")
 
     def _run(self, request, queryset, fn):
         done = 0

@@ -213,7 +213,7 @@ export function ReviewForm({ code }: { code: string }) {
       setError(err instanceof ClientApiError ? err.message : "Xatolik");
     }
   }
-  if (sent) return <p className="text-sm text-forest-700">Rahmat! Sharhingiz qabul qilindi.</p>;
+  if (sent) return <p className="text-sm text-forest-700">Rahmat! Sharhingiz qabul qilindi — tekshiruvdan so&apos;ng saytda chiqadi.</p>;
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="flex gap-1 text-3xl" role="radiogroup" aria-label="Baho">

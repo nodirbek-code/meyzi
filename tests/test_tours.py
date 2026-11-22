@@ -206,8 +206,15 @@ def test_submit_flow_moderation_and_auto_publish(agency_api, agency, samarqand, 
     res = agency_api.post(f"/api/v1/cabinet/tours/{slug}/submit/")
     assert res.data["status"] == "pending_review"
 
-    # auto_publish agentlik (masalan MEYZI) — darhol e'lon
+    # oddiy agentlikda auto_publish yoqilgan bo'lsa ham — baribir admin tekshiruvi
     agency.auto_publish = True
+    agency.save()
+    Tour.objects.filter(slug=slug).update(status=Tour.Status.DRAFT)
+    res = agency_api.post(f"/api/v1/cabinet/tours/{slug}/submit/")
+    assert res.data["status"] == "pending_review"
+
+    # faqat platformaning o'z agentligi (MEYZI) — darhol e'lon
+    agency.is_platform = True
     agency.save()
     Tour.objects.filter(slug=slug).update(status=Tour.Status.DRAFT)
     res = agency_api.post(f"/api/v1/cabinet/tours/{slug}/submit/")

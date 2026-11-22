@@ -8,7 +8,7 @@ import { api, ClientApiError } from "@/lib/client";
 import { AMENITIES, money } from "@/lib/format";
 import { galleryError, MAX_IMAGES, MAX_VIDEOS, MEDIA_ACCEPT, MEDIA_HINT, mediaKind } from "@/lib/uploads";
 
-import { ErrorText, Loading, Panel } from "./Bits";
+import { ErrorText, Loading, ModerationBanner, Panel } from "./Bits";
 import { ReviewsReply } from "./ReviewsReply";
 import { useAction, useData } from "./useData";
 
@@ -58,9 +58,11 @@ export function HotelCabinet() {
     <div className="space-y-6">
       <div className="card flex flex-wrap items-center gap-3 p-4">
         <Badge tone={h.status === "approved" ? "green" : h.status === "pending" ? "gold" : "red"}>{STATUS[h.status]}</Badge>
-        {h.moderation_note && <span className="text-sm text-ink-soft">{h.moderation_note}</span>}
         <span className="ml-auto text-xs text-ink-mute">Komissiya: {h.commission_percent}%</span>
         {h.status === "approved" && <a href={`/hotels/${h.slug}`} target="_blank" className="text-sm text-forest-700">Saytda ↗</a>}
+        <div className="w-full">
+          <ModerationBanner state={h.status} note={h.moderation_note} what="Mehmonxona" />
+        </div>
       </div>
       <ErrorText text={act.error} />
       <Panel title="Profil">

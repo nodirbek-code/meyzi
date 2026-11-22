@@ -8,7 +8,7 @@ import { api } from "@/lib/client";
 import { dateLong, dateTime, LANGUAGE_NAMES, money, weekday } from "@/lib/format";
 import type { Paginated } from "@/lib/types";
 
-import { ErrorText, Loading, Panel, Stat } from "./Bits";
+import { ErrorText, Loading, ModerationBanner, Panel, Stat } from "./Bits";
 import { MeetingPoints } from "./MeetingPoints";
 import { useAction, useData } from "./useData";
 
@@ -48,8 +48,14 @@ export function GuideCabinet() {
       {p && (
         <div className="card flex flex-wrap items-center gap-3 p-4">
           <Badge tone={approved ? "green" : p.status === "pending" ? "gold" : "red"}>{PROFILE_STATUS[p.status]}</Badge>
-          {p.moderation_note && <span className="text-sm text-ink-soft">{p.moderation_note}</span>}
           {approved && <Link href={`/guides/${p.slug}`} className="ml-auto text-sm text-forest-700">Ommaviy profil ↗</Link>}
+          <div className="w-full">
+            {p.status === "suspended" ? (
+              p.moderation_note && <p className="text-sm text-clay-700">{p.moderation_note}</p>
+            ) : (
+              <ModerationBanner state={p.status} note={p.moderation_note} what="Gid profili" />
+            )}
+          </div>
         </div>
       )}
       {p && (

@@ -19,6 +19,11 @@ class Agency(TimeStampedModel):
         ACTIVE = "active", "Faol"
         SUSPENDED = "suspended", "To'xtatilgan"
 
+    class Moderation(models.TextChoices):
+        APPROVED = "approved", "Tasdiqlangan"
+        PENDING = "pending", "Tekshiruvda"
+        REJECTED = "rejected", "Qaytarilgan"
+
     name = models.CharField("nomi", max_length=200)
     slug = models.SlugField("slug", max_length=220, unique=True)
     logo = models.ImageField("logotip", upload_to="agencies/", blank=True, validators=[image_rule])
@@ -32,6 +37,11 @@ class Agency(TimeStampedModel):
     license_number = models.CharField("litsenziya raqami", max_length=100, blank=True)
 
     status = models.CharField("holat", max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    # Profil o'zgarishlari admin tasdig'idan keyin saytga chiqadi (tekshiruvda — sahifa va turlar yashirin)
+    moderation_status = models.CharField(
+        "moderatsiya", max_length=10, choices=Moderation.choices, default=Moderation.APPROVED, db_index=True
+    )
+    moderation_note = models.TextField("moderator izohi", blank=True)
     is_verified = models.BooleanField("tekshirilgan", default=False)
     is_platform = models.BooleanField(
         "Platformaning o'zi", default=False, help_text="Platformaning o'z turlari uchun agentlik"

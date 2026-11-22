@@ -281,6 +281,11 @@ def test_cabinet_rooms_and_bookings(owner_api, auth_api, user, hotel, room):
     )
     assert res.status_code == 201, res.data
     assert len(owner_api.get("/api/v1/cabinet/hotel/rooms/").data) == 2
+    # yangi xona — mehmonxona qayta tekshiruvga (saytda yashirin, bron yo'q), admin tasdiqlaydi
+    hotel.refresh_from_db()
+    assert hotel.status == "pending"
+    assert APIClient().get("/api/v1/hotels/registon-plaza/").status_code == 404
+    services.approve_hotel(hotel)
 
     b = book(user, room)
     rows = owner_api.get("/api/v1/cabinet/hotel/bookings/").data["results"]
@@ -326,6 +331,12 @@ def test_review_after_stay(auth_api, owner_api, user, hotel, room):
     assert auth_api.post(url, {"rating": 5}, format="json").status_code == 400
     assert services.complete_finished(today=OUT) == 1
     assert auth_api.post(url, {"rating": 4, "text": "Toza"}, format="json").status_code == 201
+    hotel.refresh_from_db()
+    assert (hotel.rating, hotel.reviews_count) == (Decimal("0.00"), 0)  # tasdiqlanmagan
+    assert APIClient().get("/api/v1/hotels/registon-plaza/reviews/").data["results"] == []
+    from apps.hotels.models import HotelReview
+
+    services.set_review_published(HotelReview.objects.get(), True)
     hotel.refresh_from_db()
     assert (hotel.rating, hotel.reviews_count) == (Decimal("4.00"), 1)
 

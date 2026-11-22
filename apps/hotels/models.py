@@ -245,7 +245,7 @@ class HotelReview(TimeStampedModel):
     hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="reviews")
     rating = models.PositiveSmallIntegerField("baho", validators=[MinValueValidator(1), MaxValueValidator(5)])
     text = models.TextField("matn", blank=True)
-    is_published = models.BooleanField("e'lon qilingan", default=True)
+    is_published = models.BooleanField("e'lon qilingan", default=False)  # admin tasdig'idan keyin
     hotel_reply = models.TextField("mehmonxona javobi", blank=True)
 
     class Meta:

@@ -59,6 +59,8 @@ class CabinetAgencySerializer(VerifiedPhoneMixin, serializers.ModelSerializer):
             "inn",
             "license_number",
             "status",
+            "moderation_status",
+            "moderation_note",
             "is_verified",
             "is_platform",
             "auto_publish",
@@ -69,6 +71,8 @@ class CabinetAgencySerializer(VerifiedPhoneMixin, serializers.ModelSerializer):
         read_only_fields = [
             "slug",
             "status",
+            "moderation_status",
+            "moderation_note",
             "is_verified",
             "is_platform",
             "auto_publish",

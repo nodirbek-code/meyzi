@@ -52,3 +52,38 @@ export function LinesInput({ value, onChange, placeholder }: { value: string[]; 
     />
   );
 }
+
+/**
+ * Moderatsiya holati: saytga chiqadigan hamma narsa admin tasdig'idan keyin ko'rinadi.
+ * `state`: "approved" | "pending" | "rejected" | "suspended". Qaytarilganda — admin izohi.
+ */
+export function ModerationBanner({ state, note, what = "Profil" }: { state: string; note?: string; what?: string }) {
+  if (state === "rejected")
+    return (
+      <div className="rounded-xl border border-clay-100 bg-clay-50 p-4 text-sm text-clay-700">
+        <b>↩️ {what} qaytarildi — tuzatish kerak.</b>
+        {note && (
+          <p className="mt-2 whitespace-pre-line rounded-lg bg-white/70 p-3 text-ink">
+            <span className="text-xs font-semibold uppercase text-clay-700">Admin izohi</span>
+            <br />
+            {note}
+          </p>
+        )}
+        <p className="mt-2 text-xs">Kamchiliklarni tuzatib saqlang — o&apos;zgarishlar qayta tekshiruvga yuboriladi.</p>
+      </div>
+    );
+  if (state === "pending")
+    return (
+      <div className="rounded-xl border border-sun-200 bg-sun-50 p-4 text-sm text-ink">
+        <b>⏳ Tekshiruvda.</b> Admin tasdiqlagach saytda ko&apos;rinadi. Natija haqida email va Telegram orqali xabar olasiz.
+      </div>
+    );
+  if (state === "approved")
+    return (
+      <p className="text-xs text-ink-mute">
+        ✅ Saytda ko&apos;rinmoqda. Diqqat: har qanday o&apos;zgarish (ma&apos;lumot, rasm, video, xona va h.k.) qayta
+        tekshiruvga yuboriladi va admin tasdiqlaguncha saytda yashiriladi.
+      </p>
+    );
+  return null;
+}

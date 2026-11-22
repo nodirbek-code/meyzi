@@ -33,7 +33,7 @@ class AgencyViewSet(viewsets.ReadOnlyModelViewSet):
         from apps.tours.models import Tour
 
         return (
-            Agency.objects.filter(status=Agency.Status.ACTIVE)
+            Agency.objects.filter(status=Agency.Status.ACTIVE, moderation_status=Agency.Moderation.APPROVED)
             .annotate(tours_count=Count("tours", filter=Q(tours__status=Tour.Status.PUBLISHED)))
             .order_by("-is_platform", "name")
         )
@@ -110,3 +110,7 @@ class CabinetAgencyView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.agency
+
+    def perform_update(self, serializer):
+        agency = serializer.save()
+        services.submit_agency_changes(agency)  # admin tasdiqlaguncha sahifa va turlar yashirin

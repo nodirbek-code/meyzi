@@ -5,7 +5,7 @@ import { useState } from "react";
 import { phoneReady, VerifiedPhoneField, type VerifiedPhone } from "@/components/PhoneField";
 import { api } from "@/lib/client";
 
-import { ErrorText, Loading, Panel, Stat } from "./Bits";
+import { ErrorText, Loading, ModerationBanner, Panel, Stat } from "./Bits";
 import { useAction, useData } from "./useData";
 
 type Stats = {
@@ -16,7 +16,7 @@ type Stats = {
   upcoming_seats_booked: number;
   sold_out_departures: number;
 };
-type Agency = { name: string; description: string; phone: string; email: string; telegram: string; website: string; address: string; inn: string; license_number: string; status: string; is_verified: boolean; commission_percent: string; rating: string; reviews_count: number };
+type Agency = { name: string; description: string; phone: string; email: string; telegram: string; website: string; address: string; inn: string; license_number: string; status: string; moderation_status: string; moderation_note: string; is_platform: boolean; is_verified: boolean; commission_percent: string; rating: string; reviews_count: number };
 
 const EDITABLE = ["name", "description", "email", "telegram", "website", "address", "inn", "license_number"] as const;
 const LABELS: Record<string, string> = { name: "Nomi", description: "Tavsif", phone: "Telefon", email: "Email", telegram: "Telegram", website: "Sayt", address: "Manzil", inn: "STIR", license_number: "Litsenziya" };
@@ -45,6 +45,11 @@ export function AgencyHome() {
         </div>
       ) : <Loading />}
       <Panel title="Agentlik profili" action={a && <span className="text-xs text-ink-mute">Komissiya: {a.commission_percent}% · {a.is_verified ? "✔ tekshirilgan" : "tekshirilmagan"}</span>}>
+        {a && !a.is_platform && (
+          <div className="mb-4">
+            <ModerationBanner state={a.moderation_status} note={a.moderation_note} what="Agentlik profili" />
+          </div>
+        )}
         {!a ? <Loading /> : (
           <form
             className="grid gap-4 sm:grid-cols-2"

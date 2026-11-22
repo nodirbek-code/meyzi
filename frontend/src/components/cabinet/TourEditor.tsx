@@ -11,7 +11,7 @@ import { galleryError, MAX_IMAGES, MAX_VIDEOS, MEDIA_ACCEPT, MEDIA_HINT, mediaKi
 
 import { TOUR_STATUS } from "./AgencyTours";
 import { parseCoords } from "./MeetingPoints";
-import { ErrorText, LinesInput, Loading, Panel } from "./Bits";
+import { ErrorText, LinesInput, Loading, ModerationBanner, Panel } from "./Bits";
 import { useAction, useData } from "./useData";
 
 type Item = { start_time: string | null; end_time: string | null; title: string; description: string; is_extra_cost: boolean };
@@ -253,7 +253,7 @@ function TourStatusBar({ slug, status, note, hasMedia, onChange }: { slug: strin
   return (
     <div className="card flex flex-wrap items-center gap-3 p-4">
       <Badge tone={st?.tone ?? "gray"}>{st?.label ?? status}</Badge>
-      {status === "rejected" && note && <span className="text-sm text-clay-700">Moderator: {note}</span>}
+      {status === "pending_review" && <span className="text-sm text-ink-soft">⏳ Admin tekshiruvida — tasdiqlangach saytda chiqadi.</span>}
       {status === "published" && <a href={`/tours/${slug}`} target="_blank" className="text-sm text-forest-700">Saytda ko&apos;rish ↗</a>}
       <div className="ml-auto flex gap-2">
         {canSubmit && (
@@ -267,6 +267,16 @@ function TourStatusBar({ slug, status, note, hasMedia, onChange }: { slug: strin
         )}
       </div>
       {!hasMedia && canSubmit && <p className="w-full text-xs text-ink-mute">E&apos;longa yuborish uchun kamida bitta rasm yuklang.</p>}
+      {status === "rejected" && (
+        <div className="w-full">
+          <ModerationBanner state="rejected" note={note} what="Tur" />
+        </div>
+      )}
+      {status === "published" && (
+        <div className="w-full">
+          <ModerationBanner state="approved" />
+        </div>
+      )}
       <div className="w-full"><ErrorText text={act.error} /></div>
     </div>
   );

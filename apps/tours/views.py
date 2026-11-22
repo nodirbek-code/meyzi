@@ -40,6 +40,7 @@ def public_tours():
     return Tour.objects.filter(
         status=Tour.Status.PUBLISHED,
         agency__status=Agency.Status.ACTIVE,
+        agency__moderation_status=Agency.Moderation.APPROVED,
         destination__is_published=True,
     )
 
@@ -144,6 +145,10 @@ class CabinetTourViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(agency=self.request.agency, status=Tour.Status.DRAFT)
 
+    def perform_update(self, serializer):
+        tour = serializer.save()
+        resubmit_tour(tour, "tur tahrirlandi")
+
     def perform_destroy(self, tour):
         if tour.bookings.exists():
             raise ValidationError({"detail": "Bronlari bor turni o'chirib bo'lmaydi — arxivlang."})
@@ -152,7 +157,7 @@ class CabinetTourViewSet(viewsets.ModelViewSet):
     @extend_schema(request=None, responses=CabinetTourSerializer)
     @action(detail=True, methods=["post"])
     def submit(self, request, slug=None):
-        """E'longa yuborish. auto_publish agentliklarda darhol e'lon qilinadi, qolganlari moderatsiyaga."""
+        """E'longa yuborish → admin tekshiruvi. Faqat platformaning o'z agentligi (auto_publish) — darhol."""
         tour = self.get_object()
         if tour.status not in (Tour.Status.DRAFT, Tour.Status.REJECTED, Tour.Status.ARCHIVED):
             raise ValidationError(
@@ -168,7 +173,7 @@ class CabinetTourViewSet(viewsets.ModelViewSet):
             raise ValidationError(
                 {"meeting_map_url": "Uchrashuv joyining xarita havolasini yoki koordinatasini kiriting."}
             )
-        if request.agency.auto_publish:
+        if request.agency.is_platform and request.agency.auto_publish:
             tour.publish()
         else:
             tour.status = Tour.Status.PENDING_REVIEW
@@ -185,6 +190,28 @@ class CabinetTourViewSet(viewsets.ModelViewSet):
         tour.status = Tour.Status.ARCHIVED
         tour.save(update_fields=["status", "updated_at"])
         return Response(self.get_serializer(tour).data)
+
+
+def resubmit_tour(tour: Tour, details: str = "") -> Tour:
+    """E'lon qilingan turni agentlik o'zgartirdi — qayta tekshiruvga (tasdiqlanguncha saytda ko'rinmaydi)."""
+    agency = tour.agency
+    if tour.status == Tour.Status.PUBLISHED and not (agency.is_platform and agency.auto_publish):
+        tour.status = Tour.Status.PENDING_REVIEW
+        tour.moderation_note = ""
+        tour.save(update_fields=["status", "moderation_note", "updated_at"])
+        notify.changes_submitted("Tur", tour.title, tour, details)
+    return tour
+
+
+def reject_tour(tour: Tour, note: str) -> Tour:
+    """Admin qaytaradi: izoh agentlikka yuboriladi, u tuzatib qayta yuboradi."""
+    from apps.notifications import user_events
+
+    tour.status = Tour.Status.REJECTED
+    tour.moderation_note = note
+    tour.save(update_fields=["status", "moderation_note", "updated_at"])
+    user_events.tour_moderated(tour)
+    return tour
 
 
 class _TourChildMixin:
@@ -252,9 +279,15 @@ class CabinetMediaViewSet(
 
     def perform_create(self, serializer):
         self._save(serializer, tour=self.get_tour())
+        resubmit_tour(self.get_tour(), "yangi rasm/video yuklandi")
 
     def perform_update(self, serializer):
         self._save(serializer)
+        resubmit_tour(self.get_tour(), "rasm/video o'zgardi")
+
+    def perform_destroy(self, media):
+        media.delete()
+        resubmit_tour(self.get_tour(), "rasm/video o'chirildi")
 
     def _save(self, serializer, **extra):
         media = serializer.save(**extra)

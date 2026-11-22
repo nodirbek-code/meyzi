@@ -9,6 +9,7 @@ class Review(TimeStampedModel):
     """Sharh: faqat yakunlangan (completed) bron egasi, bitta bronga bitta."""
 
     class Status(models.TextChoices):
+        PENDING = "pending", "Tekshiruvda"
         PUBLISHED = "published", "E'lon qilingan"
         HIDDEN = "hidden", "Yashirilgan"
 
@@ -20,7 +21,7 @@ class Review(TimeStampedModel):
     rating = models.PositiveSmallIntegerField("baho", validators=[MinValueValidator(1), MaxValueValidator(5)])
     text = models.TextField("matn", blank=True)
     status = models.CharField(
-        "holat", max_length=20, choices=Status.choices, default=Status.PUBLISHED, db_index=True
+        "holat", max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True
     )
     moderation_note = models.CharField("moderator izohi", max_length=255, blank=True)
 

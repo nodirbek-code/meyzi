@@ -298,6 +298,13 @@ def test_guide_manages_meeting_points(guide_api, guide, api):
         format="json",
     )
     assert res3.status_code == 400  # koordinata majburiy
+    # yangi uchrashuv joyi — profil qayta tekshiruvga, tasdiqlanguncha saytda yo'q
+    guide.refresh_from_db()
+    assert guide.status == "pending"
+    assert api.get("/api/v1/guides/aziz/").status_code == 404
+    from apps.guides import services as guide_services
+
+    guide_services.approve_profile(guide)
     detail = api.get("/api/v1/guides/aziz/").data
     assert [p["name"] for p in detail["meeting_points"]] == ["Registon"]
 

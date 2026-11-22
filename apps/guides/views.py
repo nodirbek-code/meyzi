@@ -178,7 +178,7 @@ class MyGuideProfileView(generics.GenericAPIView):
         ser = self.get_serializer(profile, data=request.data, partial=True)
         ser.is_valid(raise_exception=True)
         profile = ser.save()
-        services.submit_profile(profile, is_new=False)
+        services.submit_profile(profile, is_new=False, details="profil tahrirlandi")
         return Response(self.get_serializer(profile).data)
 
 
@@ -340,7 +340,16 @@ class CabinetMeetingPointViewSet(viewsets.ModelViewSet):
         return GuideMeetingPoint.objects.filter(guide=self.request.guide).select_related("destination")
 
     def perform_create(self, serializer):
-        serializer.save(guide=self.request.guide)
+        point = serializer.save(guide=self.request.guide)
+        services.submit_profile(
+            self.request.guide, is_new=False, details=f"yangi uchrashuv joyi: {point.name}"
+        )
+
+    def perform_update(self, serializer):
+        point = serializer.save()
+        services.submit_profile(
+            self.request.guide, is_new=False, details=f"uchrashuv joyi o'zgardi: {point.name}"
+        )
 
     def perform_destroy(self, point):
         if point.bookings.exists():

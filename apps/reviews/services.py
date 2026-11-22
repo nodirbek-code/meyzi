@@ -40,8 +40,7 @@ def create_review(*, user, booking_code: str, rating: int, text: str = "") -> Re
 
     review = Review.objects.create(
         booking=booking, user=user, tour=booking.tour, agency=booking.agency, rating=rating, text=text
-    )
-    recalculate_ratings(tour_id=review.tour_id, agency_id=review.agency_id)
+    )  # status=PENDING — admin tasdiqlagach saytga chiqadi
     notify.review_created(review)
     return review
 
@@ -52,6 +51,7 @@ def update_review(review: Review, *, rating: int | None = None, text: str | None
         review.rating = rating
     if text is not None:
         review.text = text
+    review.status = Review.Status.PENDING  # o'zgartirilgan sharh ham qayta tekshiruvga
     review.save()
     recalculate_ratings(tour_id=review.tour_id, agency_id=review.agency_id)
     return review
