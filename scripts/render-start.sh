@@ -16,10 +16,8 @@ if [ "${SEED_DEMO:-False}" = "True" ]; then
   python manage.py seed_demo
 fi
 
-# Admin: DJANGO_SUPERUSER_EMAIL va DJANGO_SUPERUSER_PASSWORD berilsa yaratiladi (bor bo'lsa — o'tkazib yuboriladi)
-if [ -n "${DJANGO_SUPERUSER_EMAIL:-}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
-  python manage.py createsuperuser --noinput 2>/dev/null || echo "superuser allaqachon bor"
-fi
+# Admin: DJANGO_SUPERUSER_EMAIL dagi foydalanuvchi admin qilinadi (yo'q bo'lsa yaratiladi), parol — Environment'dan
+python manage.py ensure_admin || echo "ensure_admin: xato (yuqoridagi xabarni qarang)"
 
 # Telegram bot: token va secret bo'lsa webhook'ni shu serverga o'rnatadi (xato bo'lsa ham server ishga tushaveradi)
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ] && [ -n "${MEYZI_SITE_URL:-}" ]; then

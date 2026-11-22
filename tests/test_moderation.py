@@ -251,3 +251,41 @@ def test_me_shows_is_staff(auth_api, admin_user):
     c = APIClient()
     c.force_authenticate(admin_user)
     assert c.get("/api/v1/auth/me/").data["is_staff"] is True
+
+
+# ---------- Admin hisobi (Render: Environment'dan) ----------
+
+
+def test_ensure_admin_creates_or_promotes(monkeypatch, db):
+    from django.core.management import call_command
+
+    from apps.accounts.models import User
+
+    monkeypatch.setenv("DJANGO_SUPERUSER_EMAIL", "Boss@Gmail.com")
+    monkeypatch.setenv("DJANGO_SUPERUSER_PASSWORD", "Kuchli-Parol-2026")
+    # oldin Google orqali oddiy foydalanuvchi bo'lib kirgan
+    User.objects.create_user(email="boss@gmail.com", first_name="Boss")
+    call_command("ensure_admin")
+    u = User.objects.get(email__iexact="boss@gmail.com")
+    assert u.is_staff and u.is_superuser and u.check_password("Kuchli-Parol-2026")
+    assert User.objects.count() == 1
+
+    monkeypatch.setenv("DJANGO_SUPERUSER_PASSWORD", "Yangi-Parol-2027")  # parolni almashtirish
+    call_command("ensure_admin")
+    u.refresh_from_db()
+    assert u.check_password("Yangi-Parol-2027")
+
+    c = Client()
+    assert c.login(email="boss@gmail.com", password="Yangi-Parol-2027")
+    assert c.get("/admin/").status_code == 200
+
+
+def test_ensure_admin_creates_new(monkeypatch, db):
+    from django.core.management import call_command
+
+    from apps.accounts.models import User
+
+    monkeypatch.setenv("DJANGO_SUPERUSER_EMAIL", "admin@meyzi.uz")
+    monkeypatch.setenv("DJANGO_SUPERUSER_PASSWORD", "Kuchli-Parol-2026")
+    call_command("ensure_admin")
+    assert User.objects.get(email="admin@meyzi.uz").is_superuser
