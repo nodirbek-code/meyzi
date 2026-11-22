@@ -16,7 +16,7 @@ export const NAV = [
   { href: "/guides", label: "Gidlar" },
   { href: "/hotels", label: "Mehmonxonalar" },
   { href: "/destinations", label: "Yo'nalishlar" },
-  { href: "/agencies", label: "Agentliklar uchun" },
+  { href: "/hamkorlik", label: "Hamkorlik" },
 ];
 
 async function popularDestinations(): Promise<DestinationShort[]> {

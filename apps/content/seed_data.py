@@ -165,7 +165,7 @@ FAQ = [
     ),
     (
         "Men turagentlikman — qanday qo'shilaman?",
-        "«Agentliklar uchun» bo'limida ariza qoldiring: agentlik nomi, mas'ul shaxs va telefon. Jamoamiz 24 soat "
+        "«Hamkorlik» sahifasida «Turagentlik» ni tanlab ariza qoldiring: agentlik nomi, mas'ul shaxs va telefon. Jamoamiz 24 soat "
         "ichida siz bilan bog'lanadi, hujjatlarni (STIR, litsenziya) tekshiradi va kabinetingizni faollashtiradi. "
         "Kabinetda turlar, jo'nash sanalari va bronlarni boshqarasiz.",
     ),

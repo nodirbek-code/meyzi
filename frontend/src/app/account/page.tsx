@@ -175,9 +175,9 @@ export default async function AccountPage() {
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {[
-              ["/agencies", "🏢", "Turagentlik", "Turlaringizni joylang"],
-              ["/guides/become", "🧭", "Gid", "Shaxsiy gid bo'ling"],
-              ["/hotels/join", "🏡", "Mehmonxona", "Xonalaringizni soting"],
+              ["/hamkorlik?turi=agentlik", "🏢", "Turagentlik", "Turlaringizni joylang"],
+              ["/hamkorlik?turi=gid", "🧭", "Gid", "Shaxsiy gid bo'ling"],
+              ["/hamkorlik?turi=mehmonxona", "🏡", "Mehmonxona", "Xonalaringizni soting"],
             ].map(([href, icon, title, text]) => (
               <Link key={href} href={href} className="rounded-xl border border-sand-200 p-4 transition hover:border-forest-400">
                 <span className="text-2xl">{icon}</span>

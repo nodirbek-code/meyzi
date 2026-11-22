@@ -18,9 +18,9 @@ const COLS = [
   {
     title: "Hamkorlik",
     links: [
-      ["/agencies", "Agentliklar uchun"],
-      ["/guides/become", "Gid bo'lish"],
-      ["/hotels/join", "Mehmonxonani qo'shish"],
+      ["/hamkorlik?turi=agentlik", "Turagentliklar uchun"],
+      ["/hamkorlik?turi=gid", "Gid bo'lish"],
+      ["/hamkorlik?turi=mehmonxona", "Mehmonxonani qo'shish"],
     ],
   },
   {
