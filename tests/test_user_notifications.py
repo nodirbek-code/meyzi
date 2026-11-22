@@ -143,3 +143,61 @@ def test_scheduler_sends_queued(user, departure, mailoutbox):
     call_command("send_notifications")
     assert [m.to for m in mailoutbox] == [["turist@example.com"]]
     assert UserMessage.objects.get().status == "sent"
+
+
+# ---------- Telegram bot orqali bron xabari ----------
+
+
+@pytest.fixture
+def bot(settings, monkeypatch):
+    from apps.notifications import telegram
+
+    settings.TELEGRAM_BOT_TOKEN = "test-token"
+    settings.LAZURI_FRONTEND_URL = "https://lazuri.uz"
+    sent = []
+    monkeypatch.setattr(telegram, "call", lambda method, payload=None, **kw: sent.append((method, payload)))
+    return sent
+
+
+def test_booking_created_sends_bot_message_with_pay_button(
+    bot, user, departure, django_capture_on_commit_callbacks
+):
+    user.telegram_id = 555001
+    user.save(update_fields=["telegram_id"])
+    with django_capture_on_commit_callbacks(execute=True):
+        b = bookings.create_booking(
+            user=user, departure_id=departure.pk, seats=2, contact_name="A", contact_phone="+998900000000"
+        )
+
+    msg = UserMessage.objects.get(channel="telegram", event="tour_booking_created")
+    assert msg.recipient == "555001" and msg.status == UserMessage.Status.SENT
+    assert len(bot) == 1
+    method, payload = bot[0]
+    assert method == "sendMessage" and payload["chat_id"] == "555001"
+    assert b.tour.title in payload["text"]
+    assert f"{timezone.localtime(b.departure_at):%d.%m.%Y %H:%M}" in payload["text"]
+    button = payload["reply_markup"]["inline_keyboard"][0][0]
+    assert button["url"] == f"https://lazuri.uz/account/bookings/{b.code}"
+    assert "To'lov" in button["text"]
+
+
+def test_booking_bot_message_localhost_link_in_text(
+    bot, settings, user, departure, django_capture_on_commit_callbacks
+):
+    settings.LAZURI_FRONTEND_URL = "http://localhost:3000"
+    user.telegram_id = 555002
+    user.save(update_fields=["telegram_id"])
+    with django_capture_on_commit_callbacks(execute=True):
+        b = bookings.create_booking(
+            user=user, departure_id=departure.pk, seats=1, contact_name="A", contact_phone="+998900000000"
+        )
+    payload = bot[0][1]
+    assert "reply_markup" not in payload
+    assert f"http://localhost:3000/account/bookings/{b.code}" in payload["text"]
+
+
+def test_no_bot_message_without_telegram(bot, user, departure):
+    bookings.create_booking(
+        user=user, departure_id=departure.pk, seats=1, contact_name="A", contact_phone="+998900000000"
+    )
+    assert not UserMessage.objects.filter(channel="telegram").exists()

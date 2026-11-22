@@ -7,10 +7,12 @@ Matnlar hozircha o'zbekcha (ko'p tilli kontent — "Tez kunda").
 Turistga boradigan xabarlarda bron kodi (LZ…/LG…/LH…) ko'rsatilmaydi — faqat hamkor va admin uchun.
 """
 
+from html import escape
+
 from django.conf import settings
 from django.utils import timezone
 
-from .services import queue_email, queue_sms
+from .services import queue_email, queue_sms, queue_telegram
 
 SIGN = f"\n\n— {settings.BRAND_NAME}"
 
@@ -56,6 +58,20 @@ def tour_booking_created(b) -> None:
         f"Sana: {_dt(b.departure_at)}, {b.seats} kishi, jami {_money(b.total_uzs)}.\n"
         f"Joylaringiz {_dt(b.expires_at)} gacha band qilindi.",
         event="tour_booking_created",
+    )
+    # Bot orqali — darhol, to'lov sahifasiga tugma bilan (faqat Telegram'i ulangan foydalanuvchiga)
+    queue_telegram(
+        b.user.telegram_id,
+        "🧾 <b>Bron yaratildi</b>\n\n"
+        f"🧭 Tur: <b>{escape(b.tour.title)}</b>\n"
+        f"📅 Sana: {_dt(b.departure_at)}\n"
+        f"👥 {b.seats} kishi · 💰 {_money(b.total_uzs)}\n\n"
+        f"⏳ Joylaringiz <b>{_dt(b.expires_at)}</b> gacha band qilindi — shu vaqtgacha to'lov qiling, "
+        "aks holda bron bekor bo'ladi.",
+        event="tour_booking_created",
+        button_text="💳 To'lov qilish",
+        button_url=f"{settings.LAZURI_FRONTEND_URL}/account/bookings/{b.code}",
+        immediate=True,
     )
 
 

@@ -6,8 +6,6 @@ import { useState } from "react";
 import { api, ClientApiError } from "@/lib/client";
 import type { User } from "@/lib/types";
 
-import { CodeInput, fullPhone, isComplete, PhoneDigitsInput } from "./PhoneField";
-
 function useRun() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -45,69 +43,77 @@ export function ProfileForm({ user }: { user: User }) {
   );
 }
 
-export function VerifyEmail() {
+/** Profilga email ulash: email → 6 xonali kod emailga → kod to'g'ri bo'lsa email tasdiqlangan holda yoziladi. */
+export function AttachEmail({ current }: { current?: string | null }) {
   const router = useRouter();
-  const [sent, setSent] = useState(false);
+  const [email, setEmail] = useState(current ?? "");
   const [code, setCode] = useState("");
-  const { busy, error, run } = useRun();
-  return sent ? (
-    <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); run(async () => { await api.post("/auth/email/verify", { code }); router.refresh(); }); }}>
-      <input className="input w-40 text-center font-mono tracking-[0.4em]" maxLength={6} inputMode="numeric" placeholder="Kod" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
-      <button className="btn-primary" disabled={busy}>Tasdiqlash</button>
-      {error && <p className="w-full text-sm text-clay-700">{error}</p>}
-    </form>
-  ) : (
-    <div>
-      <button className="btn-ghost" disabled={busy} onClick={() => run(async () => { await api.post("/auth/email/send-code"); setSent(true); })}>
-        Tasdiqlash kodini yuborish
-      </button>
-      {error && <p className="mt-2 text-sm text-clay-700">{error}</p>}
-    </div>
-  );
-}
+  const [sent, setSent] = useState(false);
+  const { busy, error, ok, run } = useRun();
 
-export function AttachPhone({ current }: { current?: string | null }) {
-  const router = useRouter();
-  const [digits, setDigits] = useState("");
-  const [code, setCode] = useState("");
-  const [sent, setSent] = useState(false);
-  const { busy, error, run } = useRun();
-  const phone = fullPhone(digits);
+  const sendCode = () =>
+    run(async () => {
+      await api.post("/auth/me/email/request-code", { email });
+      setSent(true);
+      setCode("");
+      return "Kod emailingizga yuborildi. Pochtangizni (va «Spam» papkasini) tekshiring.";
+    });
+
   return (
     <form
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
+        if (!sent) return sendCode();
         run(async () => {
-          if (!sent) {
-            await api.post("/auth/me/phone/request-code", { phone });
-            setSent(true);
-          } else {
-            await api.post("/auth/me/phone/verify", { phone, code });
-            setSent(false);
-            setDigits("");
-            setCode("");
-            router.refresh();
-          }
+          await api.post("/auth/me/email/verify", { email, code });
+          setSent(false);
+          router.refresh();
+          return "Email ulandi";
         });
       }}
     >
-      <span className="label">{current ? "Raqamni almashtirish" : "Telefon ulash"}</span>
+      <span className="label">{current ? "Emailni tasdiqlash" : "Email qo'shish"}</span>
       <div className="flex flex-wrap gap-2">
-        <div className="w-full sm:w-64">
-          <PhoneDigitsInput digits={digits} onChange={(d) => { setDigits(d); setSent(false); }} disabled={sent} required />
-        </div>
+        <input
+          className="input w-full sm:w-72"
+          type="email"
+          autoComplete="email"
+          placeholder="siz@email.com"
+          required
+          value={email}
+          disabled={sent}
+          onChange={(e) => setEmail(e.target.value)}
+        />
         {sent && (
-          <div className="w-40">
-            <CodeInput value={code} onChange={setCode} autoFocus />
-          </div>
+          <input
+            className="input w-40 text-center font-mono tracking-[0.4em]"
+            maxLength={6}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="Kod"
+            autoFocus
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          />
         )}
-        <button className="btn-primary" disabled={busy || !isComplete(digits) || (sent && code.length !== 6)}>
-          {sent ? "Tasdiqlash" : "Telegram'ga kod yuborish"}
+        <button className="btn-primary" disabled={busy || !email || (sent && code.length !== 6)}>
+          {busy ? "Kuting…" : sent ? "Tasdiqlash" : "Kod yuborish"}
         </button>
       </div>
-      {sent && <p className="text-xs text-sky-700">Kod Telegram&apos;ga yuborildi — Telegram ilovangizni oching.</p>}
+      {sent && (
+        <p className="text-xs text-ink-soft">
+          <button type="button" className="font-semibold text-forest-600 hover:underline" onClick={() => { setSent(false); setCode(""); }}>
+            Emailni o&apos;zgartirish
+          </button>
+          {" · "}
+          <button type="button" className="font-semibold text-forest-600 hover:underline" disabled={busy} onClick={sendCode}>
+            Kodni qayta yuborish
+          </button>
+        </p>
+      )}
       {error && <p className="text-sm text-clay-700">{error}</p>}
+      {ok && <p className="text-sm text-forest-700">{ok}</p>}
     </form>
   );
 }

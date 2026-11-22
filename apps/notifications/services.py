@@ -97,6 +97,10 @@ def _deliver(msg: UserMessage) -> bool:
             send_mail(
                 msg.subject, msg.body, settings.DEFAULT_FROM_EMAIL, [msg.recipient], fail_silently=False
             )
+        elif msg.channel == UserMessage.Channel.TELEGRAM:
+            telegram.send_message(
+                msg.recipient, msg.body, button_text=msg.button_text, button_url=msg.button_url
+            )
         else:
             sms.send(msg.recipient, msg.body)
     except Exception as exc:  # noqa: BLE001 — har qanday transport xatosi qayta urinishga
@@ -125,6 +129,31 @@ def queue_sms(phone: str, text: str, *, event: str, immediate: bool = False):
     if not phone or not sms.is_enabled():
         return None
     msg = UserMessage.objects.create(channel=UserMessage.Channel.SMS, event=event, recipient=phone, body=text)
+    if immediate:
+        transaction.on_commit(lambda: _deliver(msg))
+    return msg
+
+
+def queue_telegram(
+    telegram_id: int | None,
+    text: str,
+    *,
+    event: str,
+    button_text: str = "",
+    button_url: str = "",
+    immediate: bool = False,
+):
+    """Foydalanuvchiga bot orqali xabar (u botda ro'yxatdan o'tgan bo'lsa — `user.telegram_id`)."""
+    if not telegram_id or not settings.TELEGRAM_BOT_TOKEN:
+        return None
+    msg = UserMessage.objects.create(
+        channel=UserMessage.Channel.TELEGRAM,
+        event=event,
+        recipient=str(telegram_id),
+        body=text,
+        button_text=button_text[:64],
+        button_url=button_url,
+    )
     if immediate:
         transaction.on_commit(lambda: _deliver(msg))
     return msg

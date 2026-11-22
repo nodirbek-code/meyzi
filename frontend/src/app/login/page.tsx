@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Kirish" };
 
 export default function LoginPage() {
   return (
-    <AuthCard title="Hisobingizga kiring" subtitle="Telefon raqamingiz (Telegram kodi), Google yoki email orqali.">
+    <AuthCard title="Hisobingizga kiring" subtitle="Telefon raqam va parol yoki Google akkauntingiz orqali.">
       <Suspense>
         <LoginForm />
       </Suspense>

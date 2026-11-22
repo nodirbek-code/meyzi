@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { LegalDocument } from "@/components/LegalDocument";
 import { apiGetOrNull } from "@/lib/api";
 import { dateLong } from "@/lib/format";
 import type { Page } from "@/lib/types";
@@ -18,13 +19,15 @@ export default async function StaticPage({ params }: Props) {
   if (!p) notFound();
   return (
     <div className="container-lz py-8 sm:py-10">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-5xl">
         <nav className="mb-2 text-sm text-ink-mute">
           <Link href="/" className="hover:text-forest-700">Bosh sahifa</Link> › {p.title}
         </nav>
         <h1 className="text-3xl sm:text-4xl">{p.title}</h1>
-        <p className="mt-2 text-sm text-ink-mute">Oxirgi yangilanish: {dateLong(p.updated_at.slice(0, 10), true)}</p>
-        <div className="card prose-lz mt-8 whitespace-pre-line p-6 text-base sm:p-8">{p.body}</div>
+        <p className="mt-2 text-sm text-ink-mute">Tahrir sanasi: {dateLong(p.updated_at.slice(0, 10), true)}</p>
+        <div className="mt-8">
+          <LegalDocument body={p.body} />
+        </div>
       </div>
     </div>
   );

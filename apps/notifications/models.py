@@ -36,11 +36,18 @@ class TelegramMessage(TimeStampedModel):
 
 
 class UserMessage(TimeStampedModel):
-    """Foydalanuvchiga email yoki SMS (outbox). Tasdiqlash kodlari darhol, qolganlari scheduler orqali."""
+    """Foydalanuvchiga email, SMS yoki Telegram (outbox).
+
+    Tasdiqlash kodlari darhol, qolganlari scheduler orqali.
+
+    Telegram: `recipient` — foydalanuvchining Telegram ID'si (bot bilan shaxsiy chat), `body` — HTML,
+    `button_text`/`button_url` — xabar ostidagi tugma (masalan, "To'lov qilish").
+    """
 
     class Channel(models.TextChoices):
         EMAIL = "email", "Email"
         SMS = "sms", "SMS"
+        TELEGRAM = "telegram", "Telegram"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Navbatda"
@@ -54,6 +61,8 @@ class UserMessage(TimeStampedModel):
     recipient = models.CharField("kimga", max_length=254)
     subject = models.CharField("mavzu", max_length=200, blank=True)
     body = models.TextField("matn")
+    button_text = models.CharField("tugma matni", max_length=64, blank=True)
+    button_url = models.URLField("tugma havolasi", max_length=500, blank=True)
     status = models.CharField(
         "holat", max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True
     )
@@ -62,8 +71,8 @@ class UserMessage(TimeStampedModel):
     error = models.TextField("xato", blank=True)
 
     class Meta:
-        verbose_name = "email / SMS"
-        verbose_name_plural = "email / SMS xabarlari"
+        verbose_name = "email / SMS / Telegram"
+        verbose_name_plural = "email / SMS / Telegram xabarlari"
         ordering = ["-created_at"]
 
     def __str__(self):

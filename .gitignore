@@ -16,3 +16,9 @@ htmlcov/
 private_media/
 .env.prod
 backups/
+
+# lokal ish fayllari (skrinshot, xom rasmlar)
+/skrenshot/
+/*.jfif
+/click.png
+/payme.png

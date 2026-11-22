@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { DateStrip, type CalendarDay } from "@/components/DateStrip";
@@ -10,6 +11,27 @@ import { BRAND } from "@/lib/brand";
 import type { ArticleCard, Category, Destination, Features, Paginated, Review, TourCard as Tour } from "@/lib/types";
 
 export const revalidate = 60;
+
+const COIN_STEPS = [
+  { title: "Sayohat qiling", text: "Meyzi orqali sayohat turini tanlang va bron qiling." },
+  { title: "Coin to'plang", text: "Sayohatingiz yakunlangach, hisobingizga coin qo'shiladi." },
+  { title: "Mukofotlarga ega bo'ling", text: "Yig'ilgan coinlar evaziga maxsus imtiyozlarni qo'lga kiriting." },
+];
+
+const CARD_STEPS = [
+  { title: "A'zolikni qo'lga kiriting", text: "Karta kamida 3 ta sayohat qilgan foydalanuvchilarga beriladi." },
+  { title: "Maxsus maqomga ega bo'ling", text: "Karta egasi Meyzi hamjamiyatining faol a'zosi hisoblanadi." },
+  { title: "Ko'proq imkoniyatlar", text: "Maxsus takliflar, hamkorlar chegirmalari va a'zolik imtiyozlari." },
+  { title: "Coins to'plang", text: "Har bir sayohat orqali Meyzi Coins yig'ishda davom eting." },
+];
+
+const CARD_PERKS = [
+  "Maxsus a'zolik maqomi",
+  "Meyzi Coins bonus tizimi",
+  "Hamkorlardan chegirmalar",
+  "Faqat karta egalari uchun takliflar",
+  "Membership imtiyozlari",
+];
 
 const TRUST = [
   { icon: "shield", title: "Tekshirilgan agentliklar", text: "Har bir hamkor hujjatlari tekshirilgandan keyingina platformaga qo'shiladi." },
@@ -65,13 +87,12 @@ export default async function HomePage() {
         <Cover src={heroImage} alt="" className="absolute inset-0 -z-20 h-full w-full" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-forest-900/55 via-forest-900/45 to-forest-900/85" aria-hidden />
         <div className="container-lz pb-24 pt-16 text-center sm:pb-28 sm:pt-24">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-sun-300">{BRAND.name}</p>
-          <h1 className="mx-auto mt-3 max-w-4xl text-4xl leading-tight text-white sm:text-5xl lg:text-6xl">
-            O&apos;zbekiston tabiatini kashf eting
+          <h1 className="mx-auto max-w-4xl text-4xl leading-tight text-white sm:text-5xl lg:text-6xl">
+            O&apos;zbekistonni yangicha kashf eting
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-forest-50/90 sm:text-lg">
-            Tog&apos; yo&apos;laklari, toza ko&apos;llar va Ipak yo&apos;li shaharlari — tekshirilgan mahalliy agentliklarning
-            turlarini toping va onlayn bron qiling.
+            Unutilmas sayohatlar, betakror manzillar va yangi sarguzashtlar sizni kutmoqda. O&apos;zingizga mos yo&apos;nalishni
+            tanlang, sayohat qiling va har bir safaringiz uchun Meyzi Coins to&apos;plang.
           </p>
           <div className="mx-auto mt-8 max-w-4xl text-left">
             <SearchBar destinations={destinations.results} categories={categories} />
@@ -201,6 +222,90 @@ export default async function HomePage() {
             </div>
           ))}
         </div>
+
+        {/* Bonus tizimi: Meyzi Coins + Meyzi Membership Card */}
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          {/* Meyzi Coins */}
+          <div className="card flex flex-col overflow-hidden border-sun-200 bg-gradient-to-br from-sun-50 via-white to-white">
+            <div className="flex-1 p-6 sm:p-8">
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sun-300 to-sun-500 text-lg font-extrabold text-white shadow-card" aria-hidden>
+                  M
+                </span>
+                <h3 className="font-sans text-xl font-bold">Meyzi Coins</h3>
+              </div>
+              <p className="mt-4 text-sm text-ink-soft">
+                Meyzi orqali sayohat qilgan sari to&apos;playdigan bonus ballaringiz. Har bir amalga oshirilgan sayohat hisobingizga
+                qo&apos;shimcha coin olib keladi. Ularni Meyzi hamkorlarining maxsus takliflari, chegirmalar va boshqa imtiyozlarga
+                almashtirishingiz mumkin.
+              </p>
+              <ol className="mt-5 space-y-3">
+                {COIN_STEPS.map((step, i) => (
+                  <li key={step.title} className="flex gap-3 rounded-2xl bg-white/80 p-3.5 ring-1 ring-sun-100">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sun-100 text-sm font-bold text-sun-700">
+                      {i + 1}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold">{step.title}</span>
+                      <span className="mt-0.5 block text-xs text-ink-soft">{step.text}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-5 font-display text-lg italic text-sun-700">Har bir sayohat — yangi taassurot va yangi imkoniyat!</p>
+            </div>
+            <p className="border-t border-sun-100 bg-sun-50/60 px-6 py-3 text-xs text-ink-mute sm:px-8">
+              Meyzi Coins — pul emas, platforma ichidagi bonus birliklari. Ularni naqd pulga aylantirib yoki boshqa foydalanuvchiga
+              o&apos;tkazib bo&apos;lmaydi.
+            </p>
+          </div>
+
+          {/* Meyzi Membership Card */}
+          <div className="flex flex-col overflow-hidden rounded-xl2 bg-[linear-gradient(150deg,#0d2a47_0%,#06192b_55%,#040f1b_100%)] text-white shadow-lift">
+            <div className="flex-1 p-6 sm:p-8">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                <Image
+                  src="/brand/meyzi-card.webp"
+                  alt="Meyzi Membership Card"
+                  width={640}
+                  height={412}
+                  className="w-44 shrink-0 -rotate-6 rounded-[0.9rem] shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)] ring-1 ring-white/10 sm:w-48"
+                />
+                <div>
+                  <h3 className="font-sans text-xl font-bold text-white">Meyzi Membership Card</h3>
+                  <p className="mt-2 text-sm text-slate-300">
+                    Faol sayohatchilar uchun maxsus a&apos;zolik kartasi: sayohatlar davomida qo&apos;shimcha imtiyozlar, bonuslar va
+                    maxsus takliflar.
+                  </p>
+                </div>
+              </div>
+              <ol className="mt-6 grid gap-3 sm:grid-cols-2">
+                {CARD_STEPS.map((step, i) => (
+                  <li key={step.title} className="flex gap-3 rounded-2xl bg-white/[0.06] p-3.5 ring-1 ring-white/10">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-400 text-sm font-bold text-[#06192b]">
+                      {i + 1}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-white">{step.title}</span>
+                      <span className="mt-0.5 block text-xs text-slate-300">{step.text}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <ul className="mt-5 flex flex-wrap gap-2">
+                {CARD_PERKS.map((perk) => (
+                  <li key={perk} className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-100">
+                    <Icon name="check" size={13} />
+                    {perk}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="border-t border-white/10 bg-white/[0.04] px-6 py-3 text-xs text-slate-300 sm:px-8">
+              Meyzi Card — bu shunchaki karta emas, ko&apos;proq sayohat qiladiganlar uchun alohida imkoniyatlar dunyosi.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* ---------- Sharhlar ---------- */}
@@ -227,22 +332,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ---------- Gidlar va mehmonxonalar ---------- */}
-      <section className="container-lz grid gap-5 pt-20 md:grid-cols-2">
-        {[
-          { href: "/guides", emoji: "🧭", title: "Shaxsiy gid", text: "Sertifikatlangan gidni yarim kun, to'liq kun yoki bir necha kunga bron qiling.", tone: "bg-forest-50" },
-          { href: "/hotels", emoji: "🏡", title: "Mehmonxonalar", text: "Tog' etagidagi mehmon uylaridan shahar mehmonxonalarigacha — bo'sh xonalar va narxlar.", tone: "bg-sun-50" },
-        ].map((b) => (
-          <Link key={b.href} href={b.href} className={`group flex items-center gap-5 rounded-xl2 border border-sand-200 p-6 transition hover:shadow-lift ${b.tone}`}>
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow-card">{b.emoji}</span>
-            <span>
-              <span className="block font-display text-xl font-bold group-hover:text-forest-700">{b.title}</span>
-              <span className="mt-1 block text-sm text-ink-soft">{b.text}</span>
-            </span>
-          </Link>
-        ))}
-      </section>
-
       {/* ---------- Qo'llanmalar ---------- */}
       {articles.results.length > 0 && (
         <section className="container-lz pt-20">
@@ -264,20 +353,31 @@ export default async function HomePage() {
       {/* ---------- Tez kunda: AI marshrut va to'lov usullari ---------- */}
       <section className="container-lz pt-20">
         <div className="grid gap-5 md:grid-cols-2">
-          <div className="card p-6">
-            <span className="chip bg-sun-100 text-sun-700">{features.ai_route.status_text}</span>
-            <h3 className="mt-3 text-xl">AI marshrut</h3>
-            <p className="mt-2 text-sm text-ink-soft">{features.ai_route.description}</p>
+          <div className="card flex items-start gap-4 p-6">
+            <div className="min-w-0 flex-1">
+              <span className="soon-ai">{features.ai_route.status_text}</span>
+              <h3 className="mt-3 text-xl">AI marshrut</h3>
+              <p className="mt-2 text-sm text-ink-soft">{features.ai_route.description}</p>
+            </div>
+            <Image
+              src="/brand/meyzi-ai.webp"
+              alt="Meyzi AI — sun'iy intellekt yordamchisi"
+              width={480}
+              height={480}
+              className="h-24 w-24 shrink-0 rounded-2xl object-cover shadow-card ring-1 ring-sand-200 sm:h-28 sm:w-28"
+            />
           </div>
           <div className="card p-6">
-            <h3 className="text-xl">To&apos;lov usullari</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-xl">To&apos;lov usullari</h3>
+              {features.payments.some((p) => !p.enabled) && <span className="soon-pay">Tez kunda</span>}
+            </div>
             <p className="mt-1 text-sm text-ink-soft">O&apos;zbekistonda har kuni ishlatiladigan xizmatlar orqali.</p>
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 grid grid-cols-3 gap-3">
               {features.payments.map((p) => (
-                <div key={p.code} className="flex items-center gap-2 rounded-xl border border-sand-200 px-4 py-2.5">
+                <div key={p.code} className="flex h-16 items-center justify-center rounded-xl border border-sand-200 bg-white px-2 sm:px-3" title={p.name}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {p.logo ? <img src={p.logo} alt={p.name} className="h-6" /> : <span className="font-semibold">{p.name}</span>}
-                  {!p.enabled && <span className="text-xs text-ink-mute">{p.status_text}</span>}
+                  {p.logo ? <img src={p.logo} alt={p.name} className="max-h-10 w-auto max-w-full object-contain" /> : <span className="text-sm font-semibold">{p.name}</span>}
                 </div>
               ))}
             </div>
@@ -289,11 +389,11 @@ export default async function HomePage() {
       <section className="container-lz pt-20">
         <div className="grid items-center overflow-hidden rounded-[1.5rem] bg-[linear-gradient(135deg,#dfe3e4_0%,#d3d7d9_45%,#c3c6ca_100%)] md:grid-cols-2">
           <div className="p-8 sm:p-12">
-            <span className="chip bg-white/80 text-forest-700">● Tez kunda</span>
+            <span className="soon-brand">● Tez kunda</span>
             <div className="mt-5 flex items-center gap-3">
               <AppIcon size={52} />
-              <span className="font-display text-2xl font-extrabold" style={{ color: BRAND.ink }}>
-                {BRAND.name.toLowerCase()}
+              <span className="font-brand text-3xl font-semibold tracking-[0.04em]" style={{ color: BRAND.ink }}>
+                {BRAND.name.charAt(0) + BRAND.name.slice(1).toLowerCase()}
               </span>
             </div>
             <h2 className="mt-5 text-3xl leading-tight sm:text-4xl" style={{ color: BRAND.ink }}>
@@ -312,7 +412,7 @@ export default async function HomePage() {
                     <path d={d} />
                   </svg>
                   <span className="leading-tight">
-                    <span className="block text-[10px] text-white/70">Tez kunda</span>
+                    <span className="soon-text block text-[10px]">Tez kunda</span>
                     <span className="block text-sm font-semibold">{store}</span>
                   </span>
                 </span>
@@ -328,27 +428,6 @@ export default async function HomePage() {
             loading="lazy"
             className="h-full w-full object-cover md:min-h-[26rem] md:[mask-image:linear-gradient(to_right,transparent,black_20%)]"
           />
-        </div>
-      </section>
-
-      {/* ---------- Savolingiz bormi? ---------- */}
-      <section className="container-lz pt-20">
-        <div className="flex flex-col gap-6 rounded-xl2 bg-forest-900 p-8 text-white md:flex-row md:items-center md:justify-between md:p-10">
-          <div>
-            <h2 className="text-2xl text-white">Savolingiz bormi?</h2>
-            <p className="mt-2 text-forest-100/80">To&apos;lashdan oldin so&apos;rang — jamoamiz javob beradi.</p>
-            <p className="mt-1 text-sm text-forest-100/60">{BRAND.email}</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <a href={`tel:${BRAND.phone.replace(/\s/g, "")}`} className="btn-light">
-              <Icon name="phone" size={16} />
-              {BRAND.phone}
-            </a>
-            <a href={BRAND.telegram} target="_blank" rel="noreferrer" className="btn bg-sky-500 text-white hover:bg-sky-700">
-              <Icon name="telegram" size={16} />
-              Telegramda yozish
-            </a>
-          </div>
         </div>
       </section>
 

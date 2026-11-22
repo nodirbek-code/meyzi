@@ -1,69 +1,69 @@
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
-from apps.content.models import FaqItem
-
-# Platformaning amaldagi qoidalari asosida (apps/bookings, apps/tours/policies.py).
-FAQ = [
-    (
-        "Turni qanday bron qilaman?",
-        "Tur sahifasida jo'nash sanasi va joylar sonini tanlang, aloqa uchun ism va telefoningizni kiriting. "
-        "Joylar sizga darhol 30 daqiqaga band qilinadi — shu vaqt ichida to'lovni amalga oshiring. "
-        "To'lanmasa, joylar avtomatik ravishda yana sotuvga chiqadi.",
-    ),
-    (
-        "Qanday to'lov usullari bor?",
-        "Payme, Click va Uzum Nasiya (muddatli to'lov) orqali to'lov tez kunda ishga tushadi.",
-    ),
-    (
-        "Narxga nimalar kiradi?",
-        "Har bir tur sahifasida «Narxga kiradi» va «Narxga kirmaydi» ro'yxatlari bor: transport, gid, ovqat, "
-        "kirish chiptalari va hokazo. Narx bir kishi uchun, so'mda ko'rsatiladi.",
-    ),
-    (
-        "Bronni bekor qilsam, pul qaytariladimi?",
-        "Har bir turning bekor qilish shartlari to'lovdan oldin ko'rsatiladi:\n"
-        "• Bepul bekor qilish — jo'nashdan kamida 24 soat oldin bekor qilsangiz, to'liq qaytariladi.\n"
-        "• Qisman qaytarish — jo'nashdan 48 soatdan ko'proq oldin bekor qilsangiz, 50% qaytariladi.\n"
-        "• Qaytarilmaydi — to'langan summa qaytarilmaydi.\n"
-        "Agar turni agentlik bekor qilsa, pul doim to'liq qaytariladi. "
-        "Bekor qilish shaxsiy kabinetdagi «Bronlarim» bo'limidan amalga oshiriladi.",
-    ),
-    (
-        "Turni kim o'tkazadi?",
-        "Turni sahifada ko'rsatilgan agentlik o'tkazadi. Barcha agentliklar platformaga qo'shilishdan oldin "
-        "tekshiriladi. Platformaning o'zi ham turlar tashkil qiladi.",
-    ),
-    (
-        "Bo'sh joylar va sanalarni qayerda ko'raman?",
-        "Tur sahifasida kelgusi jo'nash sanalari va har bir sanada qolgan joylar soni ko'rsatiladi. "
-        "Ma'lumotlar real vaqtda yangilanadi.",
-    ),
-    (
-        "Turlar qayerdan jo'naydi?",
-        "Ko'pchilik turlar Toshkentdan jo'naydi. "
-        "Uchrashuv joyi va vaqti tur sahifasida, xarita havolasi bilan ko'rsatiladi.",
-    ),
-    (
-        "Sharh qanday qoldiraman?",
-        "Sayohat yakunlangach, «Bronlarim» bo'limida shu bron uchun "
-        "1 dan 5 gacha baho va sharh qoldirishingiz mumkin. Sharhni 14 kun ichida tahrirlash mumkin.",
-    ),
-    (
-        "Men turagentlikman — qanday qo'shilaman?",
-        "«Agentliklar uchun» bo'limida ariza qoldiring: agentlik nomi, mas'ul shaxs va telefon. "
-        "Jamoamiz siz bilan bog'lanadi, hujjatlarni tekshiradi va kabinetingizni faollashtiradi.",
-    ),
-]
+from apps.catalog.models import Destination
+from apps.content.models import Article, FaqItem, Page
+from apps.content.seed_data import ARTICLES, FAQ, PAGES
 
 
 class Command(BaseCommand):
-    help = "Savol-javoblarni (FAQ) yuklaydi. Qayta ishga tushirish xavfsiz — mavjud savollar yangilanadi."
+    help = (
+        "Sayt kontentini yuklaydi: savol-javob, sahifalar (foydalanish shartlari, maxfiylik siyosati) va "
+        "qo'llanmalar. Qayta ishga tushirish xavfsiz: FAQ yangilanadi; admin panelda tahrirlangan sahifa va "
+        "maqolalar faqat --force bilan qayta yoziladi."
+    )
 
-    def handle(self, *args, **options):
-        created = 0
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Mavjud sahifa va maqolalarni ham seed_data matni bilan yangilash",
+        )
+
+    @transaction.atomic
+    def handle(self, *args, force=False, **options):
+        faq_new = 0
         for order, (question, answer) in enumerate(FAQ, start=1):
             _, is_new = FaqItem.objects.update_or_create(
                 question=question, defaults={"answer": answer, "sort_order": order, "is_active": True}
             )
-            created += is_new
-        self.stdout.write(self.style.SUCCESS(f"FAQ: {len(FAQ)} ta savol ({created} ta yangi)."))
+            faq_new += is_new
+
+        pages_new = pages_updated = 0
+        for slug, title, body in PAGES:
+            body = body.strip()
+            page, is_new = Page.objects.get_or_create(slug=slug, defaults={"title": title, "body": body})
+            if is_new:
+                pages_new += 1
+            elif force:
+                page.title, page.body, page.is_published = title, body, True
+                page.save()
+                pages_updated += 1
+
+        art_new = art_updated = 0
+        destinations = {d.slug: d for d in Destination.objects.all()}
+        for slug, title, excerpt, dest_slug, body in ARTICLES:
+            values = {
+                "title": title,
+                "excerpt": excerpt,
+                "body": body.strip(),
+                "destination": destinations.get(dest_slug) if dest_slug else None,
+                "status": Article.Status.PUBLISHED,
+            }
+            article = Article.objects.filter(slug=slug).first()
+            if article is None:
+                Article.objects.create(slug=slug, **values)
+                art_new += 1
+            elif force:
+                for field, value in values.items():
+                    setattr(article, field, value)
+                article.save()
+                art_updated += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"FAQ: {len(FAQ)} ta ({faq_new} yangi). "
+                f"Sahifalar: {pages_new} yangi, {pages_updated} yangilandi. "
+                f"Qo'llanmalar: {art_new} yangi, {art_updated} yangilandi."
+            )
+        )

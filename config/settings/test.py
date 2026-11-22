@@ -20,6 +20,9 @@ REST_FRAMEWORK = {
 # Testlar hech qachon haqiqiy Telegram'ga yozmasin (.env da token bo'lsa ham)
 TELEGRAM_BOT_TOKEN = ""
 TELEGRAM_ADMIN_CHAT_IDS = []
+TELEGRAM_BOT_USERNAME = ""
+TELEGRAM_WEBHOOK_SECRET = ""
+LAZURI_FRONTEND_URL = "http://localhost:3000"
 SMS_BACKEND = "locmem"
 TELEGRAM_CODE_BACKEND = "locmem"
 TELEGRAM_GATEWAY_TOKEN = ""

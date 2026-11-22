@@ -43,5 +43,25 @@ def test_seed_content_idempotent(api):
     call_command("seed_content")
     call_command("seed_content")
     faq = api.get("/api/v1/faq/").data
-    assert len(faq) == FaqItem.objects.count() >= 8
-    assert faq[0]["question"] == "Turni qanday bron qilaman?"
+    assert len(faq) == FaqItem.objects.count() >= 20
+    assert faq[0]["question"] == "Qanday ro'yxatdan o'taman?"
+
+    from apps.content.models import Article, Page
+
+    assert set(Page.objects.values_list("slug", flat=True)) == {"terms", "privacy"}
+    assert api.get("/api/v1/pages/terms/").status_code == 200
+    assert Article.objects.filter(status=Article.Status.PUBLISHED).count() >= 5
+    assert Article.objects.count() == len(set(Article.objects.values_list("slug", flat=True)))
+
+
+def test_seed_content_keeps_admin_edits_unless_forced(api):
+    from django.core.management import call_command
+
+    from apps.content.models import Page
+
+    call_command("seed_content")
+    Page.objects.filter(slug="terms").update(body="Admin yozgan matn")
+    call_command("seed_content")
+    assert Page.objects.get(slug="terms").body == "Admin yozgan matn"
+    call_command("seed_content", force=True)
+    assert Page.objects.get(slug="terms").body.startswith("MEYZI platformasidan foydalanish shartlari")

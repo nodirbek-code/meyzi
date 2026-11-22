@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AttachPhone, ProfileForm, VerifyEmail } from "@/components/ProfileForms";
+import { AttachEmail, ProfileForm } from "@/components/ProfileForms";
 import { Badge } from "@/components/ui";
 import { requireUser } from "@/lib/session";
 
@@ -19,16 +19,15 @@ export default async function ProfilePage() {
           <h2 className="text-lg font-bold">Email</h2>
           {user.email && <Badge tone={user.email_verified ? "green" : "gold"}>{user.email_verified ? "Tasdiqlangan" : "Tasdiqlanmagan"}</Badge>}
         </div>
-        <p className="text-sm text-ink-soft">{user.email || "Email ulanmagan"}</p>
-        {user.email && !user.email_verified && <VerifyEmail />}
+        <p className="text-sm text-ink-soft">{user.email || "Email ulanmagan. Email qo'shsangiz, bron va to'lov xabarlari unga keladi."}</p>
+        {!(user.email && user.email_verified) && <AttachEmail current={user.email} />}
       </section>
       <section className="card space-y-3 p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">Telefon</h2>
           {user.phone && <Badge tone={user.phone_verified ? "green" : "gold"}>{user.phone_verified ? "Tasdiqlangan" : "Tasdiqlanmagan"}</Badge>}
         </div>
-        <p className="text-sm text-ink-soft">{user.phone || "Telefon ulanmagan. Raqamingizni ulang — bron formalarida qayta tasdiqlash so'ralmaydi."}</p>
-        <AttachPhone current={user.phone} />
+        <p className="text-sm text-ink-soft">{user.phone || "Telefon ulanmagan."}</p>
       </section>
     </div>
   );

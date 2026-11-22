@@ -46,6 +46,6 @@ export const api = {
   patch: <T>(path: string, body: unknown) => request<T>(`/api/proxy${path}`, json("PATCH", body)),
   del: <T>(path: string) => request<T>(`/api/proxy${path}`, { method: "DELETE" }),
   /** Kirish/chiqish — tokenlar cookie'ga yoziladi */
-  auth: <T>(action: "login" | "register" | "phone" | "google" | "logout", body?: unknown) =>
+  auth: <T>(action: "google" | "telegram" | "phone-login" | "logout", body?: unknown) =>
     request<T>(`/api/auth/${action}`, json("POST", body ?? {})),
 };

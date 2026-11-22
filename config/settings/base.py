@@ -237,6 +237,15 @@ GOOGLE_CLIENT_ID = env.str("GOOGLE_CLIENT_ID", default="")
 # Bo'sh bo'lsa — o'chiq. Sozlash: README → "Telegram bildirishnomalari".
 TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN", default="")
 TELEGRAM_ADMIN_CHAT_IDS = env.list("TELEGRAM_ADMIN_CHAT_IDS", default=[])
+# --- Telegram bot orqali ro'yxatdan o'tish / kirish (shu bot) ---
+# Botning username'i (@ siz) — saytdagi "Telegram orqali kirish" tugmasi t.me/<username> ga olib boradi.
+# Bo'sh bo'lsa — tugma o'chiq. Dev: `python manage.py telegram_bot` (long polling).
+# Prod: webhook — `python manage.py telegram_bot --set-webhook https://<domen>/api/v1/auth/telegram/webhook/`
+TELEGRAM_BOT_USERNAME = env.str("TELEGRAM_BOT_USERNAME", default="").lstrip("@")
+TELEGRAM_WEBHOOK_SECRET = env.str("TELEGRAM_WEBHOOK_SECRET", default="")
+# Bot yuboradigan "saytga kirish" havolasi shu manzilga olib boradi (Next.js sayt)
+LAZURI_FRONTEND_URL = env.str("LAZURI_FRONTEND_URL", default="http://localhost:3000").rstrip("/")
+LAZURI_TELEGRAM_LOGIN_TTL_MINUTES = env.int("LAZURI_TELEGRAM_LOGIN_TTL_MINUTES", default=10)
 # Xabardagi admin panel havolalari uchun
 LAZURI_SITE_URL = env.str("LAZURI_SITE_URL", default="http://localhost:8000")
 

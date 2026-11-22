@@ -31,4 +31,12 @@ def features(request=None) -> dict:
             "enabled": bool(settings.GOOGLE_CLIENT_ID),
             "client_id": settings.GOOGLE_CLIENT_ID or None,
         },
+        # Telegram bot orqali ro'yxatdan o'tish / kirish
+        "telegram_login": {
+            "enabled": bool(settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_BOT_USERNAME),
+            "bot_username": settings.TELEGRAM_BOT_USERNAME or None,
+            "url": f"https://t.me/{settings.TELEGRAM_BOT_USERNAME}?start=login"
+            if settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_BOT_USERNAME
+            else None,
+        },
     }

@@ -108,6 +108,10 @@ class EmailSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
+class EmailCodeSerializer(EmailSerializer):
+    code = serializers.CharField(min_length=6, max_length=6)
+
+
 class CodeSerializer(serializers.Serializer):
     code = serializers.CharField(min_length=6, max_length=6)
 
@@ -149,6 +153,10 @@ class PhoneSerializer(serializers.Serializer):
             raise serializers.ValidationError(INVALID_TEXT) from None
 
 
+class PhoneLoginSerializer(PhoneSerializer):
+    password = serializers.CharField(write_only=True, max_length=128, trim_whitespace=False)
+
+
 class PhoneVerifySerializer(PhoneSerializer):
     code = serializers.CharField(min_length=6, max_length=6)
     first_name = serializers.CharField(required=False, allow_blank=True, default="", max_length=100)
@@ -172,3 +180,7 @@ class AuthResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
     is_new = serializers.BooleanField(required=False)
+
+
+class TelegramLoginSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=128)

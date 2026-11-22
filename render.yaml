@@ -1,0 +1,73 @@
+# Render Blueprint: Dashboard → New → Blueprint → shu repo.
+# Eslatma: agar "lazuri-api" / "lazuri-web" nomlari band bo'lsa, Render URL'ga qo'shimcha qo'shadi —
+# unda quyidagi *.onrender.com manzillarni haqiqiysiga almashtiring.
+databases:
+  - name: lazuri-db
+    plan: free
+    databaseName: lazuri
+    user: lazuri
+
+services:
+  - type: web
+    name: lazuri-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health/
+    # Free planda alohida worker yo'q — scheduler shu konteynerda fonda ishlaydi
+    dockerCommand: >-
+      sh -c "python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      (python manage.py run_scheduler --interval 30 &) &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --access-logfile -"
+    envVars:
+      - key: REQUIREMENTS
+        value: base
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lazuri-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: lazuri-api.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://lazuri-api.onrender.com,https://lazuri-web.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://lazuri-web.onrender.com
+      - key: LAZURI_SITE_URL
+        value: https://lazuri-api.onrender.com
+      - key: LAZURI_FRONTEND_URL
+        value: https://lazuri-web.onrender.com
+      - key: SERVE_MEDIA
+        value: "True"
+      - key: EMAIL_URL
+        value: consolemail://
+      - key: SMS_BACKEND
+        value: console
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        generateValue: true
+      - key: TELEGRAM_ADMIN_CHAT_IDS
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+  - type: web
+    name: lazuri-web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    envVars:
+      # Build paytida ham kerak (Render env'larni Docker build-arg sifatida beradi)
+      - key: NEXT_PUBLIC_API_URL
+        value: https://lazuri-api.onrender.com
+      - key: API_INTERNAL_URL
+        value: https://lazuri-api.onrender.com

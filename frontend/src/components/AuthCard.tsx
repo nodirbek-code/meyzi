@@ -34,7 +34,6 @@ export function AuthCard({ title, subtitle, children }: { title: string; subtitl
               ))}
             </ul>
           </div>
-          <p className="text-xs text-forest-50/60">© {new Date().getFullYear()} {BRAND.name}</p>
         </div>
         <div className="p-6 sm:p-10">
           <h1 className="text-2xl sm:text-3xl">{title}</h1>

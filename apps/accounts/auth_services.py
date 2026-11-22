@@ -6,7 +6,9 @@ Telefon kodlari SMS bilan emas — Telegram orqali yuboriladi (`apps.notificatio
 import logging
 
 from django.conf import settings
+from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
@@ -76,6 +78,37 @@ def verify_email(user: User, code: str) -> User:
     return user
 
 
+def _email_taken(user: User, email: str) -> bool:
+    return User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists()
+
+
+def request_email_attach(user: User, email: str) -> None:
+    """Profilga email ulash (Telegram bot orqali kirganlarda email yo'q): shu emailga kod yuboriladi."""
+    email = email.strip().lower()
+    if user.email and user.email_verified:
+        raise ValidationError({"email": "Akkauntingizga email allaqachon ulangan."})
+    if _email_taken(user, email):
+        raise ValidationError({"email": "Bu email boshqa akkauntga ulangan."})
+    code = otp.issue(P.EMAIL_VERIFY, f"{user.pk}:{email}")
+    _send_email_code(email, code, P.EMAIL_VERIFY)
+
+
+def verify_email_attach(user: User, email: str, code: str) -> User:
+    """Kod to'g'ri bo'lsa — email akkauntga tasdiqlangan holda yoziladi."""
+    email = email.strip().lower()
+    otp.verify(P.EMAIL_VERIFY, f"{user.pk}:{email}", code)
+    if _email_taken(user, email):
+        raise ValidationError({"email": "Bu email boshqa akkauntga ulangan."})
+    user.email = email
+    user.email_verified = True
+    try:
+        with transaction.atomic():
+            user.save(update_fields=["email", "email_verified"])
+    except IntegrityError:  # parallel so'rov shu emailni boshqa akkauntga yozib ulgurdi
+        raise ValidationError({"email": "Bu email boshqa akkauntga ulangan."}) from None
+    return user
+
+
 # ---------- Parolni tiklash ----------
 
 
@@ -134,6 +167,27 @@ def verify_phone_login(phone: str, code: str, first_name: str = "") -> tuple[Use
         user.phone_verified = True
         user.save(update_fields=["phone_verified"])
     return user, created
+
+
+PHONE_LOGIN_FAILED = "Telefon raqam yoki parol noto'g'ri."
+
+
+def login_with_phone_password(phone: str, password: str) -> User:
+    """Telefon raqam + parol → foydalanuvchi.
+
+    Xato bo'lsa — raqam bor-yo'qligini oshkor qilmaydigan bitta xabar.
+    """
+    user = User.objects.filter(phone=phone).first()
+    if user is None:
+        make_password(password)  # vaqt bo'yicha farq bilan raqam borligini bilib bo'lmasin
+        raise ValidationError({"detail": PHONE_LOGIN_FAILED})
+    if not user.check_password(password):
+        raise ValidationError({"detail": PHONE_LOGIN_FAILED})
+    if not user.is_active:
+        raise ValidationError({"detail": "Akkaunt bloklangan."})
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+    return user
 
 
 def request_phone_change(user: User, phone: str) -> None:

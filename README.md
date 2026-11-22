@@ -629,6 +629,30 @@ Xabarlar avval bazaga yoziladi (admin panel → *Telegram xabarlari*), `schedule
 xato bo'lsa 5 martagacha qayta urinadi. Telegram sekinlashsa ham sayt kutib qolmaydi.
 Token sozlanmagan bo'lsa — hech narsa yozilmaydi. Testlar hech qachon haqiqiy Telegram'ga yozmaydi.
 
+## Telegram bot orqali ro'yxatdan o'tish
+
+Saytda **"Telegram orqali kirish"** tugmasi → `t.me/<bot>?start=login` → bot:
+
+1. telefon raqamini so'raydi (**📱 Telefon raqamni yuborish** tugmasi — faqat o'zining kontakti qabul qilinadi,
+   raqamni qo'lda yozib bo'lmaydi; hozircha faqat +998);
+2. yangi foydalanuvchidan ism-familiyani so'raydi (Telegram'dagi ism tugma sifatida taklif qilinadi);
+3. foydalanuvchini bazaga yozadi — shu raqamli akkaunt bo'lsa, Telegram unga ulanadi (yangi akkaunt ochilmaydi);
+4. bir martalik havola yuboradi: `<LAZURI_FRONTEND_URL>/auth/telegram?code=...` (10 daqiqa, bir marta ishlaydi).
+   Havola bosilganda sayt `POST /api/v1/auth/telegram/login/ {"code": "..."}` orqali kiradi.
+
+Qaytgan foydalanuvchi `/start` bosishi bilan darhol yangi havola oladi. `/id` — chat ID'ni ko'rsatadi.
+
+**Sozlash:** bildirishnomalar boti bilan bitta bot ishlatiladi.
+
+1. `.env`: `TELEGRAM_BOT_TOKEN=...`, `TELEGRAM_BOT_USERNAME=<bot username, @ siz>`
+2. Botni ishga tushiring (dev, long polling): `python manage.py telegram_bot` — alohida terminalda ishlab turadi.
+3. Prod: `TELEGRAM_WEBHOOK_SECRET` va `LAZURI_FRONTEND_URL` ni yozing, so'ng bir marta
+   `python manage.py telegram_bot --set-webhook https://<domen>/api/v1/auth/telegram/webhook/`.
+   Dev'ga qaytish: `python manage.py telegram_bot --delete-webhook`.
+
+Dev'da (`localhost`) Telegram havolani tugma qilib ko'rsata olmaydi — bot uni matn sifatida yuboradi.
+Bot ishlab turganda `telegram_chat_ids` buyrug'i bo'sh chiqishi mumkin (xabarlarni bot o'qib oladi) — o'rniga botga `/id` yozing.
+
 ## Foydalanuvchilarga bildirishnomalar (email / SMS)
 
 Muhim xabarlar — email **va** SMS (telefon tasdiqlangan bo'lsa yoki tashkilot telefoni), qolganlari — email.

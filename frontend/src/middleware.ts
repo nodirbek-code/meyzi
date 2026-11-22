@@ -11,6 +11,13 @@ export async function middleware(req: NextRequest) {
   const access = req.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = req.cookies.get(REFRESH_COOKIE)?.value;
   const now = Math.floor(Date.now() / 1000);
+  // Kabinet sahifasi (masalan, bot yuborgan to'lov havolasi) — kirmagan bo'lsa login'dan keyin aynan shu sahifaga qaytsin
+  const { pathname, search } = req.nextUrl;
+  if (!access && !refresh && pathname.startsWith("/account")) {
+    const url = new URL("/login", req.url);
+    url.searchParams.set("next", pathname + search);
+    return NextResponse.redirect(url);
+  }
   if (!refresh || (access && jwtExp(access) - now > 60)) return NextResponse.next();
 
   try {

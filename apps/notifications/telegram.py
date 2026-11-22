@@ -2,7 +2,9 @@
 
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
+from html import escape
 
 from django.conf import settings
 
@@ -18,14 +20,14 @@ def is_configured() -> bool:
     return bool(settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_ADMIN_CHAT_IDS)
 
 
-def call(method: str, payload: dict | None = None) -> dict:
+def call(method: str, payload: dict | None = None, timeout: int = TIMEOUT) -> dict:
     if not settings.TELEGRAM_BOT_TOKEN:
         raise TelegramError("TELEGRAM_BOT_TOKEN sozlanmagan")
     url = API.format(token=settings.TELEGRAM_BOT_TOKEN, method=method)
     data = json.dumps(payload or {}).encode()
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = json.loads(resp.read().decode())
     except urllib.error.HTTPError as exc:
         try:
@@ -40,8 +42,21 @@ def call(method: str, payload: dict | None = None) -> dict:
     return body["result"]
 
 
-def send_message(chat_id: str, text: str) -> dict:
-    return call(
-        "sendMessage",
-        {"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True},
-    )
+def is_public_url(url: str) -> bool:
+    """Telegram tugmalari localhost havolalarini qabul qilmaydi — dev'da havola matn bo'lib yuboriladi."""
+    host = urllib.parse.urlparse(url).hostname or ""
+    return "." in host and host not in {"127.0.0.1", "0.0.0.0"}
+
+
+def send_message(chat_id: str, text: str, *, button_text: str = "", button_url: str = "") -> dict:
+    """HTML xabar. `button_url` berilsa — xabar ostida havola tugmasi (localhost bo'lsa — matnda havola)."""
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}
+    if button_url:
+        if is_public_url(button_url):
+            payload["reply_markup"] = {
+                "inline_keyboard": [[{"text": button_text or button_url, "url": button_url}]]
+            }
+        else:
+            label = escape(button_text or "Havola")
+            payload["text"] = f'{text}\n\n{label}: <a href="{escape(button_url)}">{escape(button_url)}</a>'
+    return call("sendMessage", payload)

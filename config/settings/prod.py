@@ -16,6 +16,15 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
+# Render: o'z domenini RENDER_EXTERNAL_HOSTNAME orqali beradi
+RENDER_EXTERNAL_HOSTNAME = env.str("RENDER_EXTERNAL_HOSTNAME", default="")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
+
+# nginx bo'lmagan hostingda media'ni Django beradi
+SERVE_MEDIA = env.bool("SERVE_MEDIA", default=False)
+
 # Xatolarni kuzatish (ixtiyoriy): SENTRY_DSN berilsa yoqiladi
 SENTRY_DSN = env.str("SENTRY_DSN", default="")
 if SENTRY_DSN:

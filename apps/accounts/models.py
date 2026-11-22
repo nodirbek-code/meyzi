@@ -65,6 +65,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     google_sub = models.CharField(
         "Google ID", max_length=255, unique=True, null=True, blank=True, editable=False
     )
+    # Telegram bot orqali kirganlar: Telegram foydalanuvchi ID'si (apps.accounts.telegram_bot)
+    telegram_id = models.BigIntegerField("Telegram ID", unique=True, null=True, blank=True, editable=False)
     role = models.CharField("rol", max_length=20, choices=Role.choices, default=Role.TOURIST)
     language = models.CharField("til", max_length=5, choices=Language.choices, default=Language.UZ)
     country = models.CharField("mamlakat", max_length=2, blank=True, help_text="ISO kod: UZ, US, CN...")
@@ -118,3 +120,50 @@ class OneTimeCode(models.Model):
 
     def __str__(self):
         return f"{self.get_purpose_display()} → {self.target}"
+
+
+class TelegramBotSession(models.Model):
+    """Bot bilan ro'yxatdan o'tish suhbatining holati: qaysi qadamda, qaysi raqam va ism yuborilgan.
+
+    Parol bu yerda faqat xesh ko'rinishida (`password_hash`) — "qayta kiriting" qadamida solishtirish uchun.
+    """
+
+    class Step(models.TextChoices):
+        CONTACT = "contact", "Telefon raqamini kutmoqda"
+        NAME = "name", "Ism-familiyani kutmoqda"
+        PASSWORD = "password", "Parolni kutmoqda"
+        PASSWORD2 = "password2", "Parolni qayta kiritishni kutmoqda"
+
+    telegram_id = models.BigIntegerField("Telegram ID", primary_key=True)
+    step = models.CharField("qadam", max_length=10, choices=Step.choices)
+    phone = models.CharField("telefon", max_length=20, blank=True)
+    first_name = models.CharField("ism", max_length=100, blank=True)
+    last_name = models.CharField("familiya", max_length=100, blank=True)
+    password_hash = models.CharField("parol xeshi", max_length=128, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Telegram bot suhbati"
+        verbose_name_plural = "Telegram bot suhbatlari"
+
+    def __str__(self):
+        return f"{self.telegram_id}: {self.get_step_display()}"
+
+
+class TelegramLoginLink(models.Model):
+    """Bot yuborgan bir martalik "saytga kirish" havolasi. Bazada faqat tokenning SHA-256 xeshi saqlanadi."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="telegram_login_links")
+    token_hash = models.CharField(max_length=64, unique=True)
+    is_new_user = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Telegram kirish havolasi"
+        verbose_name_plural = "Telegram kirish havolalari"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} — {self.created_at:%Y-%m-%d %H:%M}"

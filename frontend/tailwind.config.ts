@@ -49,6 +49,7 @@ export default {
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        brand: ["var(--font-brand)", "system-ui", "sans-serif"],
       },
       boxShadow: {
         card: "0 1px 2px rgba(24,34,29,.05), 0 6px 20px -10px rgba(24,34,29,.16)",

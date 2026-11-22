@@ -23,6 +23,26 @@
   .input { @apply w-full rounded-xl border border-sand-300 bg-white px-4 py-2.5 text-sm text-ink placeholder:text-ink-mute focus:border-forest-400 focus:outline-none focus:ring-2 focus:ring-forest-100 disabled:bg-sand-100; }
   .label { @apply mb-1.5 block font-sans text-xs font-semibold text-ink-soft; }
   .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold; }
+  /* "Tez kunda" belgisi: yorqin, sekin yonib-o'chib turadi */
+  /* To'lov usullari uchun: Payme (havorang) → Click (ko'k) → Uzum (binafsha) ranglarida */
+  .soon-pay {
+    @apply chip font-bold text-white;
+    background-image: linear-gradient(90deg, #00b8f0 0%, #0065ff 50%, #7000ff 100%);
+    animation: soon-glow-pay 1.6s ease-in-out infinite;
+  }
+  /* AI marshrut: Meyzi AI robot ranglarida (havorang → binafsha) */
+  .soon-ai {
+    @apply chip font-bold text-white;
+    background-image: linear-gradient(90deg, #06b6d4 0%, #8b5cf6 100%);
+    animation: soon-glow-ai 1.6s ease-in-out infinite;
+  }
+  /* Mobil ilova: MEYZI logosi rangida (to'q ko'k) */
+  .soon-brand {
+    @apply chip font-bold text-white;
+    background-color: #06192b;
+    animation: soon-glow-brand 1.6s ease-in-out infinite;
+  }
+  .soon-text { @apply font-bold text-white; animation: soon-blink 1.6s ease-in-out infinite; }
   .eyebrow { @apply text-xs font-bold uppercase tracking-[0.2em] text-forest-500; }
   .prose-lz p { @apply mb-3 leading-relaxed text-ink-soft; }
   .no-scrollbar { scrollbar-width: none; }
@@ -47,4 +67,24 @@
 .nature-3 { background-image: var(--peaks), linear-gradient(160deg, #e9ba67 0%, #c1623a 50%, #8f4426 100%); }
 :root {
   --peaks: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'%3E%3Cpath d='M0 120 L0 78 L60 40 L110 70 L170 22 L230 66 L285 38 L340 72 L400 50 L400 120Z' fill='%230E2E1E' fill-opacity='.35'/%3E%3Cpath d='M0 120 L0 96 L80 70 L150 92 L220 64 L300 94 L360 80 L400 90 L400 120Z' fill='%230E2E1E' fill-opacity='.5'/%3E%3C/svg%3E");
+}
+
+@keyframes soon-glow-pay {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 101, 255, 0); filter: brightness(1); }
+  50% { box-shadow: 0 0 14px 3px rgba(0, 101, 255, 0.55); filter: brightness(1.15); }
+}
+@keyframes soon-glow-ai {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); filter: brightness(1); }
+  50% { box-shadow: 0 0 14px 3px rgba(34, 211, 238, 0.6); filter: brightness(1.15); }
+}
+@keyframes soon-glow-brand {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 25, 43, 0); }
+  50% { box-shadow: 0 0 14px 3px rgba(6, 25, 43, 0.45); }
+}
+@keyframes soon-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .soon-pay, .soon-ai, .soon-brand, .soon-text { animation: none; }
 }

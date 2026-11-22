@@ -59,6 +59,16 @@ export function PaymentDeadline({ until }: { until: string }) {
   );
 }
 
+function MethodLogo({ method }: { method: PaymentMethod }) {
+  if (!method.logo) return <span className="text-xs font-semibold text-ink-soft">{method.name}</span>;
+  return (
+    <span className="flex h-9 items-center rounded-lg border border-sand-200 bg-white px-2" title={method.name}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={method.logo} alt={method.name} className="h-7 w-auto object-contain" />
+    </span>
+  );
+}
+
 /** To'lov usulini tanlash. Provayderlar ulanmaguncha tugma o'chiq ("tez kunda"). */
 export function PaymentChooser({ total, installment, methods }: { total: number; installment: Installment; methods: PaymentMethod[] }) {
   const [choice, setChoice] = useState<"full" | "installment">("full");
@@ -87,7 +97,9 @@ export function PaymentChooser({ total, installment, methods }: { total: number;
             <span className="flex items-center gap-2 text-sm font-semibold">
               To&apos;liq to&apos;lash <span className="chip bg-forest-100 px-2 py-0.5 text-[10px] uppercase text-forest-700">Tavsiya etiladi</span>
             </span>
-            <span className="mt-0.5 block text-xs text-ink-mute">Karta orqali: {card.map((m) => m.name).join(", ")}</span>
+            <span className="mt-1.5 flex flex-wrap items-center gap-2">
+              {card.map((m) => <MethodLogo key={m.code} method={m} />)}
+            </span>
           </span>
           <b className="text-sm">{money(total)}</b>
         </span>,
@@ -97,7 +109,9 @@ export function PaymentChooser({ total, installment, methods }: { total: number;
         <span className="flex flex-1 flex-wrap items-start justify-between gap-2">
           <span>
             <span className="text-sm font-semibold">{installment.months} oyga bo&apos;lib</span>
-            <span className="mt-0.5 block text-xs text-ink-mute">{nasiya?.name ?? "Uzum Nasiya"}</span>
+            <span className="mt-1.5 flex items-center gap-2">
+              {nasiya ? <MethodLogo method={nasiya} /> : <span className="text-xs text-ink-mute">Uzum Nasiya</span>}
+            </span>
           </span>
           <span className="text-right">
             <b className="text-sm">{money(installment.monthly_uzs)}</b>

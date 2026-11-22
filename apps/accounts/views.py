@@ -1,3 +1,7 @@
+import hmac
+import json
+
+from django.conf import settings
 from django.db import transaction
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema
@@ -9,11 +13,12 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from . import auth_services, google
+from . import auth_services, google, telegram_bot
 from .serializers import (
     AuthResponseSerializer,
     ChangePasswordSerializer,
     CodeSerializer,
+    EmailCodeSerializer,
     EmailSerializer,
     GoogleLoginSerializer,
     LoginSerializer,
@@ -21,9 +26,11 @@ from .serializers import (
     PasswordResetSerializer,
     PhoneChangeVerifySerializer,
     PhoneCheckResponseSerializer,
+    PhoneLoginSerializer,
     PhoneSerializer,
     PhoneVerifySerializer,
     RegisterSerializer,
+    TelegramLoginSerializer,
     UserSerializer,
 )
 
@@ -159,7 +166,48 @@ class EmailVerifyView(_CodeView):
         return Response(UserSerializer(user, context={"request": request}).data)
 
 
+class MeEmailRequestCodeView(_CodeView):
+    """Profilga email ulash: shu emailga 6 xonali kod yuboriladi."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(request=EmailSerializer, responses={200: dict})
+    def post(self, request):
+        ser = EmailSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        auth_services.request_email_attach(request.user, ser.validated_data["email"])
+        return Response(
+            {"detail": "Tasdiqlash kodi emailingizga yuborildi.", "email": ser.validated_data["email"]}
+        )
+
+
+class MeEmailVerifyView(_CodeView):
+    """Kod to'g'ri bo'lsa — email akkauntga tasdiqlangan holda ulanadi."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(request=EmailCodeSerializer, responses=UserSerializer)
+    def post(self, request):
+        ser = EmailCodeSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        user = auth_services.verify_email_attach(request.user, **ser.validated_data)
+        return Response(UserSerializer(user, context={"request": request}).data)
+
+
 TELEGRAM_SENT = "Tasdiqlash kodi Telegram'ga yuborildi."
+
+
+class PhoneLoginView(_CodeView):
+    """Telefon raqam + parol bilan kirish (parol Telegram bot orqali ro'yxatdan o'tishda o'rnatiladi)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(request=PhoneLoginSerializer, responses=AuthResponseSerializer)
+    def post(self, request):
+        ser = PhoneLoginSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        user = auth_services.login_with_phone_password(**ser.validated_data)
+        return Response(_tokens(user, request))
 
 
 class PhoneRequestCodeView(_CodeView):
@@ -257,3 +305,45 @@ class GoogleLoginView(_CodeView):
         ser.is_valid(raise_exception=True)
         user, created = google.login(ser.validated_data["credential"])
         return Response(_tokens(user, request, is_new=created))
+
+
+class TelegramLoginView(_CodeView):
+    """Telegram bot yuborgan bir martalik havola (`code`) → JWT. Havola bir marta ishlaydi.
+    Bot orqali yangi ro'yxatdan o'tganlar uchun `is_new: true`."""
+
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(request=TelegramLoginSerializer, responses=AuthResponseSerializer)
+    def post(self, request):
+        ser = TelegramLoginSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        user, created = telegram_bot.exchange_login_link(ser.validated_data["code"])
+        return Response(_tokens(user, request, is_new=created))
+
+
+@extend_schema(exclude=True)
+class TelegramWebhookView(APIView):
+    """Telegram Bot API webhook (prod). Telegram `X-Telegram-Bot-Api-Secret-Token` sarlavhasini yuboradi —
+    u `TELEGRAM_WEBHOOK_SECRET` ga teng bo'lmasa so'rov rad etiladi."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes: list = []
+    throttle_classes: list = []
+
+    @method_decorator(transaction.non_atomic_requests)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request):
+        secret = settings.TELEGRAM_WEBHOOK_SECRET
+        given = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if not secret or not hmac.compare_digest(given.encode(), secret.encode()):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        try:
+            update = json.loads(request.body or b"{}")
+        except ValueError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if isinstance(update, dict):
+            telegram_bot.process_update(update)
+        # Doim 200: aks holda Telegram shu yangilanishni qayta-qayta yuboradi
+        return Response({"ok": True})
