@@ -81,7 +81,7 @@ class GuideProfile(TimeStampedModel):
     )
     is_certified = models.BooleanField("sertifikat tasdiqlangan", default=False)
     managed_by_platform = models.BooleanField(
-        "platforma boshqaradi", default=False, help_text="Admin /control orqali yaratgan — admin tahrirlay oladi"
+        "platforma boshqaradi", default=False, help_text="Admin /control orqali yaratgan — tahrirlay oladi"
     )
 
     price_half_day_uzs = models.PositiveIntegerField("yarim kun (4 soat), so'm")

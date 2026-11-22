@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='hotel',
             name='managed_by_platform',
-            field=models.BooleanField(default=False, help_text='Admin /control orqali yaratgan — admin tahrirlay oladi', verbose_name='platforma boshqaradi'),
+            field=models.BooleanField(default=False, help_text='Admin /control orqali yaratgan — tahrirlay oladi', verbose_name='platforma boshqaradi'),
         ),
     ]

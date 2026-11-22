@@ -84,7 +84,7 @@ class Hotel(TimeStampedModel):
         "Platforma komissiyasi (%)", max_digits=5, decimal_places=2, default=default_hotel_commission
     )
     managed_by_platform = models.BooleanField(
-        "platforma boshqaradi", default=False, help_text="Admin /control orqali yaratgan — admin tahrirlay oladi"
+        "platforma boshqaradi", default=False, help_text="Admin /control orqali yaratgan — tahrirlay oladi"
     )
     is_featured = models.BooleanField("tavsiya", default=False)
     rating = models.DecimalField("reyting", max_digits=3, decimal_places=2, default=0)

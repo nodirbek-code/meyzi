@@ -44,7 +44,7 @@ class Agency(TimeStampedModel):
     moderation_note = models.TextField("moderator izohi", blank=True)
     is_verified = models.BooleanField("tekshirilgan", default=False)
     managed_by_platform = models.BooleanField(
-        "platforma boshqaradi", default=False, help_text="Admin /control orqali yaratgan — admin tahrirlay oladi"
+        "platforma boshqaradi", default=False, help_text="Admin /control orqali yaratgan — tahrirlay oladi"
     )
     is_platform = models.BooleanField(
         "Platformaning o'zi", default=False, help_text="Platformaning o'z turlari uchun agentlik"
