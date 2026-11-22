@@ -101,6 +101,7 @@ class Resource:
     after_save: Callable | None = None  # (obj, created, request) → None
     validate: Callable | None = None  # (attrs, instance) → attrs
     moderation_kind: str = ""  # tahrirlab bo'lmaydigan yozuv — /control/queue/<kind>/<id>
+    detail_url: Callable | None = None  # alohida ko'rish sahifasi (foydalanuvchilar)
     ordering: tuple = ("-pk",)
     hint: str = ""
 
@@ -667,7 +668,8 @@ def resources() -> dict[str, Resource]:
             ["email", "phone", "first_name", "last_name"],
             can_create=False,
             can_delete=False,
-            before_save=no_self_demote,
+            editable=lambda o: False,  # ma'lumotlarni faqat foydalanuvchining o'zi o'zgartiradi
+            detail_url=lambda o: f"/control/users/{o.pk}",
             ordering=("-date_joined",),
             hint=(
                 "Bloklash, admin yoki ishchi qilish: «admin panelga kirish» + «mas'ul sohasi» "
@@ -692,9 +694,11 @@ def _row(res: Resource, obj) -> dict:
         "id": obj.pk,
         "cells": [_display(obj, c) for c in res.columns],
         "editable": editable,
-        "moderation_url": f"/control/queue/{res.moderation_kind}/{obj.pk}"
-        if not editable and res.moderation_kind
-        else "",
+        "moderation_url": res.detail_url(obj)
+        if res.detail_url
+        else (
+            f"/control/queue/{res.moderation_kind}/{obj.pk}" if not editable and res.moderation_kind else ""
+        ),
     }
 
 

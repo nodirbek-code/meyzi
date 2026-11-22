@@ -1,8 +1,15 @@
 from django.urls import path
 
-from . import control, control_crud
+from . import control, control_crud, control_users
 
 urlpatterns = [
+    path("users/<int:pk>/", control_users.ControlUserView.as_view(), name="control-user"),
+    path("users/<int:pk>/staff/", control_users.ControlUserStaffView.as_view(), name="control-user-staff"),
+    path(
+        "users/<int:pk>/<str:action>/",
+        control_users.ControlUserBlockView.as_view(),
+        name="control-user-block",
+    ),
     path("manage/", control_crud.CrudIndexView.as_view(), name="control-manage"),
     path("manage/<str:res>/", control_crud.CrudListView.as_view(), name="control-manage-list"),
     path("manage/<str:res>/<int:pk>/", control_crud.CrudDetailView.as_view(), name="control-manage-detail"),

@@ -76,7 +76,7 @@ function Row({ href, image, alt, title, sub, total, badge, extra }: {
 }
 
 export default async function AccountPage() {
-  const user = await requireUser("/account");
+  await requireUser("/account");
   const [tours, guides, hotels] = await Promise.all([
     apiGet<Paginated<Booking>>("/bookings/", { auth: true, query: { page_size: 50 } }),
     apiGet<Paginated<GuideBooking>>("/guide-bookings/", { auth: true, query: { page_size: 50 } }),
@@ -163,27 +163,6 @@ export default async function AccountPage() {
                 total={b.total_uzs}
                 badge={<Badge tone={BOOKING_STATUS[b.status]?.tone ?? "blue"}>{BOOKING_STATUS[b.status]?.label ?? b.status}</Badge>}
               />
-            ))}
-          </div>
-        </section>
-      )}
-      {["tourist", "admin"].includes(user.role) && (
-        <section className="card p-6">
-          <h2 className="text-lg">Hamkor bo&apos;lmoqchimisiz?</h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            Hamkor kabineti faqat agentlik, gid va mehmonxonalar uchun. Ariza yuboring — admin tasdiqlagach kabinet ochiladi.
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {[
-              ["/hamkorlik?turi=agentlik", "🏢", "Turagentlik", "Turlaringizni joylang"],
-              ["/hamkorlik?turi=gid", "🧭", "Gid", "Shaxsiy gid bo'ling"],
-              ["/hamkorlik?turi=mehmonxona", "🏡", "Mehmonxona", "Xonalaringizni soting"],
-            ].map(([href, icon, title, text]) => (
-              <Link key={href} href={href} className="rounded-xl border border-sand-200 p-4 transition hover:border-forest-400">
-                <span className="text-2xl">{icon}</span>
-                <p className="mt-2 font-semibold">{title}</p>
-                <p className="text-xs text-ink-mute">{text}</p>
-              </Link>
             ))}
           </div>
         </section>

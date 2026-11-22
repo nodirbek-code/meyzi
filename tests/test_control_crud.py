@@ -193,11 +193,22 @@ def test_admin_creates_guide_needs_account_email(staff_api, samarqand):
     assert g.languages == ["uz", "en"] and list(g.destinations.all()) == [samarqand]
 
 
-def test_users_block_and_no_self_demote(staff_api, admin_user, user):
-    assert staff_api.patch(M + f"user/{user.pk}/", {"is_active": False}, format="json").status_code == 200
+def test_users_view_block_no_edit(staff_api, admin_user, user):
+    U = "/api/v1/control/users/"
+    d = staff_api.get(U + f"{user.pk}/").data
+    assert d["email"] == user.email and "completed_trips" in d and d["coins"] is None
+    # ma'lumotlarni o'zgartirish va o'chirish yo'q
+    assert staff_api.patch(M + f"user/{user.pk}/", {"first_name": "X"}, format="json").status_code == 403
+    assert staff_api.delete(M + f"user/{user.pk}/").status_code == 403
+    assert staff_api.post(M + "user/", {"first_name": "X"}, format="json").status_code == 403
+    # bloklash / blokdan chiqarish
+    assert (
+        staff_api.post(U + f"{user.pk}/block/", {"reason": "Spam"}, format="json").data["is_active"] is False
+    )
     user.refresh_from_db()
     assert user.is_active is False
-    assert (
-        staff_api.patch(M + f"user/{admin_user.pk}/", {"is_staff": False}, format="json").status_code == 400
-    )
-    assert staff_api.post(M + "user/", {"first_name": "X"}, format="json").status_code == 403
+    assert staff_api.post(U + f"{user.pk}/unblock/").data["is_active"] is True
+    assert staff_api.post(U + f"{admin_user.pk}/block/").status_code == 400  # o'zini emas
+    # ishchi qilish
+    res = staff_api.post(U + f"{user.pk}/staff/", {"is_staff": True, "staff_area": "hotels"}, format="json")
+    assert res.data == {"is_staff": True, "staff_area": "hotels"}
