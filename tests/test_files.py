@@ -46,7 +46,7 @@ def test_certificate_is_private(auth_api, admin_api, samarqand, dirs):
     assert not (dirs / "media" / profile.certificate_file.name).exists()
 
     url = profile.certificate_file.url
-    assert url.startswith("/admin/private/")
+    assert url.startswith("/control/admin/private/")
     assert APIClient().get(url).status_code == 302  # login sahifasiga
     assert auth_api.get(url).status_code == 302  # oddiy foydalanuvchi ham
     admin_api.force_login(admin_api.handler._force_user)
@@ -58,7 +58,7 @@ def test_certificate_is_private(auth_api, admin_api, samarqand, dirs):
 def test_private_path_traversal_blocked(admin_api, dirs):
     (dirs / "secret.txt").write_text("x")
     admin_api.force_login(admin_api.handler._force_user)
-    assert admin_api.get("/admin/private/../secret.txt").status_code == 404
+    assert admin_api.get("/control/admin/private/../secret.txt").status_code == 404
 
 
 def test_certificate_wrong_type(auth_api, samarqand):

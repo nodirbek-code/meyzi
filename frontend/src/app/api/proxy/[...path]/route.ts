@@ -28,11 +28,16 @@ async function handle(req: Request, ctx: { params: Promise<{ path: string[] }> }
     body: hasBody ? await req.arrayBuffer() : undefined,
     cache: "no-store",
   });
+  const type = res.headers.get("content-type") || "application/json";
+  // Fayllar (masalan gid sertifikati — faqat admin) — o'zgartirmasdan, binar holda
+  if (!type.includes("json") && !type.startsWith("text/")) {
+    const headers: Record<string, string> = { "Content-Type": type };
+    const disposition = res.headers.get("content-disposition");
+    if (disposition) headers["Content-Disposition"] = disposition;
+    return new NextResponse(await res.arrayBuffer(), { status: res.status, headers });
+  }
   const text = (await res.text()).split(API_INTERNAL).join(API_PUBLIC);
-  return new NextResponse(text || null, {
-    status: res.status,
-    headers: { "Content-Type": res.headers.get("content-type") || "application/json" },
-  });
+  return new NextResponse(text || null, { status: res.status, headers: { "Content-Type": type } });
 }
 
 export { handle as GET, handle as POST, handle as PATCH, handle as PUT, handle as DELETE };

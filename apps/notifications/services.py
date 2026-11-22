@@ -37,14 +37,32 @@ def _contact(booking) -> str:
     return f"👤 {escape(booking.contact_name)}, {escape(booking.contact_phone)}"
 
 
+# Saytdagi admin paneli (/control) — tekshiruvdagi narsalar shu yerda ko'rib chiqiladi
+CONTROL_KINDS = {
+    "hotels.hotel": "hotel",
+    "guides.guideprofile": "guide",
+    "tours.tour": "tour",
+    "agencies.agency": "agency",
+    "agencies.agencyapplication": "application",
+    "reviews.review": "review",
+    "hotels.hotelreview": "hotel_review",
+    "guides.guidereview": "guide_review",
+}
+
+
 def _obj_link(text: str, obj) -> str:
-    """Admin paneldagi obyekt sahifasiga havola."""
+    """Admin sahifasiga havola: moderatsiya obyektlari — saytdagi /control, qolganlari — Django admin."""
     meta = obj._meta
-    return _link(text, f"/admin/{meta.app_label}/{meta.model_name}/{obj.pk}/change/")
+    kind = CONTROL_KINDS.get(f"{meta.app_label}.{meta.model_name}")
+    if kind:
+        url = f"{settings.MEYZI_FRONTEND_URL}/control/queue/{kind}/{obj.pk}"
+        return f'<a href="{escape(url)}">{escape(text)}</a>'
+    return _link(text, f"/control/admin/{meta.app_label}/{meta.model_name}/{obj.pk}/change/")
 
 
 def _booking_link(booking) -> str:
-    return _link(booking.code, f"/admin/bookings/booking/{booking.pk}/change/")
+    meta = booking._meta
+    return _link(booking.code, f"/control/admin/{meta.app_label}/{meta.model_name}/{booking.pk}/change/")
 
 
 def notify_admins(event: str, text: str) -> int:

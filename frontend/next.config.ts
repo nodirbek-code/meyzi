@@ -5,11 +5,11 @@ const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace
 const nextConfig: NextConfig = {
   output: "standalone", // prod Docker image uchun
   poweredByHeader: false,
-  // Admin panel backend'da (Django admin) — saytdagi /admin unga yo'naltiriladi
+  // /control — saytdagi admin paneli; /control/admin — Django admin (backend). Oddiy /admin manzili yo'q.
   async redirects() {
     return [
-      { source: "/admin", destination: `${API}/admin/`, permanent: false },
-      { source: "/admin/:path*", destination: `${API}/admin/:path*`, permanent: false },
+      { source: "/control/admin", destination: `${API}/control/admin/`, permanent: false },
+      { source: "/control/admin/:path*", destination: `${API}/control/admin/:path*`, permanent: false },
     ];
   },
 };

@@ -69,7 +69,7 @@ def test_hotel_new_photo_goes_to_review(owner_api, hotel):  # noqa: F811
 
 
 def test_admin_returns_hotel_with_note(admin_client, hotel, owner):  # noqa: F811
-    url = "/admin/hotels/hotel/"
+    url = "/control/admin/hotels/hotel/"
     data = {"action": "return_to_owner", ACTION_CHECKBOX_NAME: [hotel.pk]}
     res = admin_client.post(url, data)
     assert res.status_code == 200 and "Kamchiliklar" in res.content.decode()  # izoh so'raladi
@@ -82,17 +82,20 @@ def test_admin_returns_hotel_with_note(admin_client, hotel, owner):  # noqa: F81
 
 
 def test_admin_cannot_edit_hotel_data(admin_client, hotel):  # noqa: F811
-    page = admin_client.get(f"/admin/hotels/hotel/{hotel.pk}/change/").content.decode()
+    page = admin_client.get(f"/control/admin/hotels/hotel/{hotel.pk}/change/").content.decode()
     assert 'name="name"' not in page  # nomi — faqat o'qish uchun
     assert 'name="commission_percent"' in page  # platforma sozlamasi — tahrirlanadi
     admin_client.post(
-        f"/admin/hotels/hotel/{hotel.pk}/change/",
+        f"/control/admin/hotels/hotel/{hotel.pk}/change/",
         {"name": "Admin o'zgartirdi", "commission_percent": "12", "_save": "1"},
     )
     hotel.refresh_from_db()
     assert hotel.name == "Registon Plaza"
-    assert admin_client.get("/admin/hotels/hotel/add/").status_code == 403
-    assert admin_client.get("/admin/hotels/roomtype/").status_code in (403, 404)  # alohida bo'lim yo'q
+    assert admin_client.get("/control/admin/hotels/hotel/add/").status_code == 403
+    assert admin_client.get("/control/admin/hotels/roomtype/").status_code in (
+        403,
+        404,
+    )  # alohida bo'lim yo'q
 
 
 # ---------- Gid ----------
@@ -109,7 +112,7 @@ def test_guide_edit_goes_back_to_review(guide_api, guide):  # noqa: F811
 
 def test_admin_cannot_edit_guide_languages(admin_client, guide):  # noqa: F811
     admin_client.post(
-        f"/admin/guides/guideprofile/{guide.pk}/change/",
+        f"/control/admin/guides/guideprofile/{guide.pk}/change/",
         {"languages": '["uz"]', "display_name": "X", "commission_percent": "10", "_save": "1"},
     )
     guide.refresh_from_db()
@@ -142,7 +145,7 @@ def test_admin_returns_tour_with_note(admin_client, tour, agency_user):
     tour.status = Tour.Status.PENDING_REVIEW
     tour.save()
     res = admin_client.post(
-        "/admin/tours/tour/",
+        "/control/admin/tours/tour/",
         {
             "action": "return_to_agency",
             ACTION_CHECKBOX_NAME: [tour.pk],
@@ -173,10 +176,10 @@ def test_agency_profile_edit_hides_agency_until_approved(agency_api, agency, tou
 
 
 def test_admin_cannot_add_or_delete_partner_data(admin_client, agency, tour):
-    assert admin_client.get("/admin/agencies/agency/add/").status_code == 403
-    assert admin_client.get("/admin/tours/tour/add/").status_code == 403
-    assert admin_client.get(f"/admin/tours/tour/{tour.pk}/delete/").status_code == 403
-    admin_client.post(f"/admin/tours/tour/{tour.pk}/change/", {"title": "Boshqa", "_save": "1"})
+    assert admin_client.get("/control/admin/agencies/agency/add/").status_code == 403
+    assert admin_client.get("/control/admin/tours/tour/add/").status_code == 403
+    assert admin_client.get(f"/control/admin/tours/tour/{tour.pk}/delete/").status_code == 403
+    admin_client.post(f"/control/admin/tours/tour/{tour.pk}/change/", {"title": "Boshqa", "_save": "1"})
     tour.refresh_from_db()
     assert tour.title == "Samarqand 1 kun"
 
@@ -201,27 +204,27 @@ def test_admin_dashboard_shows_queue_money_and_actions(admin_client, hotel, tour
     tour.status = Tour.Status.PENDING_REVIEW
     tour.save()
 
-    page = admin_client.get("/admin/").content.decode()
+    page = admin_client.get("/control/admin/").content.decode()
     assert "Tekshiruv navbati" in page and "komissiya" in page
     assert "2 ta</b> narsa tasdiqlashingizni kutyapti" in page
-    assert "/admin/hotels/hotel/?status__exact=pending" in page
-    assert "/admin/tours/tour/?status__exact=pending_review" in page
+    assert "/control/admin/hotels/hotel/?status__exact=pending" in page
+    assert "/control/admin/tours/tour/?status__exact=pending_review" in page
     assert Booking.objects.count() == 0  # bo'sh bazada ham sahifa ochiladi
 
     # qaytarish amali "Oxirgi admin amallari" da ko'rinadi
     admin_client.post(
-        "/admin/hotels/hotel/",
+        "/control/admin/hotels/hotel/",
         {"action": "return_to_owner", ACTION_CHECKBOX_NAME: [hotel.pk], "apply": "1", "note": "Telefon yo'q"},
     )
-    page = admin_client.get("/admin/").content.decode()
+    page = admin_client.get("/control/admin/").content.decode()
     assert "Qaytarildi: Telefon yo&#x27;q" in page
     assert "1 ta</b> narsa" in page  # mehmonxona endi navbatda emas, faqat tur qoldi
 
 
 def test_dashboard_requires_staff(client, user):
-    assert client.get("/admin/").status_code == 302  # login sahifasiga
+    assert client.get("/control/admin/").status_code == 302  # login sahifasiga
     client.force_login(user)
-    assert client.get("/admin/").status_code == 302  # oddiy foydalanuvchi kira olmaydi
+    assert client.get("/control/admin/").status_code == 302  # oddiy foydalanuvchi kira olmaydi
 
 
 # ---------- Hamkor kabineti ----------
@@ -277,7 +280,7 @@ def test_ensure_admin_creates_or_promotes(monkeypatch, db):
 
     c = Client()
     assert c.login(email="boss@gmail.com", password="Yangi-Parol-2027")
-    assert c.get("/admin/").status_code == 200
+    assert c.get("/control/admin/").status_code == 200
 
 
 def test_ensure_admin_creates_new(monkeypatch, db):

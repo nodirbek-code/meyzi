@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "@/lib/client";
-import { API_PUBLIC } from "@/lib/config";
 import type { User } from "@/lib/types";
 
 export function UserMenu({ user }: { user: User }) {
@@ -54,9 +53,9 @@ export function UserMenu({ user }: { user: User }) {
             <Link href="/cabinet" className={`${item} font-semibold text-forest-700`}>📊 Hamkor kabineti</Link>
           )}
           {user.is_staff && (
-            <a href={`${API_PUBLIC}/admin/`} target="_blank" rel="noopener noreferrer" className={`${item} font-semibold text-clay-700`}>
-              🛡️ Admin panel ↗
-            </a>
+            <Link href="/control" className={`${item} font-semibold text-clay-700`}>
+              🛡️ Admin panel
+            </Link>
           )}
           <button onClick={logout} className={`${item} w-full border-t border-sand-200 text-clay-500`}>
             ↩ Chiqish

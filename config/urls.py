@@ -22,11 +22,13 @@ api_v1 = [
     path("hotel-bookings/", include("apps.hotels.booking_urls")),
     path("", include("apps.content.urls")),
     path("cabinet/", include("apps.tours.cabinet_urls")),
+    path("control/", include("apps.core.control_urls")),  # saytdagi admin paneli (/control)
 ]
 
 urlpatterns = [
-    path("admin/private/<path:path>", private_file, name="private-file"),
-    path("admin/", admin.site.urls),
+    # Django admin — /control/admin/ (oddiy /admin/ manzili yo'q)
+    path("control/admin/private/<path:path>", private_file, name="private-file"),
+    path("control/admin/", admin.site.urls),
     path("api/v1/", include(api_v1)),
     path("api/health/", HealthView.as_view(), name="health"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
