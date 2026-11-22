@@ -38,6 +38,12 @@ services:
         value: https://meyzi-api.onrender.com
       - key: MEYZI_FRONTEND_URL
         value: https://meyzi-web.onrender.com
+      - key: SEED_DEMO
+        value: "True"
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
       - key: SERVE_MEDIA
         value: "True"
       - key: EMAIL_URL
