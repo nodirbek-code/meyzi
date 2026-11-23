@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { api, ClientApiError } from "@/lib/client";
-import { money, POLICY_LABEL, time } from "@/lib/format";
-import type { Departure, User } from "@/lib/types";
+import { LANGUAGE_NAMES, money, POLICY_LABEL, time } from "@/lib/format";
+import type { Departure, TourGuideOption, User } from "@/lib/types";
 
 import { accountPhone, phoneReady, VerifiedPhoneField, type VerifiedPhone } from "./PhoneField";
 import { Icon } from "./ui";
@@ -33,6 +33,7 @@ export function BookingWidget({
   rating,
   reviewsCount,
   policy,
+  guidePrice,
 }: {
   slug: string;
   departures: Departure[];
@@ -44,6 +45,8 @@ export function BookingWidget({
   rating: string;
   reviewsCount: number;
   policy: string;
+  /** Ixtiyoriy professional gid narxi (guruh uchun bir marta); null — xizmat yo'q */
+  guidePrice: number | null;
 }) {
   const router = useRouter();
   const bookable = departures.filter((d) => d.is_bookable);
@@ -60,7 +63,30 @@ export function BookingWidget({
   const dep = bookable.find((d) => d.id === depId) ?? null;
   const unit = dep?.price_uzs ?? price;
   const maxSeats = Math.max(1, Math.min(dep?.seats_left ?? 1, maxGroup, 20));
-  const total = unit * seats;
+
+  // Ixtiyoriy professional gid: sana tanlanganda shu kunlar uchun bo'sh gidlar
+  const [wantGuide, setWantGuide] = useState(false);
+  const [guides, setGuides] = useState<TourGuideOption[] | null>(null);
+  const [guideSlug, setGuideSlug] = useState("");
+  const depKey = dep?.id ?? null;
+  useEffect(() => {
+    if (!wantGuide || depKey === null) return;
+    let alive = true;
+    setGuides(null);
+    api
+      .get<TourGuideOption[]>(`/tours/${slug}/guides?departure=${depKey}`)
+      .then((list) => {
+        if (!alive) return;
+        setGuides(list);
+        setGuideSlug((cur) => (list.some((g) => g.slug === cur && g.available) ? cur : ""));
+      })
+      .catch(() => alive && setGuides([]));
+    return () => {
+      alive = false;
+    };
+  }, [wantGuide, depKey, slug]);
+  const guideCost = wantGuide && guideSlug && guidePrice ? guidePrice : 0;
+  const total = unit * seats + guideCost;
   const monthly = useMemo(() => Math.round((total * MARKUP) / MONTHS), [total]);
 
   function changeSeats(n: number) {
@@ -70,7 +96,7 @@ export function BookingWidget({
   }
 
   const travelersOk = travelers.every((t) => t.trim().length >= 2);
-  const ready = !!dep && name.trim().length >= 2 && phoneReady(phone, trusted) && travelersOk;
+  const ready = !!dep && name.trim().length >= 2 && phoneReady(phone, trusted) && travelersOk && (!wantGuide || !!guideSlug);
 
   async function book() {
     if (!user) {
@@ -88,6 +114,7 @@ export function BookingWidget({
         contact_phone: phone.phone,
         phone_token: phone.token,
         travelers: travelers.map((t) => ({ full_name: t.trim() })),
+        guide: wantGuide ? guideSlug : "",
       });
       router.push(`/account/bookings/${b.code}`);
     } catch (e) {
@@ -194,6 +221,56 @@ export function BookingWidget({
             </div>
           </div>
 
+          {/* Yo'lboshchi — doim; professional gid — ixtiyoriy */}
+          <div className="space-y-3 rounded-xl bg-forest-50 p-3">
+            <p className="flex items-start gap-2 text-sm text-forest-800">
+              <Icon name="check" size={16} className="mt-0.5 shrink-0 text-forest-600" />
+              <span>
+                <b>Sayohat yo&apos;lboshchisi</b> narxga kiradi — guruhni olib boradi, transport va vaqtni boshqaradi.
+              </span>
+            </p>
+            {guidePrice ? (
+              <div>
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input type="checkbox" className="mt-0.5" checked={wantGuide} onChange={(e) => setWantGuide(e.target.checked)} />
+                  <span>
+                    <b>Professional gid kerak</b> — obidalar tarixini tanlagan tilingizda batafsil so&apos;zlab beradi.{" "}
+                    <span className="whitespace-nowrap font-semibold text-forest-700">+{money(guidePrice)}</span>{" "}
+                    <span className="text-ink-mute">(butun guruh uchun bir marta)</span>
+                  </span>
+                </label>
+                {wantGuide && (
+                  <div className="mt-3 space-y-2">
+                    {guides === null ? (
+                      <p className="text-xs text-ink-mute">Bo&apos;sh gidlar yuklanmoqda…</p>
+                    ) : !guides.length ? (
+                      <p className="text-xs text-clay-600">Bu sana uchun gid yo&apos;q.</p>
+                    ) : (
+                      guides.map((g) => (
+                        <label
+                          key={g.slug}
+                          className={`flex items-center gap-3 rounded-xl border-2 bg-white p-2.5 text-sm ${
+                            !g.available ? "cursor-not-allowed opacity-50" : guideSlug === g.slug ? "border-forest-600" : "cursor-pointer border-sand-200"
+                          }`}
+                        >
+                          <input type="radio" name="guide" disabled={!g.available} checked={guideSlug === g.slug} onChange={() => setGuideSlug(g.slug)} />
+                          <span className="min-w-0">
+                            <span className="block font-semibold">{g.display_name}</span>
+                            <span className="block text-xs text-ink-soft">
+                              {g.languages.map((l) => LANGUAGE_NAMES[l] ?? l).join(", ")}
+                              {g.experience_years > 0 && ` · ${g.experience_years} yil`}
+                              {!g.available && " · bu kunlarda band"}
+                            </span>
+                          </span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
           {user && (
             <>
               {/* Sayohatchilar */}
@@ -212,7 +289,7 @@ export function BookingWidget({
                     </div>
                   ))}
                 </div>
-                <p className="mt-1.5 text-xs text-ink-mute">Har bir o&apos;rin uchun ism va familiya — gid ro&apos;yxatni shu bo&apos;yicha oladi.</p>
+                <p className="mt-1.5 text-xs text-ink-mute">Har bir o&apos;rin uchun ism va familiya — yo&apos;lboshchi ro&apos;yxatni shu bo&apos;yicha oladi.</p>
               </div>
 
               {/* Aloqa */}
@@ -228,11 +305,23 @@ export function BookingWidget({
             </>
           )}
 
-          <div className="flex justify-between border-t border-sand-200 pt-4 text-sm">
-            <span className="text-ink-soft">
-              {seats} × {money(unit)}
-            </span>
-            <b className="text-lg">{money(total)}</b>
+          <div className="space-y-1 border-t border-sand-200 pt-4 text-sm">
+            <div className="flex justify-between">
+              <span className="text-ink-soft">
+                {seats} × {money(unit)}
+              </span>
+              <span>{money(unit * seats)}</span>
+            </div>
+            {guideCost > 0 && (
+              <div className="flex justify-between">
+                <span className="text-ink-soft">Professional gid (guruh uchun)</span>
+                <span>{money(guideCost)}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-1">
+              <span className="font-semibold">Jami</span>
+              <b className="text-lg">{money(total)}</b>
+            </div>
           </div>
 
           {error && <p className="rounded-xl bg-clay-50 px-3 py-2 text-sm text-clay-700">{error}</p>}

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CancelBooking, PaymentChooser, PaymentDeadline, ReviewForm } from "@/components/BookingActions";
 import { Badge, Cover, Icon } from "@/components/ui";
 import { apiGet, apiGetOrNull } from "@/lib/api";
-import { BOOKING_STATUS, dateLong, dateTime, money, phone, POLICY_LABEL, weekday } from "@/lib/format";
+import { BOOKING_STATUS, dateLong, dateTime, LANGUAGE_NAMES, money, phone, POLICY_LABEL, weekday } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import type { Booking, Features } from "@/lib/types";
 
@@ -73,6 +73,22 @@ export default async function BookingPage({ params }: { params: Promise<{ code: 
           <span className="text-ink-soft">Narx (1 kishi)</span>
           <span>{money(b.unit_price_uzs)}</span>
         </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-ink-soft">Sayohat yo&apos;lboshchisi</span>
+          <span className="text-forest-700">narxga kiradi</span>
+        </div>
+        {b.guide && (
+          <div className="flex justify-between gap-3 text-sm">
+            <span className="text-ink-soft">
+              Professional gid: <b className="text-ink">{b.guide.display_name}</b>
+              <span className="block text-xs">
+                {b.guide.languages.map((l) => LANGUAGE_NAMES[l] ?? l).join(", ")}
+                {b.guide.phone ? ` · ${b.guide.phone}` : " · telefon to'lovdan keyin ochiladi"}
+              </span>
+            </span>
+            <span className="shrink-0">{money(b.guide_price_uzs)}</span>
+          </div>
+        )}
         <div className="flex items-baseline justify-between border-t border-sand-200 pt-4">
           <span className="font-semibold">Jami</span>
           <b className="text-2xl">{money(b.total_uzs)}</b>

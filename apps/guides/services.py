@@ -131,8 +131,10 @@ def quote(guide: GuideProfile, *, duration: str, days: int, group_size: int) -> 
 # ---------- Bandlik ----------
 
 
-def busy_dates(guide: GuideProfile, *, start: date, end: date, exclude_booking_id=None) -> set[date]:
-    """Gid band kunlari: o'zi belgilagan + faol bronlar."""
+def busy_dates(
+    guide: GuideProfile, *, start: date, end: date, exclude_booking_id=None, exclude_tour_booking_id=None
+) -> set[date]:
+    """Gid band kunlari: o'zi belgilagan + faol bronlar (shaxsiy va turlardagi)."""
     result = set(
         GuideUnavailableDate.objects.filter(guide=guide, date__range=(start, end)).values_list(
             "date", flat=True
@@ -149,6 +151,31 @@ def busy_dates(guide: GuideProfile, *, start: date, end: date, exclude_booking_i
     for b in bookings.only("start_date", "days"):
         for i in range(b.days):
             d = b.start_date + timedelta(days=i)
+            if start <= d <= end:
+                result.add(d)
+    result |= tour_busy_dates(guide, start=start, end=end, exclude_tour_booking_id=exclude_tour_booking_id)
+    return result
+
+
+def tour_busy_dates(guide, *, start: date, end: date, exclude_tour_booking_id=None, now=None) -> set[date]:
+    """Turlarda ixtiyoriy gid sifatida band kunlar (to'langan yoki to'lov muddati o'tmagan bronlar)."""
+    from django.db.models import Q
+
+    from apps.bookings.models import Booking
+
+    now = now or timezone.now()
+    qs = Booking.objects.filter(
+        guide=guide, departure__date__lte=end, departure__date__gte=start - timedelta(days=60)
+    )
+    qs = qs.filter(
+        Q(status=Booking.Status.CONFIRMED) | Q(status=Booking.Status.PENDING_PAYMENT, expires_at__gt=now)
+    )
+    if exclude_tour_booking_id:
+        qs = qs.exclude(pk=exclude_tour_booking_id)
+    result = set()
+    for d0, days in qs.values_list("departure__date", "tour__duration_days"):
+        for i in range(max(days, 1)):
+            d = d0 + timedelta(days=i)
             if start <= d <= end:
                 result.add(d)
     return result

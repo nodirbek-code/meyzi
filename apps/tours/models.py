@@ -82,6 +82,15 @@ class Tour(TimeStampedModel):
     meeting_map_url = models.URLField("xarita havolasi", blank=True)
 
     price_uzs = models.PositiveIntegerField("narx (so'm, 1 kishi)")
+    # Har bir turda sayohat yo'lboshchisi bor (narxga kiradi). Professional gid — ixtiyoriy qo'shimcha:
+    # turist bron qilganda turga biriktirilgan gidlardan birini tanlaydi, narx guruh uchun bir marta.
+    # Bo'sh — qo'shimcha gid xizmati yo'q (biriktirilgan gid bo'lsa, u narxga kiradi).
+    guide_price_uzs = models.PositiveIntegerField(
+        "gid xizmati narxi (so'm, guruh uchun)",
+        null=True,
+        blank=True,
+        help_text="Ixtiyoriy professional gid — guruh uchun bir marta. Bo'sh — gid narxga kiradi yoki yo'q.",
+    )
     price_note = models.CharField(
         "narx izohi", max_length=200, blank=True, help_text="Masalan: 2 kishilik xonada 1 kishi uchun"
     )

@@ -19,6 +19,21 @@ type Row = {
   respond_by: string | null; guide_penalty_usd: string; no_show: string;
 };
 type Busy = { id: number; date: string; note: string };
+type TourJob = {
+  code: string;
+  status: string;
+  tour_title: string;
+  tour_slug: string;
+  agency: string;
+  date: string;
+  days: number;
+  departure_time: string | null;
+  meeting_point: string;
+  seats: number;
+  guide_price_uzs: number;
+  contact_name: string | null;
+  contact_phone: string | null;
+};
 
 const STATUS: Record<string, { label: string; tone: "gold" | "green" | "gray" | "red" | "blue" }> = {
   requested: { label: "Javob kutilmoqda", tone: "gold" },
@@ -120,11 +135,42 @@ export function GuideCabinet() {
 /** Gidning ishlamaydigan kunlari (turistlar bu kunlarga bron qila olmaydi). */
 export function GuideSchedule() {
   const busy = useData<Busy[]>("/cabinet/guide/unavailable-dates");
+  const jobs = useData<TourJob[]>("/cabinet/guide/tour-bookings");
   const act = useAction();
   const [newBusy, setNewBusy] = useState("");
   return (
     <div className="space-y-4">
-      <ErrorText text={act.error || busy.error} />
+      <ErrorText text={act.error || busy.error || jobs.error} />
+      <Panel title="Turlardagi bronlarim (professional gid sifatida)">
+        {!jobs.data ? (
+          <Loading />
+        ) : !jobs.data.length ? (
+          <p className="text-sm text-ink-mute">Hozircha yo&apos;q. Turist turni bron qilib, sizni gid sifatida tanlasa — shu yerda chiqadi.</p>
+        ) : (
+          <ul className="divide-y divide-sand-200">
+            {jobs.data.map((j) => (
+              <li key={j.code} className="flex flex-wrap items-start justify-between gap-2 py-3 text-sm">
+                <div>
+                  <Link href={`/tours/${j.tour_slug}`} className="font-semibold hover:underline">{j.tour_title}</Link>
+                  <p className="text-xs text-ink-soft">
+                    {weekday(j.date)}, {dateLong(j.date)}
+                    {j.days > 1 && ` · ${j.days} kun`}
+                    {j.departure_time && ` · ${j.departure_time.slice(0, 5)}`} · {j.meeting_point}
+                  </p>
+                  <p className="text-xs text-ink-mute">
+                    {j.agency} · {j.seats} kishi
+                    {j.contact_phone ? ` · ${j.contact_name}, ${j.contact_phone}` : " · kontakt to'lovdan keyin"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <Badge tone={j.status === "confirmed" ? "green" : "gold"}>{j.status === "confirmed" ? "to'langan" : "to'lov kutilmoqda"}</Badge>
+                  <p className="mt-1 text-xs font-semibold">{money(j.guide_price_uzs)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
       <Panel title="Ishlamaydigan kunlarim">
         <form className="mb-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); act.run(async () => { await api.post("/cabinet/guide/unavailable-dates", { date: newBusy }); setNewBusy(""); busy.reload(); }); }}>
           <input className="input w-auto" type="date" required value={newBusy} onChange={(e) => setNewBusy(e.target.value)} />

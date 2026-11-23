@@ -1,6 +1,6 @@
 """Docker'siz lokal ishga tushirish uchun: docker-compose'dagi `scheduler` xizmatining o'rnini bosadi.
 
-Har N soniyada `process_bookings` va `send_notifications` ni chaqiradi.
+Har N soniyada `process_bookings`, `send_notifications` va `process_media_imports` ni chaqiradi.
 """
 
 import time
@@ -19,7 +19,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Scheduler ishga tushdi, har {interval} soniyada. To'xtatish: Ctrl+C")
         try:
             while True:
-                for cmd in ("process_bookings", "send_notifications"):
+                for cmd in ("process_bookings", "send_notifications", "process_media_imports"):
                     try:
                         call_command(cmd)
                     except Exception as exc:  # noqa: BLE001 — sikl to'xtamasin

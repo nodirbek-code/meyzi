@@ -8,6 +8,7 @@ from apps.bookings.views import CabinetBookingViewSet
 from apps.guides.views import (
     CabinetGuideBookingViewSet,
     CabinetGuideReviewViewSet,
+    CabinetGuideTourBookingViewSet,
     CabinetMeetingPointViewSet,
     CabinetUnavailableDateViewSet,
 )
@@ -35,6 +36,7 @@ router.register("guide/bookings", CabinetGuideBookingViewSet, basename="cabinet-
 router.register(
     "guide/unavailable-dates", CabinetUnavailableDateViewSet, basename="cabinet-guide-unavailable"
 )
+router.register("guide/tour-bookings", CabinetGuideTourBookingViewSet, basename="cabinet-guide-tour-booking")
 router.register("guide/meeting-points", CabinetMeetingPointViewSet, basename="cabinet-guide-meeting-point")
 router.register("guide/reviews", CabinetGuideReviewViewSet, basename="cabinet-guide-review")
 # Mehmonxona kabineti

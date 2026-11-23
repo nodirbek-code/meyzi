@@ -88,6 +88,20 @@ export type TourDetail = TourCard & {
   places: string[];
   guides: TourGuide[];
   hotels: TourHotel[];
+  /** Ixtiyoriy professional gid narxi (guruh uchun); null — qo'shimcha xizmat yo'q */
+  guide_price_uzs: number | null;
+};
+
+/** Bron oynasi: shu sana uchun tanlash mumkin bo'lgan gid */
+export type TourGuideOption = {
+  slug: string;
+  display_name: string;
+  photo: string | null;
+  languages: string[];
+  experience_years: number;
+  is_certified: boolean;
+  rating: string;
+  available: boolean;
 };
 
 /** Turni olib boradigan gid (kontaktlarsiz) */
@@ -146,6 +160,9 @@ export type Booking = {
   departure_at: string;
   seats: number;
   unit_price_uzs: number;
+  /** Ixtiyoriy professional gid (telefon — bron tasdiqlangach) */
+  guide: { slug: string; display_name: string; languages: string[]; phone: string | null } | null;
+  guide_price_uzs: number;
   total_uzs: number;
   cancellation_policy: string;
   contact_name: string;

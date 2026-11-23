@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.db.models import Count, F, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -25,6 +25,7 @@ from .serializers import (
     TourCardSerializer,
     TourCategorySerializer,
     TourDetailSerializer,
+    TourGuideOptionSerializer,
 )
 
 
@@ -104,6 +105,23 @@ class TourViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_serializer_class(self):
         return TourDetailSerializer if self.action == "retrieve" else TourCardSerializer
+
+    @extend_schema(
+        parameters=[OpenApiParameter("departure", int, required=True, description="Jo'nash sanasi ID")],
+        responses=TourGuideOptionSerializer(many=True),
+    )
+    @action(detail=True, methods=["get"])
+    def guides(self, request, slug=None):
+        """Ixtiyoriy professional gid: shu sana uchun turga biriktirilgan gidlar va ularning bo'shligi."""
+        from apps.bookings.services import guide_options
+
+        tour = self.get_object()
+        try:
+            departure = tour.departures.get(pk=int(request.query_params.get("departure", "")))
+        except (ValueError, Departure.DoesNotExist):
+            raise ValidationError({"departure": "Jo'nash sanasini tanlang."}) from None
+        options = guide_options(departure)
+        return Response(TourGuideOptionSerializer(options, many=True, context={"request": request}).data)
 
     @extend_schema(responses={200: dict})
     @action(detail=False, methods=["get"])

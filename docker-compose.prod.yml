@@ -46,7 +46,10 @@ services:
   scheduler:
     <<: *app
     command: >
-      sh -c "while true; do python manage.py process_bookings; python manage.py send_notifications; sleep 15; done"
+      sh -c "while true; do python manage.py process_bookings; python manage.py send_notifications; python manage.py process_media_imports; sleep 15; done"
+    volumes:  # media importi: ZIP web konteynerida yuklanadi, shu yerda ishlanadi
+      - media:/app/media
+      - private_media:/app/private_media
     healthcheck:
       disable: true
     depends_on:

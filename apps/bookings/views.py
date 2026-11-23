@@ -25,7 +25,7 @@ class _BookingQuerysetMixin:
 
     def base_queryset(self):
         return Booking.objects.select_related(
-            "tour", "agency", "departure", "user", "review"
+            "tour", "agency", "departure", "user", "review", "guide"
         ).prefetch_related("travelers", "tour__media")
 
     def get_object(self):
@@ -66,6 +66,7 @@ class BookingViewSet(_BookingQuerysetMixin, mixins.CreateModelMixin, viewsets.Re
             contact_email=data["contact_email"],
             note=data["note"],
             travelers=data["travelers"],
+            guide=data["guide"] or None,
         )
         booking = self.base_queryset().get(pk=booking.pk)
         return Response(BookingSerializer(booking, context=self.get_serializer_context()).data, status=201)

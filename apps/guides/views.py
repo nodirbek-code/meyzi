@@ -299,6 +299,35 @@ class _HasGuideProfile(BasePermission):
         return profile is not None
 
 
+class CabinetGuideTourBookingViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Gid professional gid sifatida tanlangan turlar (kelgusi, faol bronlar). Faqat o'qish."""
+
+    permission_classes = [_HasGuideProfile]
+    pagination_class = None
+
+    def get_serializer_class(self):
+        from .serializers import GuideTourBookingSerializer
+
+        return GuideTourBookingSerializer
+
+    def get_queryset(self):
+        from django.db.models import Q
+
+        from apps.bookings.models import Booking
+
+        if getattr(self, "swagger_fake_view", False):
+            return Booking.objects.none()
+        return (
+            Booking.objects.filter(guide=self.request.guide, departure__date__gte=timezone.localdate())
+            .filter(
+                Q(status=Booking.Status.CONFIRMED)
+                | Q(status=Booking.Status.PENDING_PAYMENT, expires_at__gt=timezone.now())
+            )
+            .select_related("tour", "departure", "agency")
+            .order_by("departure__date")
+        )
+
+
 class CabinetUnavailableDateViewSet(
     mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
 ):

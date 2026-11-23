@@ -177,8 +177,20 @@ export default async function TourPage({ params }: Props) {
             </Section>
           )}
 
+          <Section title="Sayohatni kim olib boradi">
+            <p className="text-sm text-ink-soft">
+              <b className="text-ink">Sayohat yo&apos;lboshchisi</b> har bir turda bor va narxga kiradi: guruhni yig&apos;adi,
+              transport, vaqt va joylashuvni boshqaradi.{" "}
+              {tour.guide_price_uzs
+                ? `Obidalar tarixini o'z tilingizda batafsil eshitmoqchi bo'lsangiz — bron qilishda professional gidni tanlang (+${money(tour.guide_price_uzs)}, butun guruh uchun bir marta).`
+                : tour.guides.length > 0
+                  ? "Bu turda professional gid narxga kiradi."
+                  : ""}
+            </p>
+          </Section>
+
           {tour.guides.length > 0 && (
-            <Section title={tour.guides.length > 1 ? "Gidlar" : "Gid"}>
+            <Section title={tour.guide_price_uzs ? "Professional gidlar (ixtiyoriy)" : tour.guides.length > 1 ? "Gidlar" : "Gid"}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {tour.guides.map((g) => (
                   <Link key={g.slug} href={`/guides/${g.slug}`} className="card flex items-center gap-4 p-4 transition hover:shadow-lift">
@@ -343,6 +355,7 @@ export default async function TourPage({ params }: Props) {
             rating={tour.rating}
             reviewsCount={tour.reviews_count}
             policy={tour.cancellation_policy}
+            guidePrice={tour.guide_price_uzs}
           />
           {tour.price_note && <p className="mt-2 px-1 text-xs text-ink-mute">* {tour.price_note}</p>}
         </aside>

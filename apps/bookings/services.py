@@ -51,6 +51,7 @@ def create_booking(
     contact_email: str = "",
     note: str = "",
     travelers: list[dict] | None = None,
+    guide: str | None = None,
     now: datetime | None = None,
 ) -> Booking:
     now = now or timezone.now()
@@ -95,8 +96,10 @@ def create_booking(
             {"detail": "To'lanmagan bronlaringiz juda ko'p. Avval ularni to'lang yoki bekor qiling."}
         )
 
+    guide_obj, guide_price = _pick_guide(tour, departure, guide, now=now)
+
     unit_price = departure.effective_price
-    total = unit_price * seats
+    total = unit_price * seats + guide_price
     commission_percent = tour.agency.commission_percent
     commission = _money(Decimal(total) * commission_percent / 100)
 
@@ -106,6 +109,8 @@ def create_booking(
         tour=tour,
         agency=tour.agency,
         seats=seats,
+        guide=guide_obj,
+        guide_price_uzs=guide_price,
         unit_price_uzs=unit_price,
         total_uzs=total,
         commission_percent=commission_percent,
@@ -124,6 +129,54 @@ def create_booking(
     notify.booking_created(booking)
     user_events.tour_booking_created(booking)
     return booking
+
+
+# ---------- Ixtiyoriy professional gid ----------
+
+
+def _tour_days(tour, departure) -> tuple:
+    start = departure.date
+    return start, start + timedelta(days=max(tour.duration_days, 1) - 1)
+
+
+def guide_options(departure, *, now: datetime | None = None) -> list[dict]:
+    """Shu sana uchun turga biriktirilgan (tasdiqlangan) gidlar va ularning bo'shligi."""
+    from apps.guides.models import GuideProfile
+    from apps.guides.services import busy_dates
+
+    tour = departure.tour
+    if not tour.guide_price_uzs:
+        return []
+    start, end = _tour_days(tour, departure)
+    out = []
+    for g in tour.guides.filter(status=GuideProfile.Status.APPROVED).order_by("-rating", "display_name"):
+        out.append({"guide": g, "available": not busy_dates(g, start=start, end=end)})
+    return out
+
+
+def _pick_guide(tour, departure, slug: str | None, *, now):
+    """Turist tanlagan gid: shu turga biriktirilgan, tasdiqlangan va tur kunlari bo'sh bo'lishi kerak.
+
+    Gid qatori `select_for_update` bilan qulflanadi — bir vaqtda ikki turist bitta gidni ololmaydi.
+    """
+    if not slug:
+        return None, 0
+    from apps.guides.models import GuideProfile
+    from apps.guides.services import busy_dates
+
+    if not tour.guide_price_uzs:
+        raise ValidationError({"guide": "Bu turda qo'shimcha gid xizmati yo'q."})
+    guide = (
+        GuideProfile.objects.select_for_update()
+        .filter(pk__in=tour.guides.values("pk"), slug=slug, status=GuideProfile.Status.APPROVED)
+        .first()
+    )
+    if guide is None:
+        raise ValidationError({"guide": "Bu gid shu turga biriktirilmagan."})
+    start, end = _tour_days(tour, departure)
+    if busy_dates(guide, start=start, end=end):
+        raise ValidationError({"guide": f"{guide.display_name} bu kunlarda band. Boshqa gidni tanlang."})
+    return guide, tour.guide_price_uzs
 
 
 # ---------- Muddati o'tganlar ----------

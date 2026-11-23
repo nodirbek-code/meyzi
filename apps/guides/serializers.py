@@ -238,6 +238,33 @@ class GuideBookingCreateSerializer(VerifiedPhoneMixin, serializers.Serializer):
     note = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+class GuideTourBookingSerializer(serializers.Serializer):
+    """Gid kabineti: turda professional gid sifatida tanlangan bron (turist kontakti — faqat to'langach)."""
+
+    code = serializers.CharField()
+    status = serializers.CharField()
+    tour_title = serializers.CharField(source="tour.title")
+    tour_slug = serializers.CharField(source="tour.slug")
+    agency = serializers.CharField(source="agency.name")
+    date = serializers.DateField(source="departure.date")
+    days = serializers.IntegerField(source="tour.duration_days")
+    departure_time = serializers.TimeField(source="tour.departure_time", allow_null=True)
+    meeting_point = serializers.CharField(source="tour.meeting_point")
+    seats = serializers.IntegerField()
+    guide_price_uzs = serializers.IntegerField()
+    contact_name = serializers.SerializerMethodField()
+    contact_phone = serializers.SerializerMethodField()
+
+    def _paid(self, b) -> bool:
+        return b.status == "confirmed"
+
+    def get_contact_name(self, b) -> str | None:
+        return b.contact_name if self._paid(b) else None
+
+    def get_contact_phone(self, b) -> str | None:
+        return b.contact_phone if self._paid(b) else None
+
+
 class GuideShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = GuideProfile

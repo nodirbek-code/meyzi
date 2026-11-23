@@ -66,6 +66,25 @@ class BookingCreateSerializer(VerifiedPhoneMixin, serializers.Serializer):
     contact_email = serializers.EmailField(required=False, allow_blank=True, default="")
     note = serializers.CharField(required=False, allow_blank=True, default="")
     travelers = TravelerSerializer(many=True, required=False, default=list)
+    guide = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        help_text="Professional gid slug'i (`/tours/<slug>/guides/?departure=<id>`). Bo'sh — gidsiz.",
+    )
+
+
+class BookingGuideSerializer(serializers.Serializer):
+    """Brondagi gid: ism va tillar; telefon — faqat bron tasdiqlangach."""
+
+    slug = serializers.CharField()
+    display_name = serializers.CharField()
+    languages = serializers.ListField(child=serializers.CharField())
+    phone = serializers.SerializerMethodField()
+
+    def get_phone(self, guide) -> str | None:
+        booking = self.context.get("booking")
+        return guide.phone if booking is not None and booking.status == Booking.Status.CONFIRMED else None
 
 
 class BookingSerializer(serializers.ModelSerializer):
@@ -75,6 +94,7 @@ class BookingSerializer(serializers.ModelSerializer):
     travelers = TravelerSerializer(many=True, read_only=True)
     installment = serializers.SerializerMethodField()
     has_review = serializers.SerializerMethodField()
+    guide = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
@@ -88,6 +108,8 @@ class BookingSerializer(serializers.ModelSerializer):
             "departure_at",
             "seats",
             "unit_price_uzs",
+            "guide",
+            "guide_price_uzs",
             "total_uzs",
             "installment",
             "cancellation_policy",
@@ -109,6 +131,12 @@ class BookingSerializer(serializers.ModelSerializer):
 
     def get_has_review(self, booking) -> bool:
         return hasattr(booking, "review")
+
+    @extend_schema_field(BookingGuideSerializer(allow_null=True))
+    def get_guide(self, booking):
+        if booking.guide is None:
+            return None
+        return BookingGuideSerializer(booking.guide, context={**self.context, "booking": booking}).data
 
     @extend_schema_field(InstallmentSerializer)
     def get_installment(self, booking):

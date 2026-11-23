@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import control, control_crud, control_import, control_users
+from . import control, control_crud, control_import, control_media, control_users
 
 urlpatterns = [
     path("users/<int:pk>/", control_users.ControlUserView.as_view(), name="control-user"),
@@ -9,6 +9,12 @@ urlpatterns = [
         "users/<int:pk>/<str:action>/",
         control_users.ControlUserBlockView.as_view(),
         name="control-user-block",
+    ),
+    path("media-import/", control_media.MediaImportListView.as_view(), name="control-media-import"),
+    path(
+        "media-import/<int:pk>/",
+        control_media.MediaImportDetailView.as_view(),
+        name="control-media-import-detail",
     ),
     path("manage/", control_crud.CrudIndexView.as_view(), name="control-manage"),
     path("manage/<str:res>/", control_crud.CrudListView.as_view(), name="control-manage-list"),

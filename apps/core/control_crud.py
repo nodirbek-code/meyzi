@@ -617,6 +617,7 @@ def resources() -> dict[str, Resource]:
                 "meeting_map_url",
                 "price_uzs",
                 "price_note",
+                "guide_price_uzs",
                 "cancellation_policy",
                 "included",
                 "not_included",

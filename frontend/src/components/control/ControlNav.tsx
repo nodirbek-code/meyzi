@@ -11,7 +11,12 @@ export function ControlNav({ queue, role }: { queue: QueueCard[]; role: StaffRol
   const path = usePathname();
   const links = [
     { href: "/control", label: "Dashboard", icon: "📊", count: 0, exact: true },
-    ...(admin ? [{ href: "/control/manage", label: "Boshqarish", icon: "⚙️", count: 0, exact: false }] : []),
+    ...(admin
+      ? [
+          { href: "/control/manage", label: "Boshqarish", icon: "⚙️", count: 0, exact: false },
+          { href: "/control/media", label: "Media (ZIP)", icon: "🖼️", count: 0, exact: false },
+        ]
+      : []),
     ...queue.map((q) => ({ href: `/control/queue/${q.kind}`, label: q.title, icon: q.icon, count: q.count, exact: false })),
   ];
   const active = (href: string, exact: boolean) => (exact ? path === href : path === href || path.startsWith(href + "/"));

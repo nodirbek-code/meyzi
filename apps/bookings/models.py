@@ -50,6 +50,16 @@ class Booking(TimeStampedModel):
     )
 
     seats = models.PositiveSmallIntegerField("joylar soni")
+    # Ixtiyoriy professional gid (Tour.guide_price_uzs) — tanlangan gid va qotirilgan narx
+    guide = models.ForeignKey(
+        "guides.GuideProfile",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="tour_bookings",
+        verbose_name="professional gid",
+    )
+    guide_price_uzs = models.PositiveIntegerField("gid xizmati (so'm, guruh uchun)", default=0)
     unit_price_uzs = models.PositiveIntegerField("1 kishi narxi (so'm)")
     total_uzs = models.PositiveBigIntegerField("jami (so'm)")
     commission_percent = models.DecimalField("komissiya (%)", max_digits=5, decimal_places=2)

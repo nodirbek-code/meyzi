@@ -133,6 +133,19 @@ class TourGuideSerializer(serializers.ModelSerializer):
         fields = ["slug", "display_name", "photo", "languages", "experience_years", "is_certified", "rating"]
 
 
+class TourGuideOptionSerializer(serializers.Serializer):
+    """Bron oynasi: shu sana uchun tanlash mumkin bo'lgan gid (kontaktlarsiz)."""
+
+    slug = serializers.CharField(source="guide.slug")
+    display_name = serializers.CharField(source="guide.display_name")
+    photo = serializers.ImageField(source="guide.photo", allow_null=True)
+    languages = serializers.ListField(source="guide.languages", child=serializers.CharField())
+    experience_years = serializers.IntegerField(source="guide.experience_years")
+    is_certified = serializers.BooleanField(source="guide.is_certified")
+    rating = serializers.DecimalField(source="guide.rating", max_digits=3, decimal_places=2)
+    available = serializers.BooleanField()
+
+
 class TourHotelSerializer(serializers.ModelSerializer):
     destination = serializers.CharField(source="destination.name", read_only=True)
     cover = serializers.SerializerMethodField()
@@ -161,6 +174,7 @@ class TourDetailSerializer(TourCardSerializer):
     class Meta(TourCardSerializer.Meta):
         fields = TourCardSerializer.Meta.fields + [
             "description",
+            "guide_price_uzs",
             "max_group_size",
             "departure_time",
             "return_time",
@@ -206,6 +220,13 @@ class CabinetTourSerializer(serializers.ModelSerializer):
     places = serializers.SlugRelatedField(
         slug_field="slug", many=True, queryset=Place.objects.all(), required=False
     )
+    # Ixtiyoriy professional gidlar — faqat tasdiqlanganlar (slug'lar, /guides/ katalogidan)
+    guides = serializers.SlugRelatedField(
+        slug_field="slug",
+        many=True,
+        required=False,
+        queryset=GuideProfile.objects.filter(status=GuideProfile.Status.APPROVED),
+    )
     itinerary = ItineraryDaySerializer(many=True, required=False)
     included = StringListField(required=False)
     not_included = StringListField(required=False)
@@ -224,6 +245,8 @@ class CabinetTourSerializer(serializers.ModelSerializer):
             "destination",
             "categories",
             "places",
+            "guides",
+            "guide_price_uzs",
             "duration_days",
             "duration_nights",
             "max_group_size",
@@ -304,10 +327,12 @@ class CabinetTourSerializer(serializers.ModelSerializer):
         itinerary = validated_data.pop("itinerary", None)
         categories = validated_data.pop("categories")
         places = validated_data.pop("places", [])
+        guides = validated_data.pop("guides", [])
         validated_data["slug"] = unique_slug(Tour, validated_data["title"])
         tour = Tour.objects.create(**validated_data)
         tour.categories.set(categories)
         tour.places.set(places)
+        tour.guides.set(guides)
         if itinerary is not None:
             self._save_itinerary(tour, itinerary)
         return tour
@@ -317,6 +342,7 @@ class CabinetTourSerializer(serializers.ModelSerializer):
         itinerary = validated_data.pop("itinerary", None)
         categories = validated_data.pop("categories", None)
         places = validated_data.pop("places", None)
+        guides = validated_data.pop("guides", None)
         for key, value in validated_data.items():
             setattr(tour, key, value)
         tour.save()
@@ -324,6 +350,8 @@ class CabinetTourSerializer(serializers.ModelSerializer):
             tour.categories.set(categories)
         if places is not None:
             tour.places.set(places)
+        if guides is not None:
+            tour.guides.set(guides)
         if itinerary is not None:
             self._save_itinerary(tour, itinerary)
         return tour
