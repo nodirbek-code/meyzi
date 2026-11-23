@@ -116,6 +116,10 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 # Yopiq fayllar (gid sertifikatlari va h.k.) — veb orqali berilmaydi, faqat admin yuklab oladi
 PRIVATE_MEDIA_ROOT = env.path("PRIVATE_MEDIA_ROOT", default=BASE_DIR / "private_media")
+# Cloudinary (ixtiyoriy): cloudinary://<api_key>:<api_secret>@<cloud_name>. Berilsa, prod'da yuklangan fayllar
+# (ochiq va yopiq) Cloudinary'da saqlanadi — apps/core/cloud_storage.py. Lokal ishlashda bo'sh qoldiring.
+CLOUDINARY_URL = env.str("CLOUDINARY_URL", default="")
+CLOUDINARY_FOLDER = env.str("CLOUDINARY_FOLDER", default="meyzi")
 # Katta video yuklash uchun (nginx'da ham client_max_body_size)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 

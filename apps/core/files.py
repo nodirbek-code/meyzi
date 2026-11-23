@@ -5,6 +5,7 @@ import os
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
+from django.db.models.fields.files import FieldFile
 from django.utils.deconstruct import deconstructible
 
 MB = 1024 * 1024
@@ -34,6 +35,11 @@ class PrivateStorage(FileSystemStorage):
 
 
 def private_storage():
+    """Yopiq fayllar: `CLOUDINARY_URL` bo'lsa — Cloudinary (authenticated), aks holda — PRIVATE_MEDIA_ROOT."""
+    if getattr(settings, "CLOUDINARY_URL", ""):
+        from .cloud_storage import CloudinaryStorage
+
+        return CloudinaryStorage(private=True)
     return PrivateStorage()
 
 
@@ -98,6 +104,10 @@ class FileRule:
         self.max_mb, self.exts, self.label, self.kind = max_mb, exts, label, kind
 
     def __call__(self, f):
+        if isinstance(f, FieldFile) and f._committed:
+            # Allaqachon saqlangan fayl (tahrirlashda o'zgarmagan) — qayta tekshirilmaydi: Cloudinary'dan
+            # yuklab olish shart emas, fayl yo'qolgan bo'lsa ham boshqa maydonlarni saqlash mumkin
+            return
         ext = _ext(f.name)
         if ext not in self.exts:
             raise ValidationError(f"{self.label}: faqat {', '.join(self.exts)} formatlari.")

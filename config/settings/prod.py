@@ -25,6 +25,11 @@ if RENDER_EXTERNAL_HOSTNAME:
 # nginx bo'lmagan hostingda media'ni Django beradi
 SERVE_MEDIA = env.bool("SERVE_MEDIA", default=False)
 
+# Render free: disk vaqtinchalik (qayta ishga tushganda media/ tozalanadi) — fayllar Cloudinary'da
+if CLOUDINARY_URL:  # noqa: F405
+    STORAGES = {**STORAGES, "default": {"BACKEND": "apps.core.cloud_storage.CloudinaryStorage"}}  # noqa: F405
+    SERVE_MEDIA = False
+
 # Xatolarni kuzatish (ixtiyoriy): SENTRY_DSN berilsa yoqiladi
 SENTRY_DSN = env.str("SENTRY_DSN", default="")
 if SENTRY_DSN:

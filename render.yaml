@@ -46,6 +46,10 @@ services:
         sync: false
       - key: SERVE_MEDIA
         value: "True"
+      # Cloudinary → Dashboard → API Keys → "API environment variable" (cloudinary://...). Bo'lmasa — fayllar
+      # server diskida, Render qayta ishga tushganda yo'qoladi.
+      - key: CLOUDINARY_URL
+        sync: false
       - key: EMAIL_URL
         value: consolemail://
       - key: SMS_BACKEND
