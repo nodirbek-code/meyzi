@@ -595,7 +595,7 @@ Reyting 5+ sharhdan keyin **4.0 dan past** tushsa — profil vaqtincha to'xtatil
 
 ### Excel orqali ommaviy qo'shish (`/api/v1/control/manage/`, faqat asosiy admin)
 
-Yo'nalish (`destination`), agentlik (`agency`), mehmonxona (`hotel`), gid (`guide`) va tur (`tour`) uchun. Saytda: `/control/manage/<bo'lim>` →
+Yo'nalish (`destination`), diqqatga sazovor joy (`place`), agentlik (`agency`), mehmonxona (`hotel`), gid (`guide`) va tur (`tour`) uchun. Saytda: `/control/manage/<bo'lim>` →
 **📥 Excel'dan yuklash**.
 
 | Metod | Yo'l | Tavsif |

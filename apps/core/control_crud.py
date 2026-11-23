@@ -31,7 +31,7 @@ from rest_framework.views import APIView
 from .control import IsMainAdmin
 
 # Excel (.xlsx) orqali ommaviy qo'shiladigan bo'limlar — control_import.py
-IMPORTABLE = ("destination", "agency", "hotel", "guide", "tour")
+IMPORTABLE = ("destination", "place", "agency", "hotel", "guide", "tour")
 
 
 class _Staff(APIView):

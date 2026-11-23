@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.agencies.models import Agency, AgencyMember
-from apps.catalog.models import Destination
+from apps.catalog.models import Destination, Place
 from apps.guides.models import GuideProfile
 from apps.hotels.models import Hotel
 from apps.tours.models import Tour, TourCategory
@@ -46,7 +46,7 @@ def upload(client, res, file):
 # ---------- Shablon ----------
 
 
-@pytest.mark.parametrize("res", ["destination", "agency", "hotel", "guide", "tour"])
+@pytest.mark.parametrize("res", ["destination", "place", "agency", "hotel", "guide", "tour"])
 def test_template_downloads_without_file_columns(staff_api, samarqand, res):
     r = staff_api.get(M + f"{res}/import/template/")
     assert r.status_code == 200
@@ -124,6 +124,23 @@ def test_import_destinations_then_hotels_use_them(staff_api):
     )
     assert r.status_code == 201, r.data
     assert Hotel.objects.get(name="Oxus Termiz").destination == t
+
+
+def test_import_places_by_city_and_category_label(staff_api, samarqand):
+    category = next(c for c in staff_api.get(M + "place/").data["schema"] if c["name"] == "category")
+    value, label = category["options"][0]
+    r = upload(
+        staff_api,
+        "place",
+        xlsx(
+            ["Shahar *", "Nomi *", "Toifa", "Tarixi", "Kirish narxi (so'm)", "Ish vaqti", "E'lon qilingan"],
+            [["Samarqand", "Go'ri Amir", label, "1404 yilda qurilgan", "50 000", "08:00–19:00", "Ha"]],
+        ),
+    )
+    assert r.status_code == 201, r.data
+    p = Place.objects.get(name="Go'ri Amir")
+    assert p.destination == samarqand and p.category == value and p.entry_fee_uzs == 50000 and p.is_published
+    assert p.slug and not p.cover_image and not p.audio_guide  # fayllar — keyin qo'lda
 
 
 def test_import_hotels_by_city_name_and_labels(staff_api, samarqand):

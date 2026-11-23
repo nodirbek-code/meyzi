@@ -1,6 +1,6 @@
 """/control → Boshqarish: Excel (.xlsx) orqali ommaviy qo'shish — faqat asosiy admin.
 
-Yo'nalish, agentlik, mehmonxona, gid va turlar uchun. Faqat matnli ma'lumotlar (nom, telefon, narx...);
+Yo'nalish, joy, agentlik, mehmonxona, gid va turlar uchun. Faqat matnli ma'lumotlar (nom, telefon, narx...);
 rasm, logotip, sertifikat kabi fayllar Excel'ga kirmaydi — ular keyin yozuvni tahrirlashda qo'lda qo'shiladi.
 
 Har bir qator "Yangi qo'shish" formasidan yuborilgandek `control_crud._save` orqali o'tadi — validatsiya,
