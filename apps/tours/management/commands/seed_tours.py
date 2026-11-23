@@ -8,14 +8,8 @@ from django.utils import timezone
 
 from apps.agencies.models import Agency
 from apps.catalog.models import Destination
+from apps.tours.categories import CATEGORIES
 from apps.tours.models import CancellationPolicy, Departure, ItineraryDay, ItineraryItem, Tour, TourCategory
-
-CATEGORIES = [
-    ("tog", "Tog'", "⛰️", 1),
-    ("madaniy", "Madaniy", "🕌", 2),
-    ("sarguzasht", "Sarguzasht", "🧗", 3),
-    ("dam-olish-kuni", "Dam olish kuni", "🌤️", 4),
-]
 
 EXTRA_DESTINATIONS = [
     ("chimyon", "Chimyon", "Toshkent viloyati", "Toshkentdan 1,5 soatlik tog' kurorti."),
@@ -29,7 +23,7 @@ TOURS = [
         "chimyon-1-kunlik-sayohat",
         "Chimyon — 1 kunlik tog' sayohati",
         "chimyon",
-        ["tog", "dam-olish-kuni"],
+        ["tog", "qisqa-sayohat"],
         1,
         0,
         250_000,
@@ -49,7 +43,7 @@ TOURS = [
         "samarqand-1-kunlik-poyezdda",
         "Samarqand — 1 kunda Afrosiyob poyezdida",
         "samarqand",
-        ["madaniy"],
+        ["tarix"],
         1,
         0,
         950_000,

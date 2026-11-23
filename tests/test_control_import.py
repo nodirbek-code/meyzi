@@ -203,7 +203,7 @@ def test_import_guides_creates_accounts(staff_api, samarqand):
 
 def test_import_tours_resolves_agency_category_and_lists(staff_api, samarqand):
     Agency.objects.create(name="MEYZI", slug="meyzi", is_platform=True)
-    TourCategory.objects.create(name="Tog'", slug="tog")
+    TourCategory.objects.get_or_create(slug="tog", defaults={"name": "Tog'"})
     f = xlsx(
         [
             "agency",
@@ -294,7 +294,7 @@ def test_unknown_reference_and_option_are_reported(staff_api, samarqand):
 
 def test_tour_for_partner_owned_agency_is_rejected(staff_api, agency, samarqand):
     """Hamkor o'zi yaratgan agentlik nomiga tur qo'shib bo'lmaydi (forma bilan bir xil qoida)."""
-    TourCategory.objects.create(name="Tog'", slug="tog")
+    TourCategory.objects.get_or_create(slug="tog", defaults={"name": "Tog'"})
     f = xlsx(
         ["agency", "destination", "title", "categories", "meeting_point", "price_uzs"],
         [[agency.name, "Samarqand", "T", "Tog'", "m", 1]],

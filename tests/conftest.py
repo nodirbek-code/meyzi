@@ -85,7 +85,7 @@ def agency_api(agency_user):
 def category(db):
     from apps.tours.models import TourCategory
 
-    return TourCategory.objects.create(name="Tog'", slug="tog")
+    return TourCategory.objects.get_or_create(slug="tog", defaults={"name": "Tog'"})[0]
 
 
 @pytest.fixture

@@ -53,7 +53,10 @@ EXTRA_COLUMNS = {
             "label": "Jo'nash sanalari",
             "type": "departures",
             "required": False,
-            "help": "Vergul bilan: 2026-12-05, 2026-12-19. Joylar soni — «Guruhdagi maks. odam».",
+            "help": (
+                "Vergul bilan: 2026-12-05, 2026-12-19. O'tgan sanalar tashlab yuboriladi. "
+                "Joylar — «Guruhdagi maks. odam»."
+            ),
         },
     ],
 }
@@ -279,11 +282,13 @@ def convert(res, col: dict, raw):
                     parts.append(dt.date.fromisoformat(p))
                 except ValueError:
                     raise CellError(f"«{p}» — sana YYYY-MM-DD ko'rinishida bo'lsin.") from None
+        # Fayl oldindan tayyorlanadi: yuklash kunigacha o'tib ketgan sanalar tashlab yuboriladi,
+        # faqat hammasi o'tgan bo'lsa — xato (masalan, yil noto'g'ri yozilgan)
         today = timezone.localdate()
-        past = [d.isoformat() for d in parts if d < today]
-        if past:
-            raise CellError("O'tgan sana qo'shilmaydi: " + ", ".join(past))
-        return sorted(set(parts))
+        upcoming = sorted({d for d in parts if d >= today})
+        if parts and not upcoming:
+            raise CellError("Barcha sanalar o'tib ketgan: " + ", ".join(d.isoformat() for d in parts[:5]))
+        return upcoming
     if t == "date":
         if isinstance(raw, (dt.datetime, dt.date)):
             return (raw.date() if isinstance(raw, dt.datetime) else raw).isoformat()

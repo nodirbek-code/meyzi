@@ -149,7 +149,7 @@ def test_import_tour_with_team_itinerary_and_departures(staff_api, base):
         "Jasur",
         "Afrosiyob",
         "Registon va Shohi Zinda: madrasalar, maqbaralar\nAfrosiyob: muzey va qog'oz ustaxonasi",
-        f"{future(10)}, {future(24)}, {future(10)}",
+        f"2020-01-01, {future(10)}, {future(24)}, {future(10)}",  # o'tgan sana — tashlab yuboriladi
     ]
     r = staff_api.post(M + "tour/import/", {"file": xlsx(HEAD, [row])}, format="multipart")
     assert r.status_code == 201, r.data
@@ -171,7 +171,7 @@ def test_import_tour_with_team_itinerary_and_departures(staff_api, base):
     ("itinerary", "departures", "message"),
     [
         ("1-kun: a\n2-kun: b\n3-kun: c", "", "Dasturda 3 kun"),
-        ("", "2020-01-01", "O'tgan sana"),
+        ("", "2020-01-01, 2020-02-01", "Barcha sanalar o'tib ketgan"),
         ("", "31.12.2026", "YYYY-MM-DD"),
     ],
 )

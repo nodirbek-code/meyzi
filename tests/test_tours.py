@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from apps.agencies.models import Agency
-from apps.tours.models import Departure, Tour, TourMedia
+from apps.tours.models import Departure, Tour, TourCategory, TourMedia
 from apps.tours.policies import refund_ratio
 from apps.tours.pricing import installment
 
@@ -123,8 +123,9 @@ def test_tour_filters(api, tour, departure, agency, category):
 
 
 def test_categories_count_only_public(api, tour, category):
-    res = api.get("/api/v1/tours/categories/")
-    assert res.data[0]["tours_count"] == 1
+    counts = {c["slug"]: c["tours_count"] for c in api.get("/api/v1/tours/categories/").data}
+    assert counts[category.slug] == 1
+    assert counts["tarix"] == 0  # boshqa toifalar ham ro'yxatda, turi yo'q
 
 
 # ---------- Agentlik kabineti ----------
@@ -263,6 +264,13 @@ def test_seed_tours_idempotent(api):
     meyzi = Agency.objects.get(slug="meyzi")
     assert meyzi.is_platform and meyzi.auto_publish and meyzi.commission_percent == 0
     assert api.get("/api/v1/tours/?category=tog").data["count"] == 2
+    # Toifalar yagona ro'yxatdan: eski "madaniy" / "dam-olish-kuni" qaytib kelmaydi
+    from apps.tours.categories import CATEGORIES
+
+    assert list(TourCategory.objects.order_by("sort_order").values_list("slug", flat=True)) == [
+        c[0] for c in CATEGORIES
+    ]
+    assert api.get("/api/v1/tours/?category=qisqa-sayohat").data["count"] == 1
 
 
 def test_calendar_counts_open_departures(api, tour, departure):
