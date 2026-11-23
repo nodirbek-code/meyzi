@@ -80,6 +80,9 @@ export default async function HotelPage({ params, searchParams }: Props) {
           </div>
 
           {h.description && <p className="prose-lz whitespace-pre-line">{h.description}</p>}
+          <Link href={`/tours?hotel=${h.slug}`} className="inline-flex text-sm font-semibold text-forest-700 hover:underline">
+            Shu mehmonxonada tunaladigan turlar →
+          </Link>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="card p-5">

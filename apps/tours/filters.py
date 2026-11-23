@@ -2,6 +2,9 @@ import django_filters
 from django.db.models import F
 from django.utils import timezone
 
+from apps.guides.models import GuideProfile
+from apps.hotels.models import Hotel
+
 from .models import CancellationPolicy, Departure, Tour
 
 
@@ -13,6 +16,16 @@ class TourFilter(django_filters.FilterSet):
         method="filter_category", help_text="Toifa slug'i, vergul bilan bir nechta"
     )
     agency = django_filters.CharFilter(field_name="agency__slug")
+    guide = django_filters.CharFilter(
+        method="filter_guide", help_text="Gid slug'i — shu gid olib boradigan turlar"
+    )
+    hotel = django_filters.CharFilter(
+        method="filter_hotel", help_text="Mehmonxona slug'i — shu yerda tunaladigan turlar"
+    )
+    language = django_filters.CharFilter(
+        method="filter_language",
+        help_text="Til kodi (uz, ru, en, ja...) — shu tilda gapiradigan gidi bor turlar",
+    )
     min_price = django_filters.NumberFilter(field_name="price_uzs", lookup_expr="gte")
     max_price = django_filters.NumberFilter(field_name="price_uzs", lookup_expr="lte")
     min_days = django_filters.NumberFilter(field_name="duration_days", lookup_expr="gte")
@@ -29,6 +42,21 @@ class TourFilter(django_filters.FilterSet):
     def filter_category(self, qs, name, value):
         slugs = [s.strip() for s in value.split(",") if s.strip()]
         return qs.filter(categories__slug__in=slugs).distinct() if slugs else qs
+
+    def filter_guide(self, qs, name, value):
+        return qs.filter(guides__slug=value, guides__status=GuideProfile.Status.APPROVED).distinct()
+
+    def filter_hotel(self, qs, name, value):
+        return qs.filter(hotels__slug=value, hotels__status=Hotel.Status.APPROVED).distinct()
+
+    def filter_language(self, qs, name, value):
+        code = value.strip().lower()
+        if not code.isalpha():
+            return qs.none()
+        # JSON ro'yxat matn sifatida: ["uz", "ja"] — Postgres va SQLite'da bir xil ishlaydi
+        return qs.filter(
+            guides__status=GuideProfile.Status.APPROVED, guides__languages__icontains=f'"{code}"'
+        ).distinct()
 
     def filter_date(self, qs, name, value):
         return qs  # filter_queryset ichida birga qo'llanadi

@@ -604,6 +604,8 @@ def resources() -> dict[str, Resource]:
                 "description",
                 "categories",
                 "places",
+                "guides",
+                "hotels",
                 "duration_days",
                 "duration_nights",
                 "max_group_size",
@@ -625,7 +627,12 @@ def resources() -> dict[str, Resource]:
             ["title", "agency", "price_uzs", "status"],
             ["title", "agency__name"],
             editable=lambda o: o.agency.is_platform or o.agency.managed_by_platform,
-            fk_scope={"agency": editable_agencies},
+            fk_scope={
+                "agency": editable_agencies,
+                # Turga faqat tasdiqlangan gid va mehmonxona biriktiriladi
+                "guides": lambda: GuideProfile.objects.filter(status=GuideProfile.Status.APPROVED),
+                "hotels": lambda: Hotel.objects.filter(status=Hotel.Status.APPROVED),
+            },
             after_save=tour_after,
             moderation_kind="tour",
             hint="Platforma yoki siz yaratgan agentlik turlari. Rasm va sanalar — quyidagi bo'limlarda.",

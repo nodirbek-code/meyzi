@@ -78,6 +78,10 @@ export default async function GuidePage({ params }: Props) {
             </Section>
           )}
 
+          <Link href={`/tours?guide=${g.slug}`} className="inline-flex text-sm font-semibold text-forest-700 hover:underline">
+            Shu gid olib boradigan turlar →
+          </Link>
+
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="card p-5">
               <h3 className="label">Tillar</h3>

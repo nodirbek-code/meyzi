@@ -7,6 +7,8 @@ from apps.agencies.serializers import AgencyShortSerializer
 from apps.agencies.services import unique_slug
 from apps.catalog.models import Destination, Place
 from apps.catalog.serializers import DestinationShortSerializer
+from apps.guides.models import GuideProfile
+from apps.hotels.models import Hotel, HotelImage
 
 from .models import Departure, ItineraryDay, ItineraryItem, Tour, TourCategory, TourMedia
 from .policies import POLICY_TEXT
@@ -123,12 +125,38 @@ class TourCardSerializer(serializers.ModelSerializer):
         return DepartureSerializer(nxt).data if nxt else None
 
 
+class TourGuideSerializer(serializers.ModelSerializer):
+    """Tur sahifasidagi gid kartasi — kontaktlarsiz (telefon faqat gid bronidan keyin ochiladi)."""
+
+    class Meta:
+        model = GuideProfile
+        fields = ["slug", "display_name", "photo", "languages", "experience_years", "is_certified", "rating"]
+
+
+class TourHotelSerializer(serializers.ModelSerializer):
+    destination = serializers.CharField(source="destination.name", read_only=True)
+    cover = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Hotel
+        fields = ["slug", "name", "kind", "stars", "destination", "cover", "rating"]
+
+    def get_cover(self, hotel) -> str | None:
+        image = next((i for i in hotel.images.all() if i.kind == HotelImage.Kind.IMAGE), None)
+        if image is None:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(image.image.url) if request else image.image.url
+
+
 class TourDetailSerializer(TourCardSerializer):
     media = TourMediaSerializer(many=True, read_only=True)
     itinerary = ItineraryDaySerializer(many=True, read_only=True)
     departures = serializers.SerializerMethodField()
     cancellation_policy_text = serializers.SerializerMethodField()
     places = serializers.SlugRelatedField(many=True, read_only=True, slug_field="slug")
+    guides = TourGuideSerializer(many=True, read_only=True)  # view faqat tasdiqlanganlarini prefetch qiladi
+    hotels = TourHotelSerializer(many=True, read_only=True)
 
     class Meta(TourCardSerializer.Meta):
         fields = TourCardSerializer.Meta.fields + [
@@ -149,6 +177,8 @@ class TourDetailSerializer(TourCardSerializer):
             "itinerary",
             "departures",
             "places",
+            "guides",
+            "hotels",
         ]
 
     @extend_schema_field(DepartureSerializer(many=True))

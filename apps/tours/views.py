@@ -12,6 +12,8 @@ from rest_framework.response import Response
 
 from apps.agencies.models import Agency
 from apps.agencies.permissions import IsAgencyMember
+from apps.guides.models import GuideProfile
+from apps.hotels.models import Hotel
 from apps.notifications import services as notify
 
 from .filters import TourFilter
@@ -88,6 +90,15 @@ class TourViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.prefetch_related(
                 "places",
                 Prefetch("itinerary", queryset=ItineraryDay.objects.prefetch_related("items")),
+                Prefetch("guides", queryset=GuideProfile.objects.filter(status=GuideProfile.Status.APPROVED)),
+                Prefetch(
+                    "hotels",
+                    queryset=Hotel.objects.filter(
+                        status=Hotel.Status.APPROVED, destination__is_published=True
+                    )
+                    .select_related("destination")
+                    .prefetch_related("images"),
+                ),
             )
         return qs
 

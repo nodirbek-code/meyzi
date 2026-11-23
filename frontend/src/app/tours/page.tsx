@@ -7,7 +7,7 @@ import { TourCard } from "@/components/TourCard";
 import { SortSelect, TourFilters } from "@/components/TourFilters";
 import { EmptyState } from "@/components/ui";
 import { apiGet } from "@/lib/api";
-import { dateLong, money } from "@/lib/format";
+import { dateLong, LANGUAGE_NAMES, money } from "@/lib/format";
 import type { Category, Destination, Paginated, TourCard as Tour } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Turlar" };
@@ -18,6 +18,9 @@ const KEYS = [
   "destination",
   "category",
   "agency",
+  "guide",
+  "hotel",
+  "language",
   "min_price",
   "max_price",
   "min_days",
@@ -55,6 +58,9 @@ export default async function ToursPage({ searchParams }: { searchParams: Promis
   if (params.search) chips.push({ label: `«${params.search}»`, href: without("search") });
   if (destination) chips.push({ label: destination.name, href: without("destination") });
   if (category) chips.push({ label: category.name, href: without("category") });
+  if (params.language) chips.push({ label: `Gid: ${LANGUAGE_NAMES[params.language] ?? params.language}`, href: without("language") });
+  if (params.guide) chips.push({ label: "Tanlangan gid turlari", href: without("guide") });
+  if (params.hotel) chips.push({ label: "Tanlangan mehmonxona turlari", href: without("hotel") });
   if (params.date) chips.push({ label: dateLong(params.date), href: without("date") });
   if (params.min_price || params.max_price)
     chips.push({

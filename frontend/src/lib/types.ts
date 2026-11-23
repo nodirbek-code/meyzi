@@ -86,6 +86,30 @@ export type TourDetail = TourCard & {
   itinerary: { day_number: number; title: string; description: string; items: ItineraryItem[] }[];
   departures: Departure[];
   places: string[];
+  guides: TourGuide[];
+  hotels: TourHotel[];
+};
+
+/** Turni olib boradigan gid (kontaktlarsiz) */
+export type TourGuide = {
+  slug: string;
+  display_name: string;
+  photo: string | null;
+  languages: string[];
+  experience_years: number;
+  is_certified: boolean;
+  rating: string;
+};
+
+/** Tur davomida tunaladigan mehmonxona */
+export type TourHotel = {
+  slug: string;
+  name: string;
+  kind: string;
+  stars: number | null;
+  destination: string;
+  cover: string | null;
+  rating: string;
 };
 
 export type Review = {

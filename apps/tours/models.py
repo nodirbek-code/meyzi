@@ -51,6 +51,13 @@ class Tour(TimeStampedModel):
     places = models.ManyToManyField(
         "catalog.Place", related_name="tours", blank=True, verbose_name="tashrif buyuriladigan joylar"
     )
+    # Tur jamoasi: kim olib boradi va qayerda tunaladi (ommaga faqat tasdiqlanganlari ko'rinadi)
+    guides = models.ManyToManyField(
+        "guides.GuideProfile", related_name="tours", blank=True, verbose_name="gidlar"
+    )
+    hotels = models.ManyToManyField(
+        "hotels.Hotel", related_name="tours", blank=True, verbose_name="mehmonxonalar"
+    )
 
     title = models.CharField("nomi", max_length=200)
     slug = models.SlugField("slug", max_length=220, unique=True)

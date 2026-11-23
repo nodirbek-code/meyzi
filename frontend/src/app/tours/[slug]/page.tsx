@@ -6,9 +6,9 @@ import { BookingWidget } from "@/components/BookingWidget";
 import { Gallery } from "@/components/Gallery";
 import { ShareButton } from "@/components/ShareButton";
 import { TourCard } from "@/components/TourCard";
-import { Badge, Icon } from "@/components/ui";
+import { Badge, Cover, Icon } from "@/components/ui";
 import { apiGet, apiGetOrNull } from "@/lib/api";
-import { dateLong, duration, money, POLICY_LABEL, time } from "@/lib/format";
+import { dateLong, duration, HOTEL_KIND, LANGUAGE_NAMES, money, POLICY_LABEL, time } from "@/lib/format";
 import { getUser } from "@/lib/session";
 import type { Paginated, Review, TourCard as Tour, TourDetail } from "@/lib/types";
 
@@ -150,25 +150,70 @@ export default async function TourPage({ params }: Props) {
                       <span className="rounded-lg bg-forest-600 px-2.5 py-0.5 text-xs text-white">{day.day_number}-kun</span>
                       {day.title !== `${day.day_number}-kun` && day.title}
                     </h3>
-                    <ol className="relative space-y-4 border-l-2 border-forest-100 pl-5">
-                      {day.items.map((it, i) => (
-                        <li key={i} className="relative">
-                          <span className="absolute -left-[27px] top-1 h-3 w-3 rounded-full border-2 border-white bg-forest-500 ring-2 ring-forest-100" />
-                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                            {it.start_time && (
-                              <span className="text-xs font-bold text-forest-700">
-                                {time(it.start_time)}
-                                {it.end_time && `–${time(it.end_time)}`}
-                              </span>
-                            )}
-                            <span className="text-sm font-medium">{it.title}</span>
-                            {it.is_extra_cost && <Badge tone="gold">o&apos;z hisobidan</Badge>}
-                          </div>
-                          {it.description && <p className="mt-1 text-sm text-ink-soft">{it.description}</p>}
-                        </li>
-                      ))}
-                    </ol>
+                    {day.description && <p className="text-sm text-ink-soft">{day.description}</p>}
+                    {day.items.length > 0 && (
+                      <ol className="relative space-y-4 border-l-2 border-forest-100 pl-5">
+                        {day.items.map((it, i) => (
+                          <li key={i} className="relative">
+                            <span className="absolute -left-[27px] top-1 h-3 w-3 rounded-full border-2 border-white bg-forest-500 ring-2 ring-forest-100" />
+                            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                              {it.start_time && (
+                                <span className="text-xs font-bold text-forest-700">
+                                  {time(it.start_time)}
+                                  {it.end_time && `–${time(it.end_time)}`}
+                                </span>
+                              )}
+                              <span className="text-sm font-medium">{it.title}</span>
+                              {it.is_extra_cost && <Badge tone="gold">o&apos;z hisobidan</Badge>}
+                            </div>
+                            {it.description && <p className="mt-1 text-sm text-ink-soft">{it.description}</p>}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
                   </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {tour.guides.length > 0 && (
+            <Section title={tour.guides.length > 1 ? "Gidlar" : "Gid"}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {tour.guides.map((g) => (
+                  <Link key={g.slug} href={`/guides/${g.slug}`} className="card flex items-center gap-4 p-4 transition hover:shadow-lift">
+                    <Cover src={g.photo} alt={g.display_name} className="h-14 w-14 shrink-0 overflow-hidden rounded-full" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 font-semibold">
+                        <span className="truncate">{g.display_name}</span>
+                        {g.is_certified && <Badge tone="green">sertifikat</Badge>}
+                      </div>
+                      <p className="mt-0.5 text-xs text-ink-soft">
+                        {g.languages.map((l) => LANGUAGE_NAMES[l] ?? l).join(", ")}
+                        {g.experience_years > 0 && ` · ${g.experience_years} yil tajriba`}
+                        {Number(g.rating) > 0 && ` · ★ ${Number(g.rating).toFixed(1)}`}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {tour.hotels.length > 0 && (
+            <Section title="Qayerda tunaysiz">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {tour.hotels.map((h) => (
+                  <Link key={h.slug} href={`/hotels/${h.slug}`} className="card flex items-center gap-4 overflow-hidden p-0 transition hover:shadow-lift">
+                    <Cover src={h.cover} alt={h.name} className="h-20 w-28 shrink-0" />
+                    <div className="min-w-0 py-3 pr-4">
+                      <div className="truncate font-semibold">{h.name}</div>
+                      <p className="mt-0.5 text-xs text-ink-soft">
+                        {h.stars ? `${"★".repeat(h.stars)} · ` : ""}
+                        {HOTEL_KIND[h.kind] ?? h.kind} · {h.destination}
+                      </p>
+                    </div>
+                  </Link>
                 ))}
               </div>
             </Section>

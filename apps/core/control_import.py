@@ -1,6 +1,6 @@
 """/control → Boshqarish: Excel (.xlsx) orqali ommaviy qo'shish — faqat asosiy admin.
 
-Agentlik, mehmonxona, gid va turlar uchun. Faqat matnli ma'lumotlar (nom, telefon, narx, ro'yxatlar...);
+Yo'nalish, agentlik, mehmonxona, gid va turlar uchun. Faqat matnli ma'lumotlar (nom, telefon, narx...);
 rasm, logotip, sertifikat kabi fayllar Excel'ga kirmaydi — ular keyin yozuvni tahrirlashda qo'lda qo'shiladi.
 
 Har bir qator "Yangi qo'shish" formasidan yuborilgandek `control_crud._save` orqali o'tadi — validatsiya,
@@ -17,6 +17,7 @@ from django.contrib.admin.models import ADDITION
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -37,6 +38,27 @@ TRUE = {"ha", "yes", "true", "1", "✓", "+", "x", "bor"}
 FALSE = {"yo'q", "yoq", "yo‘q", "no", "false", "0", "-", "—", "yo`q", "yo’q"}
 
 
+# Modelda maydon emas, bog'liq yozuvlar: yozuv saqlangandan keyin yaratiladi (`_save_extras`)
+EXTRA_COLUMNS = {
+    "tour": [
+        {
+            "name": "_itinerary",
+            "label": "Kunlik dastur",
+            "type": "itinerary",
+            "required": False,
+            "help": "Har kun yangi qatorda (Alt+Enter) yoki «;» bilan: «Sarlavha: tavsif». 1-qator — 1-kun.",
+        },
+        {
+            "name": "_departures",
+            "label": "Jo'nash sanalari",
+            "type": "departures",
+            "required": False,
+            "help": "Vergul bilan: 2026-12-05, 2026-12-19. Joylar soni — «Guruhdagi maks. odam».",
+        },
+    ],
+}
+
+
 def _importable(key: str):
     if key not in IMPORTABLE:
         raise NotFound("Bu bo'lim uchun Excel orqali qo'shish yo'q.")
@@ -49,7 +71,7 @@ def import_columns(res) -> list[dict]:
     for c in cols:
         if c["type"] == "multiselect":  # M2M (masalan, gid shaharlari) — blank=False bo'lsa majburiy
             c["required"] = not _safe_field(res, c["name"]).blank
-    return cols
+    return cols + [dict(c) for c in EXTRA_COLUMNS.get(res.key, [])]
 
 
 def _norm(s) -> str:
@@ -79,6 +101,8 @@ def _format_hint(col: dict) -> str:
         return "Vergul bilan bir nechta: " + ", ".join(label for _, label in opts)
     if t == "tags":
         return "Har bir band — yangi qatorda yoki «;» bilan"
+    if t in ("itinerary", "departures"):
+        return col["help"]
     if t == "number":
         return "Raqam (bo'shliqsiz yoki bo'shliq bilan: 890 000)"
     if t == "date":
@@ -236,6 +260,30 @@ def convert(res, col: dict, raw):
         except ValueError:
             raise CellError("Raqam kiriting.") from None
         return int(num) if num.is_integer() else text
+    if t == "itinerary":
+        days = []
+        for part in _split(_text(raw), comma=False):
+            title, _, desc = part.partition(":")
+            title, desc = title.strip(), desc.strip()
+            if len(title) > 200:
+                raise CellError(f"Kun sarlavhasi 200 belgidan oshmasin: «{title[:40]}…»")
+            days.append((title, desc))
+        return days
+    if t == "departures":
+        if isinstance(raw, (dt.datetime, dt.date)):
+            parts = [raw.date() if isinstance(raw, dt.datetime) else raw]
+        else:
+            parts = []
+            for p in _split(_text(raw), comma=True):
+                try:
+                    parts.append(dt.date.fromisoformat(p))
+                except ValueError:
+                    raise CellError(f"«{p}» — sana YYYY-MM-DD ko'rinishida bo'lsin.") from None
+        today = timezone.localdate()
+        past = [d.isoformat() for d in parts if d < today]
+        if past:
+            raise CellError("O'tgan sana qo'shilmaydi: " + ", ".join(past))
+        return sorted(set(parts))
     if t == "date":
         if isinstance(raw, (dt.datetime, dt.date)):
             return (raw.date() if isinstance(raw, dt.datetime) else raw).isoformat()
@@ -338,10 +386,14 @@ def run_import(res, request, upload) -> list[int]:
     created = []
     with transaction.atomic():
         for number, data in rows:
+            extras = {
+                c["name"]: data.pop(c["name"]) for c in EXTRA_COLUMNS.get(res.key, []) if c["name"] in data
+            }
             fake = SimpleNamespace(data=data, user=request.user)
             try:
                 with transaction.atomic():  # har bir qator — alohida savepoint
                     obj = _save(res, fake)
+                    _save_extras(res, obj, extras)
             except ValidationError as exc:
                 errors.append({"row": number, "errors": _messages(exc.detail, labels)})
                 continue
@@ -359,6 +411,29 @@ def run_import(res, request, upload) -> list[int]:
     if errors:
         raise ImportFailed(sorted(errors, key=lambda e: e["row"]))
     return created
+
+
+def _save_extras(res, obj, extras: dict) -> None:
+    """Tur: kunlik dastur va jo'nash sanalari (joylar — guruhdagi maks. odam)."""
+    if res.key != "tour":
+        return
+    from apps.tours.models import Departure, ItineraryDay
+
+    days = extras.get("_itinerary") or []
+    if len(days) > obj.duration_days:
+        raise ValidationError(
+            {
+                "_itinerary": f"Dasturda {len(days)} kun, turda esa {obj.duration_days} kun"
+                " — «Kunlar»ni to'g'rilang."
+            }
+        )
+    ItineraryDay.objects.bulk_create(
+        ItineraryDay(tour=obj, day_number=i, title=title, description=desc)
+        for i, (title, desc) in enumerate(days, 1)
+    )
+    Departure.objects.bulk_create(
+        Departure(tour=obj, date=d, seats_total=obj.max_group_size) for d in extras.get("_departures") or []
+    )
 
 
 class ImportFailed(Exception):

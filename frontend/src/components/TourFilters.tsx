@@ -3,9 +3,10 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { LANGUAGE_NAMES } from "@/lib/format";
 import type { Category, DestinationShort } from "@/lib/types";
 
-const FIELDS = ["search", "destination", "category", "min_price", "max_price", "min_days", "max_days", "cancellation_policy"] as const;
+const FIELDS = ["search", "destination", "category", "language", "min_price", "max_price", "min_days", "max_days", "cancellation_policy"] as const;
 type Values = Record<(typeof FIELDS)[number], string>;
 
 const DAYS = [
@@ -83,6 +84,18 @@ export function TourFilters({ destinations, categories }: { destinations: Destin
             {categories.map((c) => (
               <option key={c.slug} value={c.slug}>
                 {c.name} ({c.tours_count})
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="label">Gid tili</span>
+          <select className="input" value={v.language} onChange={set("language")}>
+            <option value="">Istalgan til</option>
+            {Object.entries(LANGUAGE_NAMES).map(([code, name]) => (
+              <option key={code} value={code}>
+                {name}
               </option>
             ))}
           </select>
