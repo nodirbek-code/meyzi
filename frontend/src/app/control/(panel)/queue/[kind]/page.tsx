@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ImportExcel } from "@/components/control/ImportExcel";
 import { Badge } from "@/components/ui";
 import { REVIEW_KINDS, REVIEW_STATE_LABEL, STATE_LABEL, STATE_TONE, TWO_STAGE_LABEL, type ControlKind, type ListResponse } from "@/lib/control";
 import { controlGet, requireStaff } from "@/lib/control-server";
@@ -28,6 +29,8 @@ export default async function ControlQueue({
           <button className="btn-ghost px-3">Izlash</button>
         </form>
       </div>
+
+      {data.import_key && <ImportExcel res={data.import_key} title={data.title} />}
 
       <div className="no-scrollbar flex gap-2 overflow-x-auto">
         {data.states.map((s) => (

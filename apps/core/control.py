@@ -400,6 +400,12 @@ def _kind(name: str) -> Kind:
 # ---------- Rollar: asosiy admin va soha moderatorlari ----------
 
 REVIEW_KINDS = ("review", "hotel_review", "guide_review")
+# Hamkorlik arizalarini Excel'dan qo'shish: navbat turi → import bo'limi (control_crud.application_resources)
+APPLICATION_IMPORTS = {
+    "application": "agency_application",
+    "guide": "guide_application",
+    "hotel": "hotel_application",
+}
 AREA_TITLE = {"hotels": "Mehmonxonalar moderatori", "guides": "Gidlar moderatori", "admin": "Asosiy admin"}
 
 
@@ -615,6 +621,8 @@ class ControlListView(_Staff):
                 "default_state": default,
                 "two_stage": k.two_stage,
                 "can_suspend": k.suspend is not None and role == "admin",
+                # Hamkorlik arizalarini Excel'dan qo'shish — faqat asosiy admin
+                "import_key": APPLICATION_IMPORTS.get(kind) if role == "admin" else None,
                 "results": rows,
                 "counts": {s: k.queryset().filter(**f).count() for s, f in k.states.items()},
             }

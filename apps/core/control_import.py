@@ -28,7 +28,17 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
-from .control_crud import IMPORTABLE, _log, _res, _safe_field, _save, _Staff, field_schema
+from .control_crud import (
+    APPLICATION_IMPORTS,
+    IMPORTABLE,
+    _log,
+    _res,
+    _safe_field,
+    _save,
+    _Staff,
+    application_resources,
+    field_schema,
+)
 
 MAX_FILE_BYTES = 2 * 1024 * 1024  # 2 MB
 MAX_ROWS = 500
@@ -63,9 +73,11 @@ EXTRA_COLUMNS = {
 
 
 def _importable(key: str):
-    if key not in IMPORTABLE:
-        raise NotFound("Bu bo'lim uchun Excel orqali qo'shish yo'q.")
-    return _res(key)
+    if key in IMPORTABLE:
+        return _res(key)
+    if key in APPLICATION_IMPORTS.values():  # hamkorlik arizalari — tekshiruv navbatiga
+        return application_resources()[key]
+    raise NotFound("Bu bo'lim uchun Excel orqali qo'shish yo'q.")
 
 
 def import_columns(res) -> list[dict]:
