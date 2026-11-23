@@ -21,6 +21,10 @@ fi
 # Admin: DJANGO_SUPERUSER_EMAIL dagi foydalanuvchi admin qilinadi (yo'q bo'lsa yaratiladi), parol — Environment'dan
 python manage.py ensure_admin || echo "ensure_admin: xato (yuqoridagi xabarni qarang)"
 
+# Platforma yozuvlari bron qilinadigan bo'lsin: turlarga haftaning barcha kunlariga sanalar (120 kun oldinga),
+# xonasiz mehmonxonalarga xona turlari, uchrashuv joyisiz gidlarga joy. Faqat yo'q narsani qo'shadi.
+python manage.py fill_inventory || echo "fill_inventory: xato"
+
 # Telegram bot: token va secret bo'lsa webhook'ni shu serverga o'rnatadi (xato bo'lsa ham server ishga tushaveradi)
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ] && [ -n "${MEYZI_SITE_URL:-}" ]; then
   python manage.py telegram_bot --set-webhook "${MEYZI_SITE_URL%/}/api/v1/auth/telegram/webhook/" || echo "Telegram webhook o'rnatilmadi"
