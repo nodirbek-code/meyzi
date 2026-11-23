@@ -1,4 +1,4 @@
-"""/control → Boshqarish: Excel orqali agentlik, mehmonxona, gid va turlarni qo'shish — faqat asosiy admin."""
+"""/control → Boshqarish: Excel orqali ommaviy qo'shish (yo'nalish, agentlik, mehmonxona, gid, tur)."""
 
 import io
 
@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.agencies.models import Agency, AgencyMember
+from apps.catalog.models import Destination
 from apps.guides.models import GuideProfile
 from apps.hotels.models import Hotel
 from apps.tours.models import Tour, TourCategory
@@ -45,7 +46,7 @@ def upload(client, res, file):
 # ---------- Shablon ----------
 
 
-@pytest.mark.parametrize("res", ["agency", "hotel", "guide", "tour"])
+@pytest.mark.parametrize("res", ["destination", "agency", "hotel", "guide", "tour"])
 def test_template_downloads_without_file_columns(staff_api, samarqand, res):
     r = staff_api.get(M + f"{res}/import/template/")
     assert r.status_code == 200
@@ -95,6 +96,34 @@ def test_import_agencies_with_owner(staff_api):
     member = AgencyMember.objects.get(agency=silk)
     assert member.user.email == "boss@silk.uz" and member.user.role == User.Role.AGENCY
     assert Agency.objects.get(name="Tog' Sayohat").is_verified is False
+
+
+def test_import_destinations_then_hotels_use_them(staff_api):
+    r = upload(
+        staff_api,
+        "destination",
+        xlsx(
+            ["Nomi *", "Viloyat", "Kenglik", "Uzunlik", "Tavsiya etiladi", "E'lon qilingan"],
+            [
+                ["Termiz", "Surxondaryo viloyati", 37.224, 67.278, "Ha", "Ha"],
+                ["Namangan", "Namangan viloyati", None, None, "", "Ha"],
+            ],
+        ),
+    )
+    assert r.status_code == 201, r.data
+    t = Destination.objects.get(slug="termiz")
+    assert t.region == "Surxondaryo viloyati" and t.is_featured and t.is_published
+    assert not Destination.objects.get(name="Namangan").is_featured
+    r = upload(
+        staff_api,
+        "hotel",
+        xlsx(
+            ["Nomi *", "Shahar *", "Manzil *", "Telefon *"],
+            [["Oxus Termiz", "Termiz", "Alpomish 1", "+998 76 000 00 01"]],
+        ),
+    )
+    assert r.status_code == 201, r.data
+    assert Hotel.objects.get(name="Oxus Termiz").destination == t
 
 
 def test_import_hotels_by_city_name_and_labels(staff_api, samarqand):
