@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { DateStrip, type CalendarDay } from "@/components/DateStrip";
+import { HeroSlides, type HeroSlide } from "@/components/HeroSlides";
 import { AppIcon } from "@/components/Logo";
 import { SearchBar } from "@/components/SearchBar";
 import { TourCard } from "@/components/TourCard";
@@ -78,14 +79,22 @@ export default async function HomePage() {
     ),
   );
 
-  const heroImage =
-    tours.results.find((t) => t.cover)?.cover ?? destinations.results.find((d) => d.cover_image)?.cover_image ?? null;
+  // Hero: yo'nalishlar rasmlari almashib turadi — avval admin "asosiy sahifada" deb belgilaganlar, ko'pi bilan 5 ta
+  const withCover = destinations.results.filter((d) => d.cover_image);
+  const featured = withCover.filter((d) => d.is_featured);
+  const heroSlides: HeroSlide[] = (featured.length >= 2 ? featured : withCover).slice(0, 5).map((d) => ({
+    src: d.cover_image as string,
+    name: d.name,
+    href: `/destinations/${d.slug}`,
+  }));
+  const tourCover = tours.results.find((t) => t.cover)?.cover;
+  if (!heroSlides.length && tourCover) heroSlides.push({ src: tourCover, name: "", href: "" });
 
   return (
     <>
       {/* ---------- Hero ---------- */}
       <section className="relative isolate overflow-hidden">
-        <Cover src={heroImage} alt="" className="absolute inset-0 -z-20 h-full w-full" />
+        <HeroSlides slides={heroSlides} />
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-forest-900/55 via-forest-900/45 to-forest-900/85" aria-hidden />
         <div className="container-lz pb-24 pt-16 text-center sm:pb-28 sm:pt-24">
           <h1 className="mx-auto max-w-4xl text-4xl leading-tight text-white sm:text-5xl lg:text-6xl">
