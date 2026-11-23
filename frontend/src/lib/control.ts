@@ -29,7 +29,7 @@ export type Dashboard = {
 type Money = { count: number; total: number; commission: number };
 
 export type ListRow = { id: number; title: string; subtitle: string; status: string; waiting: string; overdue: boolean };
-export type ListResponse = { kind: ControlKind; title: string; states: string[]; state: string; default_state: string; two_stage: boolean; can_suspend: boolean; import_key?: string | null; results: ListRow[]; counts: Record<string, number> };
+export type ListResponse = { kind: ControlKind; title: string; states: string[]; state: string; default_state: string; two_stage: boolean; can_suspend: boolean; results: ListRow[]; counts: Record<string, number> };
 
 export type Item = {
   kind: ControlKind;

@@ -28,7 +28,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .control import APPLICATION_IMPORTS, IsMainAdmin  # noqa: F401 — control_import shu yerdan oladi
+from .control import IsMainAdmin
 
 # Excel (.xlsx) orqali ommaviy qo'shiladigan bo'limlar — control_import.py
 IMPORTABLE = ("destination", "place", "agency", "hotel", "guide", "tour")
@@ -697,93 +697,6 @@ def _res(key: str) -> Resource:
     if r is None:
         raise NotFound("Bunday bo'lim yo'q.")
     return r
-
-
-# ---------- Hamkorlik arizalari: faqat Excel import (Boshqarish ro'yxatida ko'rinmaydi) ----------
-
-# Yozuvlar hamkor yuborgandek tushadi: agentlik arizasi — "Yangi", gid va mehmonxona — "Tekshiruvda"
-# (moderator → admin). Platforma boshqaruviga o'tmaydi. Navbat turi → bo'lim: control.APPLICATION_IMPORTS
-_ADMIN_ONLY = {"is_certified", "commission_percent", "is_featured", "status"}
-
-
-def application_resources() -> dict[str, Resource]:
-    from dataclasses import replace
-
-    from apps.accounts.models import User
-    from apps.agencies.models import AgencyApplication
-    from apps.guides.models import GuideProfile
-    from apps.hotels.models import Hotel, HotelMember
-
-    base = resources()
-    owner = {
-        "name": "owner_email",
-        "type": "email",
-        "required": True,
-        "help": "Ariza beruvchining emaili — akkaunt bo'lmasa yaratiladi.",
-    }
-
-    def owner_user(request):
-        user = _user_by_email(request.data.get("owner_email", ""), create=True)
-        if user is None:
-            raise ValidationError({"owner_email": "Ariza beruvchining emailini kiriting."})
-        return user
-
-    def guide_before(attrs, instance, request):
-        user = owner_user(request)
-        if GuideProfile.objects.filter(user=user).exists():
-            raise ValidationError({"owner_email": "Bu foydalanuvchining gid profili allaqachon bor."})
-        attrs.update(user=user, status=GuideProfile.Status.PENDING, managed_by_platform=False)
-        if user.role == User.Role.TOURIST:
-            user.role = User.Role.GUIDE
-            user.save(update_fields=["role"])
-        return attrs
-
-    def hotel_before(attrs, instance, request):
-        if HotelMember.objects.filter(user=owner_user(request)).exists():
-            raise ValidationError({"owner_email": "Bu foydalanuvchi allaqachon mehmonxonaga biriktirilgan."})
-        attrs.update(status=Hotel.Status.PENDING, managed_by_platform=False)
-        return attrs
-
-    def hotel_after(obj, created, request):
-        user = owner_user(request)
-        HotelMember.objects.create(hotel=obj, user=user, role=HotelMember.Role.OWNER)
-        if user.role == User.Role.TOURIST:
-            user.role = User.Role.BUSINESS
-            user.save(update_fields=["role"])
-
-    def strip(r):
-        return [f for f in r.fields if f not in _ADMIN_ONLY]
-
-    items = [
-        Resource(
-            "agency_application",
-            "Agentlik arizalari",
-            "",
-            AgencyApplication,
-            ["agency_name", "contact_person", "phone", "email", "message"],
-            ["agency_name", "contact_person", "phone"],
-            before_save=lambda attrs, inst, req: {**attrs, "status": AgencyApplication.Status.NEW},
-        ),
-        replace(
-            base["guide"],
-            key="guide_application",
-            title="Gid arizalari",
-            fields=strip(base["guide"]),
-            extra=[{**owner, "label": "Gid akkauntining emaili"}],
-            before_save=guide_before,
-            after_save=None,
-        ),
-        replace(
-            base["hotel"],
-            key="hotel_application",
-            title="Mehmonxona arizalari",
-            fields=strip(base["hotel"]),
-            extra=[{**owner, "label": "Egasining emaili"}],
-            before_save=hotel_before,
-            after_save=hotel_after,
-        ),
-    ]
-    return {r.key: r for r in items}
 
 
 def _row(res: Resource, obj) -> dict:
