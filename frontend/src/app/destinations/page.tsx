@@ -20,7 +20,7 @@ export default async function DestinationsPage() {
         {data.results.map((d) => (
           <Link key={d.slug} href={`/destinations/${d.slug}`} className="group relative overflow-hidden rounded-xl2 shadow-card">
             <Cover src={d.cover_image} alt={d.name} className="aspect-[4/3] w-full transition duration-500 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-gradient-to-t from-forest-900/90 via-forest-900/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent via-55% to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-sun-300">{d.region}</p>
               <h2 className="mt-0.5 text-2xl text-white">{d.name}</h2>

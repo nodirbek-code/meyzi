@@ -95,12 +95,12 @@ export default async function HomePage() {
       {/* ---------- Hero ---------- */}
       <section className="relative isolate overflow-hidden">
         <HeroSlides slides={heroSlides} />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-forest-900/55 via-forest-900/45 to-forest-900/85" aria-hidden />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/40 via-black/15 to-black/60" aria-hidden />
         <div className="container-lz pb-24 pt-16 text-center sm:pb-28 sm:pt-24">
-          <h1 className="mx-auto max-w-4xl text-4xl leading-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="mx-auto max-w-4xl text-4xl leading-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)] sm:text-5xl lg:text-6xl">
             O&apos;zbekistonni yangicha kashf eting
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-forest-50/90 sm:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-base text-white/95 [text-shadow:0_2px_12px_rgba(0,0,0,0.45)] sm:text-lg">
             Unutilmas sayohatlar, betakror manzillar va yangi sarguzashtlar sizni kutmoqda. O&apos;zingizga mos yo&apos;nalishni
             tanlang, sayohat qiling va har bir safaringiz uchun Meyzi Coins to&apos;plang.
           </p>
@@ -202,7 +202,7 @@ export default async function HomePage() {
                   alt={d.name}
                   className={`w-full transition duration-500 group-hover:scale-105 ${i === 0 ? "h-56 md:h-[29rem]" : "h-48 md:h-56"}`}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-forest-900/90 via-forest-900/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent via-50% to-transparent" />
                 <div className="absolute bottom-0 p-4">
                   <h3 className={`text-white ${i === 0 ? "text-2xl" : "text-lg"}`}>{d.name}</h3>
                   <p className="line-clamp-2 text-xs text-forest-50/85">{d.short_description}</p>

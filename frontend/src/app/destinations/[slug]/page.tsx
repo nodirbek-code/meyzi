@@ -38,14 +38,14 @@ export default async function DestinationPage({ params }: Props) {
     <>
       <section className="relative isolate overflow-hidden">
         <Cover src={d.cover_image} alt="" className="absolute inset-0 -z-20 h-full w-full" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-forest-900/90 via-forest-900/40 to-forest-900/30" aria-hidden />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/70 via-black/20 to-black/10" aria-hidden />
         <div className="container-lz py-20 sm:py-28">
           <nav className="mb-4 text-sm text-forest-50/70">
             <Link href="/destinations" className="hover:text-white">‹ Yo&apos;nalishlar</Link>
           </nav>
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-sun-300">{d.region}</p>
-          <h1 className="mt-2 text-4xl text-white sm:text-5xl">{d.name}</h1>
-          <p className="mt-3 max-w-2xl text-lg text-forest-50/90">{d.short_description}</p>
+          <h1 className="mt-2 text-4xl text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)] sm:text-5xl">{d.name}</h1>
+          <p className="mt-3 max-w-2xl text-lg text-white/95 [text-shadow:0_2px_12px_rgba(0,0,0,0.45)]">{d.short_description}</p>
           <div className="mt-5 flex flex-wrap gap-2 text-sm">
             <span className="chip bg-white/15 py-1.5 text-white backdrop-blur">{tours.count} ta tur</span>
             {minPrice !== null && <span className="chip bg-white/15 py-1.5 text-white backdrop-blur">{money(minPrice)} dan</span>}
