@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ImportExcel } from "@/components/control/ImportExcel";
 import type { CrudList } from "@/lib/control";
 import { controlGet, requireStaff } from "@/lib/control-server";
 
@@ -33,6 +34,7 @@ export default async function ManageList({
         </div>
       </div>
       {d.hint && <p className="rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-700">{d.hint}</p>}
+      {d.can_import && <ImportExcel res={res} title={d.title} />}
 
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">

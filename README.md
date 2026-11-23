@@ -593,6 +593,24 @@ Reyting 5+ sharhdan keyin **4.0 dan past** tushsa — profil vaqtincha to'xtatil
 - Narx = kecha narxi × kechalar × xonalar (≤ 30 kecha). Komissiya sukut 15%.
 - Bekor qilish siyosati turlardagidek (`free` / `partial` / `non_refundable`), kirish vaqtiga nisbatan.
 
+### Excel orqali ommaviy qo'shish (`/api/v1/control/manage/`, faqat asosiy admin)
+
+Agentlik (`agency`), mehmonxona (`hotel`), gid (`guide`) va tur (`tour`) uchun. Saytda: `/control/manage/<bo'lim>` →
+**📥 Excel'dan yuklash**.
+
+| Metod | Yo'l | Tavsif |
+|---|---|---|
+| GET | `manage/<bo'lim>/import/template/` | `.xlsx` shablon: «Ma'lumotlar» (ustunlar, `*` — majburiy) va «Yo'riqnoma» varaqlari |
+| POST | `manage/<bo'lim>/import/` | `multipart`, `file` — to'ldirilgan `.xlsx` (≤ 2 MB, ≤ 500 qator) |
+
+- Faqat matnli ma'lumotlar. Rasm, logotip, sertifikat va boshqa fayllar keyin tahrirlashda qo'lda qo'shiladi.
+- Har bir qator «Yangi qo'shish» formasi bilan bir xil yo'ldan o'tadi (`control_crud._save`): validatsiya, slug,
+  egasi emaili (akkaunt yaratiladi), `managed_by_platform=True`, admin tarixi.
+- Bog'lanishlar (agentlik, shahar, toifa) — nomi, slugi yoki ID bilan; tanlovlar — kodi yoki o'zbekcha nomi bilan;
+  ro'yxatlar — vergul (tanlovli) yoki `;` / yangi qator bilan.
+- **Hammasi yoki hech narsa:** bitta qatorda xato bo'lsa, hech narsa saqlanmaydi. Javob `400`:
+  `{"detail", "rows": [{"row": 3, "errors": ["Nomi: ..."]}]}`. Muvaffaqiyat — `201`: `{"created", "ids"}`.
+
 ### Umumiy qoidalar
 
 - **Sahifalash:** har sahifada 20 ta, `?page=2`, `?page_size=50` (maks. 100).

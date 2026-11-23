@@ -156,7 +156,7 @@ export type CrudField = {
   extra?: boolean;
 };
 
-export type CrudMeta = { key: string; title: string; group: string; can_create: boolean; can_delete: boolean; hint: string; columns: string[]; count?: number };
+export type CrudMeta = { key: string; title: string; group: string; can_create: boolean; can_delete: boolean; can_import?: boolean; hint: string; columns: string[]; count?: number };
 
 export type CrudList = CrudMeta & {
   schema: CrudField[];

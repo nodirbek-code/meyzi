@@ -30,6 +30,9 @@ from rest_framework.views import APIView
 
 from .control import IsMainAdmin
 
+# Excel (.xlsx) orqali ommaviy qo'shiladigan bo'limlar — control_import.py
+IMPORTABLE = ("agency", "hotel", "guide", "tour")
+
 
 class _Staff(APIView):
     """Boshqarish — faqat asosiy admin (moderatorlar kira olmaydi)."""
@@ -709,6 +712,7 @@ def _meta(res: Resource) -> dict:
         "group": res.group,
         "can_create": res.can_create,
         "can_delete": res.can_delete,
+        "can_import": res.key in IMPORTABLE,
         "hint": res.hint,
         "columns": [
             str(_model_field(res, c).verbose_name)
