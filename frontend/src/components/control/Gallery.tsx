@@ -6,6 +6,8 @@ import { useRef, useState } from "react";
 import { firstError } from "@/lib/client";
 import type { CrudGallery } from "@/lib/control";
 
+import { LinkUpload } from "./LinkUpload";
+
 /** Tur / mehmonxona tahrirlash sahifasidagi rasm va videolar: bir nechtasini birdan yuklash, muqova, o'chirish. */
 export function Gallery({ gallery, parentId }: { gallery: CrudGallery; parentId: number }) {
   const router = useRouter();
@@ -77,6 +79,8 @@ export function Gallery({ gallery, parentId }: { gallery: CrudGallery; parentId:
           />
         </label>
       </div>
+
+      <LinkUpload res={gallery.parent} id={parentId} />
 
       {errors.length > 0 && (
         <ul className="space-y-1 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">

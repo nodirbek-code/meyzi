@@ -7,6 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from openpyxl import Workbook, load_workbook
 from rest_framework.test import APIClient
 
+from apps.accounts.models import User
 from apps.core import control_photo_links as pl
 from apps.core.media_import import Skip
 from apps.hotels.models import HotelImage
@@ -120,3 +121,88 @@ def test_download_sniffs_real_content(monkeypatch):
         pl.download("https://instagram.com/p/x", "image")
     monkeypatch.setattr(pl._opener, "open", lambda req, timeout: Resp(MP4))
     assert pl.download("https://x.uz/v", "video")[0] == "mp4"
+
+
+GOOGLE = (
+    "https://www.google.com/imgres?q=Guliston%20va%20Farhod%20GESi&imgurl=https%3A%2F%2Fupload.wikimedia.org"
+    "%2Fwikipedia%2Fcommons%2F2%2F2e\n  %2FFarhad-GES-1200%25D1%2585900-_00.jpg"
+    "%3Futm_source%3Duz.wikipedia.org"
+    "&imgrefurl=https%3A%2F%2Fuz.wikipedia.org%2Fwiki%2FShirin\n  _(shahar)&docid=uoYtE3Eh6dsObM&w=1200&h=900"
+)
+
+
+def test_unwrap_google_image_link():
+    assert pl.unwrap(GOOGLE) == (
+        "https://upload.wikimedia.org/wikipedia/commons/2/2e/Farhad-GES-1200%D1%85900-_00.jpg"
+        "?utm_source=uz.wikipedia.org"
+    )
+    assert pl.unwrap(" https://x.uz/a.jpg ") == "https://x.uz/a.jpg"
+    assert (
+        pl.unwrap("https://yandex.uz/images/search?img_url=https%3A%2F%2Fx.uz%2Fb.png")
+        == "https://x.uz/b.png"
+    )
+
+
+def test_big_image_is_shrunk(monkeypatch):
+    from PIL import Image
+
+    img = Image.effect_noise((4200, 3000), 120).convert("RGB")
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    big = buf.getvalue()
+    assert len(big) > 6 * 1024 * 1024
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    monkeypatch.setattr(pl, "_check_host", lambda url: None)
+    monkeypatch.setattr(pl._opener, "open", lambda req, timeout: Resp(big))
+    ext, data = pl.download("https://x.uz/big.png", "auto")
+    assert ext == "jpg" and len(data) <= 6 * 1024 * 1024
+    assert max(Image.open(io.BytesIO(data)).size) == 2560
+
+
+def test_record_links_tour_gallery_and_guide_photo(staff_api, tour, monkeypatch):
+    from apps.guides.models import GuideProfile
+    from apps.tours.models import TourMedia
+
+    seen = []
+
+    def download(url, kind):
+        seen.append(pl.unwrap(url))
+        if "page" in url:
+            raise Skip("Havola rasm yoki video emas.")
+        return ("mp4", MP4) if url.endswith(".mp4") else ("png", PNG)
+
+    monkeypatch.setattr(pl, "download", download)
+    res = staff_api.post(
+        M + f"tour/{tour.pk}/links/",
+        {"urls": [GOOGLE, "https://x.uz/v.mp4", "https://x.uz/page"]},
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+    assert res.data["done"] == 2 and [r["ok"] for r in res.data["results"]] == [True, True, False]
+    assert seen[0].startswith("https://upload.wikimedia.org/")
+    media = TourMedia.objects.filter(tour=tour)
+    assert media.filter(kind="image", is_cover=True).count() == 1 and media.filter(kind="video").count() == 1
+
+    gu = User.objects.create_user(email="g2@example.com", password="x")
+    g = GuideProfile.objects.create(
+        user=gu,
+        slug="g2",
+        display_name="G2",
+        phone="+998900000009",
+        languages=["uz"],
+        price_half_day_uzs=1,
+        price_full_day_uzs=1,
+        price_per_day_uzs=1,
+    )
+    res = staff_api.post(M + f"guide/{g.pk}/links/", {"urls": "https://x.uz/g.png"}, format="json")
+    assert res.status_code == 200 and res.data["done"] == 1
+    g.refresh_from_db()
+    assert g.photo.name.startswith("guides/g2")
+    assert staff_api.post(M + f"destination/{g.pk}/links/", {"urls": "x"}, format="json").status_code == 404

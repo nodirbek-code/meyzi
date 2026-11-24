@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { CrudForm } from "@/components/control/CrudForm";
 import { Gallery } from "@/components/control/Gallery";
+import { LinkUpload } from "@/components/control/LinkUpload";
 import type { CrudDetail } from "@/lib/control";
 import { controlGet, requireStaff } from "@/lib/control-server";
 
@@ -24,6 +25,12 @@ export default async function ManageEdit({ params }: { params: Promise<{ res: st
         </p>
       )}
       {d.gallery && <Gallery gallery={d.gallery} parentId={d.id} />}
+      {/* Gid surati, agentlik logotipi — havola orqali ham */}
+      {!d.gallery && (res === "guide" || res === "agency") && (
+        <section className="card p-5">
+          <LinkUpload res={res} id={d.id} multiple={false} />
+        </section>
+      )}
       {schema.length > 0 && (
         <CrudForm res={res} schema={schema} data={d.data} id={d.id} canDelete={d.can_delete && !mediaOnly} />
       )}

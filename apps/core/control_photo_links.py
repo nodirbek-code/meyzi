@@ -15,18 +15,19 @@ import socket
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.admin.models import CHANGE
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from rest_framework.exceptions import NotFound, ValidationError
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.response import Response
 
-from .control_crud import _log, _Staff
+from .control_crud import _log, _res, _Staff
 from .files import IMAGE_MAX_MB, MB, VIDEO_MAX_MB, sniff_image, sniff_video
 from .media_import import Skip, attach, resolve
 
@@ -130,10 +131,53 @@ class _SafeRedirect(urllib.request.HTTPRedirectHandler):
 _opener = urllib.request.build_opener(_SafeRedirect)
 
 
+# Qidiruv tizimlarining "rasm sahifasi" havolalari: asl rasm manzili parametrda turadi
+_WRAPPERS = (
+    ("google.", ("imgurl", "url", "q")),
+    ("yandex.", ("img_url",)),
+    ("bing.com", ("mediaurl",)),
+)
+MAX_SOURCE_MB = 25  # katta rasm yuklab olinadi va kichraytiriladi
+MAX_SIDE = 2560
+
+
+def unwrap(url: str) -> str:
+    """Bo'shliqlarni olib tashlaydi; Google/Yandex/Bing rasm havolasidan asl manzilni oladi."""
+    url = "".join((url or "").split())
+    p = urlparse(url)
+    host = (p.hostname or "").lower()
+    params = parse_qs(p.query)
+    for marker, keys in _WRAPPERS:
+        if marker in host:
+            for k in keys:
+                inner = (params.get(k) or [""])[0]
+                if inner.startswith(("http://", "https://")):
+                    return inner
+    return url
+
+
+def _shrink(data: bytes) -> tuple[str, bytes]:
+    """Katta rasm → eng uzun tomoni 2560 px, JPEG (6 MB chegarasiga sig'adi)."""
+    from PIL import Image, ImageOps
+
+    with Image.open(io.BytesIO(data)) as img:
+        img = ImageOps.exif_transpose(img)
+        img.thumbnail((MAX_SIDE, MAX_SIDE))
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        for quality in (85, 75, 65):
+            out = io.BytesIO()
+            img.save(out, "JPEG", quality=quality, optimize=True)
+            if out.tell() <= IMAGE_MAX_MB * MB:
+                return "jpg", out.getvalue()
+    raise Skip(f"Rasm juda katta ({IMAGE_MAX_MB} MB gacha kichraytirib bo'lmadi).")
+
+
 def download(url: str, kind: str) -> tuple[str, bytes]:
-    """→ (fayl nomi kengaytmasi bilan, baytlar). Muammo bo'lsa — Skip (sababi bilan)."""
+    """`kind`: "image" | "video" | "auto". → (kengaytma, baytlar). Muammo bo'lsa — Skip (sababi bilan)."""
+    url = unwrap(url)
     _check_host(url)
-    limit = (VIDEO_MAX_MB if kind == "video" else IMAGE_MAX_MB) * MB
+    limit = (VIDEO_MAX_MB if kind == "video" else max(MAX_SOURCE_MB, VIDEO_MAX_MB)) * MB
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (MEYZI media import)"})
     try:
         with _opener.open(req, timeout=TIMEOUT) as resp:  # noqa: S310 — sxema va manzil tekshirilgan
@@ -145,17 +189,55 @@ def download(url: str, kind: str) -> tuple[str, bytes]:
     if len(data) > limit:
         raise Skip(f"Fayl juda katta ({limit // MB} MB dan oshmasin).")
     f = io.BytesIO(data)
-    if kind == "image":
+    if kind in ("image", "auto"):
         fmt = sniff_image(f)
-        if fmt not in _IMAGE_EXT:
+        if fmt in _IMAGE_EXT:
+            if len(data) > IMAGE_MAX_MB * MB:
+                return _shrink(data)
+            return _IMAGE_EXT[fmt], data
+        if kind == "image":
             raise Skip(
                 "Havola rasm emas (sahifa yoki noma'lum format). To'g'ridan-to'g'ri rasm havolasi kerak."
             )
-        return _IMAGE_EXT[fmt], data
     ext = sniff_video(f)
     if ext is None:
+        if kind == "auto":
+            raise Skip("Havola rasm yoki video emas (sahifa). To'g'ridan-to'g'ri fayl havolasi kerak.")
         raise Skip("Havola video fayl emas (mp4, mov yoki webm kerak; YouTube havolasi ishlamaydi).")
+    if len(data) > VIDEO_MAX_MB * MB:
+        raise Skip(f"Video juda katta ({VIDEO_MAX_MB} MB dan oshmasin).")
     return ext, data
+
+
+# ---------- Bitta yozuvga havolalar (tahrirlash sahifasidan) ----------
+
+LINKABLE = ("tour", "hotel", "guide", "agency")  # media_import.attach bo'limlari bilan bir xil
+MAX_RECORD_LINKS = 20
+
+
+def add_links(key: str, obj, urls: list[str]) -> list[dict]:
+    urls = [u for u in ("".join(x.split()) for x in urls) if u][:MAX_RECORD_LINKS]
+
+    def fetch(url):
+        try:
+            return download(url, "auto"), None
+        except Skip as exc:
+            return None, str(exc)
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        fetched = list(pool.map(fetch, urls))
+    out = []
+    base = (getattr(obj, "slug", "") or "fayl")[:60]
+    for url, (got, err) in zip(urls, fetched, strict=True):
+        item = {"url": url, "ok": False, "message": err or ""}
+        if got:
+            try:
+                item["message"] = attach(key, obj, f"{base}.{got[0]}", got[1])
+                item["ok"] = True
+            except Skip as exc:
+                item["message"] = str(exc)
+        out.append(item)
+    return out
 
 
 # ---------- Excel'ni o'qish va biriktirish ----------
@@ -267,3 +349,32 @@ class PhotoLinksView(_Staff):
         if upload is None:
             raise ValidationError({"file": "Excel faylni tanlang."})
         return Response(run(res, request, upload))
+
+
+class RecordLinksView(_Staff):
+    """Tahrirlash sahifasidan: bitta yozuvga havola(lar) orqali rasm/video."""
+
+    parser_classes = [JSONParser]
+
+    @extend_schema(request={"application/json": {"type": "object"}}, responses={200: dict})
+    def post(self, request, res, pk):
+        if res not in LINKABLE:
+            raise NotFound("Bu bo'limga havola orqali rasm qo'shilmaydi.")
+        obj = get_object_or_404(_res(res).queryset(), pk=pk)
+        raw = request.data.get("urls") or []
+        urls = raw.splitlines() if isinstance(raw, str) else [str(u) for u in raw]
+        urls = [u for u in urls if u.strip()]
+        if not urls:
+            raise ValidationError({"urls": "Havolani kiriting."})
+        results = add_links(res, obj, urls)
+        done = sum(r["ok"] for r in results)
+        if done:
+            _log(request, obj, CHANGE, f"🖼 Havola orqali {done} ta fayl qo'shildi")
+        failed = len(results) - done
+        return Response(
+            {
+                "done": done,
+                "results": results,
+                "detail": f"{done} ta fayl qo'shildi" + (f", {failed} tasi o'tmadi." if failed else "."),
+            }
+        )

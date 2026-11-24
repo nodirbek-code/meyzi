@@ -30,6 +30,11 @@ urlpatterns = [
         name="control-manage-photo-links-template",
     ),
     path(
+        "manage/<str:res>/<int:pk>/links/",
+        control_photo_links.RecordLinksView.as_view(),
+        name="control-manage-record-links",
+    ),
+    path(
         "manage/<str:res>/photo-links/",
         control_photo_links.PhotoLinksView.as_view(),
         name="control-manage-photo-links",
