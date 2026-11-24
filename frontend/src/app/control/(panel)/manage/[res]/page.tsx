@@ -63,7 +63,11 @@ export default async function ManageList({
                     {r.editable ? (
                       <Link href={href} className="text-forest-700">Tahrirlash ›</Link>
                     ) : href ? (
-                      <Link href={href} className="text-ink-mute" title="Hamkor kiritgan — faqat moderatsiya">🔒 Moderatsiya ›</Link>
+                      res === "user" ? (
+                        <Link href={href} className="text-forest-700">Huquqlar / bloklash ›</Link>
+                      ) : (
+                        <Link href={href} className="text-ink-mute" title="Hamkor kiritgan — faqat moderatsiya">🔒 Moderatsiya ›</Link>
+                      )
                     ) : (
                       <span className="text-ink-mute">🔒</span>
                     )}

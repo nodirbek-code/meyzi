@@ -295,3 +295,21 @@ def test_tour_edit_page_has_gallery_for_partner_tour(staff_api, tour):
     assert staff_api.delete(M + f"tour_media/{second}/").status_code == 204
     # hamkor turi matni — baribir o'zgarmaydi
     assert staff_api.patch(M + f"tour/{tour.pk}/", {"title": "X"}, format="json").status_code == 403
+
+
+def test_make_user_admin_or_moderator_and_back(staff_api, admin_user, user):
+    U = "/api/v1/control/users/"
+    assert staff_api.get(U + f"{user.pk}/").data["is_staff"] is False
+    res = staff_api.post(U + f"{user.pk}/staff/", {"is_staff": True, "staff_area": ""}, format="json")
+    assert res.status_code == 200
+    user.refresh_from_db()
+    assert user.is_staff and user.staff_area == ""  # asosiy admin
+    staff_api.post(U + f"{user.pk}/staff/", {"is_staff": True, "staff_area": "guides"}, format="json")
+    user.refresh_from_db()
+    assert user.staff_area == "guides"
+    staff_api.post(U + f"{user.pk}/staff/", {"is_staff": False}, format="json")
+    user.refresh_from_db()
+    assert not user.is_staff and user.staff_area == ""
+    # o'zini o'zgartira olmaydi
+    res = staff_api.post(U + f"{admin_user.pk}/staff/", {"is_staff": False}, format="json")
+    assert res.status_code == 400
