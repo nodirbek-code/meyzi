@@ -119,6 +119,12 @@ PRIVATE_MEDIA_ROOT = env.path("PRIVATE_MEDIA_ROOT", default=BASE_DIR / "private_
 # Cloudinary (ixtiyoriy): cloudinary://<api_key>:<api_secret>@<cloud_name>. Berilsa, prod'da yuklangan fayllar
 # (ochiq va yopiq) Cloudinary'da saqlanadi — apps/core/cloud_storage.py. Lokal ishlashda bo'sh qoldiring.
 CLOUDINARY_URL = env.str("CLOUDINARY_URL", default="")
+# Yoki uchta alohida o'zgaruvchi: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+_cld = [env.str(f"CLOUDINARY_{k}", default="").strip() for k in ("CLOUD_NAME", "API_KEY", "API_SECRET")]
+if not CLOUDINARY_URL and all(_cld):
+    from urllib.parse import quote
+
+    CLOUDINARY_URL = f"cloudinary://{quote(_cld[1], safe='')}:{quote(_cld[2], safe='')}@{_cld[0]}"
 CLOUDINARY_FOLDER = env.str("CLOUDINARY_FOLDER", default="meyzi")
 # Katta video yuklash uchun (nginx'da ham client_max_body_size)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

@@ -3,12 +3,12 @@
 set -e
 
 # Diagnostika: qaysi sozlamalar serverga yetib kelgan (qiymatlar chiqarilmaydi)
-for v in CLOUDINARY_URL GOOGLE_CLIENT_ID TELEGRAM_BOT_TOKEN TELEGRAM_BOT_USERNAME TELEGRAM_WEBHOOK_SECRET MEYZI_SITE_URL MEYZI_FRONTEND_URL; do
+for v in CLOUDINARY_URL CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET GOOGLE_CLIENT_ID TELEGRAM_BOT_TOKEN TELEGRAM_BOT_USERNAME TELEGRAM_WEBHOOK_SECRET MEYZI_SITE_URL MEYZI_FRONTEND_URL; do
   eval "val=\${$v:-}"
   if [ -n "$val" ]; then echo "[env] $v: BOR"; else echo "[env] $v: YO'Q"; fi
 done
 # Fayllar qayerda saqlanadi (Cloudinary bo'lmasa — har deploy/qayta ishga tushishda o'chadi)
-python manage.py shell -c "from django.core.files.storage import storages; n = type(storages['default']).__name__; print('[storage]', n, '- OK: fayllar Cloudinary da saqlanadi' if n == 'CloudinaryStorage' else '- DIQQAT: server diski, fayllar har deploy da yoqoladi. CLOUDINARY_URL ni meyzi-api Environment ga kiriting')" || echo "[storage] tekshirib bo'lmadi"
+python manage.py shell -c "from django.core.files.storage import storages; n = type(storages['default']).__name__; print('[storage]', n, '- OK: fayllar Cloudinary da saqlanadi' if n == 'CloudinaryStorage' else '- DIQQAT: server diski, fayllar har deploy da yoqoladi. CLOUDINARY_URL yoki CLOUDINARY_CLOUD_NAME+API_KEY+API_SECRET ni meyzi-api Environment ga kiriting')" || echo "[storage] tekshirib bo'lmadi"
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
