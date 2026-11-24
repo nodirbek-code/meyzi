@@ -12,7 +12,7 @@ formani chizadi). Har bir amal admin tarixiga yoziladi.
 
 import json
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -32,6 +32,8 @@ from .control import IsMainAdmin
 
 # Excel (.xlsx) orqali ommaviy qo'shiladigan bo'limlar — control_import.py
 IMPORTABLE = ("destination", "place", "agency", "hotel", "guide", "tour")
+# Excel orqali rasm havolalari — control_photo_links.py
+PHOTO_LINKS = ("guide", "agency", "hotel")
 
 
 class _Staff(APIView):
@@ -96,6 +98,10 @@ class Resource:
     can_create: bool = True
     can_delete: bool = True
     editable: Callable = field(default=lambda obj: True)
+    # Hamkor yozuvida ham (editable=False) admin o'zgartira oladigan rasm maydonlari (gid surati, logotip)
+    media_fields: list = field(default_factory=list)
+    # Hamkor yozuviga galereya qo'shish sahifasi (mehmonxona → rasm va videolari)
+    media_url: Callable | None = None
     scope: Callable | None = None  # ro'yxat (qs → qs)
     fk_scope: dict = field(default_factory=dict)  # maydon → () → queryset
     json_options: dict = field(default_factory=dict)  # JSON ro'yxat maydoni → {kod: nomi}
@@ -460,6 +466,7 @@ def resources() -> dict[str, Resource]:
             ["name", "phone", "status", "moderation_status", "managed_by_platform"],
             ["name", "phone", "inn"],
             editable=lambda o: o.is_platform or o.managed_by_platform,
+            media_fields=["logo"],
             extra=[owner_field],
             after_save=agency_after,
             moderation_kind="agency",
@@ -493,6 +500,7 @@ def resources() -> dict[str, Resource]:
             ["name", "destination", "status", "managed_by_platform"],
             ["name", "address", "phone"],
             editable=lambda o: o.managed_by_platform,
+            media_url=lambda o: f"/control/manage/hotel_media/new?hotel={o.pk}",
             json_options={"amenities": amen},
             extra=[owner_field],
             after_save=hotel_after,
@@ -532,8 +540,8 @@ def resources() -> dict[str, Resource]:
             ["hotel", "image", "caption", "is_cover", "sort_order"],
             ["hotel", "kind", "is_cover"],
             ["hotel__name"],
-            scope=lambda qs: qs.filter(hotel__managed_by_platform=True),
-            fk_scope={"hotel": managed_hotels},
+            # Admin istalgan mehmonxonaga (hamkornikiga ham) rasm qo'sha oladi
+            fk_scope={"hotel": lambda: Hotel.objects.order_by("name")},
             validate=lambda attrs, inst: _set_kind(attrs, inst, "image"),
             after_save=lambda obj, created, request: _single_cover(obj, "hotel"),
             hint="Rasm — jpg/png/webp, 6 MB gacha (20 ta); video — mp4/mov/webm, 20 MB gacha (4 ta).",
@@ -566,6 +574,7 @@ def resources() -> dict[str, Resource]:
             ["display_name", "phone", "status", "managed_by_platform"],
             ["display_name", "phone"],
             editable=lambda o: o.managed_by_platform,
+            media_fields=["photo"],
             json_options={"languages": lang, "specializations": spec},
             extra=[
                 {
@@ -701,10 +710,17 @@ def _res(key: str) -> Resource:
 
 def _row(res: Resource, obj) -> dict:
     editable = res.editable(obj)
+    media_url = ""
+    if not editable:
+        if res.media_fields:
+            media_url = f"/control/manage/{res.key}/{obj.pk}"
+        elif res.media_url:
+            media_url = res.media_url(obj)
     return {
         "id": obj.pk,
         "cells": [_display(obj, c) for c in res.columns],
         "editable": editable,
+        "media_url": media_url,
         "moderation_url": res.detail_url(obj)
         if res.detail_url
         else (
@@ -721,6 +737,7 @@ def _meta(res: Resource) -> dict:
         "can_create": res.can_create,
         "can_delete": res.can_delete,
         "can_import": res.key in IMPORTABLE,
+        "can_photo_links": res.key in PHOTO_LINKS,
         "hint": res.hint,
         "columns": [
             str(_model_field(res, c).verbose_name)
@@ -839,6 +856,7 @@ class CrudDetailView(_Staff):
                 "id": obj.pk,
                 "name": str(obj),
                 "editable": r.editable(obj),
+                "media_fields": r.media_fields,
                 "data": data,
             }
         )
@@ -848,9 +866,21 @@ class CrudDetailView(_Staff):
         r = _res(res)
         obj = self._obj(r)
         if not r.editable(obj):
-            raise PermissionDenied(
-                "Bu ma'lumotni hamkorning o'zi kiritgan — admin o'zgartira olmaydi (faqat moderatsiya)."
+            sent = set(request.data.keys()) | set(request.FILES.keys())
+            if not (r.media_fields and sent and sent <= set(r.media_fields)):
+                raise PermissionDenied(
+                    "Bu ma'lumotni hamkorning o'zi kiritgan — admin faqat rasmini o'zgartira oladi."
+                )
+            # Hamkor yozuvi: faqat rasm maydoni, boshqa hook'larsiz
+            obj = _save(
+                replace(
+                    r, fields=list(r.media_fields), extra=[], before_save=None, after_save=None, validate=None
+                ),
+                request,
+                obj,
             )
+            _log(request, obj, CHANGE, f"🖼 Rasm yangilandi ({r.title})")
+            return Response({"id": obj.pk})
         obj = _save(r, request, obj)
         _log(request, obj, CHANGE, f"✏️ Tahrirlandi ({r.title})")
         return Response({"id": obj.pk})

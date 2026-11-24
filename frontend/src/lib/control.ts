@@ -156,14 +156,21 @@ export type CrudField = {
   extra?: boolean;
 };
 
-export type CrudMeta = { key: string; title: string; group: string; can_create: boolean; can_delete: boolean; can_import?: boolean; hint: string; columns: string[]; count?: number };
+export type CrudMeta = { key: string; title: string; group: string; can_create: boolean; can_delete: boolean; can_import?: boolean; can_photo_links?: boolean; hint: string; columns: string[]; count?: number };
 
 export type CrudList = CrudMeta & {
   schema: CrudField[];
-  results: { id: number; cells: string[]; editable: boolean; moderation_url: string }[];
+  results: { id: number; cells: string[]; editable: boolean; moderation_url: string; media_url?: string }[];
   count: number;
   page: number;
   pages: number;
 };
 
-export type CrudDetail = CrudMeta & { schema: CrudField[]; id: number; name: string; editable: boolean; data: Record<string, unknown> };
+export type CrudDetail = CrudMeta & {
+  schema: CrudField[];
+  id: number;
+  name: string;
+  editable: boolean;
+  media_fields?: string[];
+  data: Record<string, unknown>;
+};

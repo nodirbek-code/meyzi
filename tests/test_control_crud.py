@@ -212,3 +212,56 @@ def test_users_view_block_no_edit(staff_api, admin_user, user):
     # ishchi qilish
     res = staff_api.post(U + f"{user.pk}/staff/", {"is_staff": True, "staff_area": "hotels"}, format="json")
     assert res.data == {"is_staff": True, "staff_area": "hotels"}
+
+
+def test_admin_adds_photos_to_partner_guide_agency_hotel(staff_api, hotel, agency, samarqand):  # noqa: F811
+    gu = User.objects.create_user(email="gid-hamkor@example.com", password="x")
+    g = GuideProfile.objects.create(
+        user=gu,
+        slug="hamkor-gid",
+        display_name="Hamkor gid",
+        phone="+998901112299",
+        languages=["uz"],
+        price_half_day_uzs=1,
+        price_full_day_uzs=1,
+        price_per_day_uzs=1,
+    )
+    # Gid: ro'yxatda "Rasm" havolasi, faqat surat maydoni o'zgaradi
+    row = next(r for r in staff_api.get(M + "guide/").data["results"] if r["id"] == g.pk)
+    assert row["editable"] is False and row["media_url"] == f"/control/manage/guide/{g.pk}"
+    d = staff_api.get(M + f"guide/{g.pk}/").data
+    assert d["media_fields"] == ["photo"]
+    res = staff_api.patch(
+        M + f"guide/{g.pk}/", {"photo": SimpleUploadedFile("g.png", PNG)}, format="multipart"
+    )
+    assert res.status_code == 200, res.data
+    g.refresh_from_db()
+    assert g.photo.name.startswith("guides/")
+    # boshqa maydon bilan birga — rad etiladi
+    res = staff_api.patch(
+        M + f"guide/{g.pk}/",
+        {"photo": SimpleUploadedFile("g.png", PNG), "display_name": "X"},
+        format="multipart",
+    )
+    assert res.status_code == 403
+    g.refresh_from_db()
+    assert g.display_name == "Hamkor gid"
+
+    # Agentlik logotipi
+    res = staff_api.patch(
+        M + f"agency/{agency.pk}/", {"logo": SimpleUploadedFile("l.png", PNG)}, format="multipart"
+    )
+    assert res.status_code == 200, res.data
+    agency.refresh_from_db()
+    assert agency.logo.name.startswith("agencies/")
+
+    # Mehmonxona: galereya sahifasiga havola, hamkor mehmonxonasiga rasm qo'shiladi
+    row = next(r for r in staff_api.get(M + "hotel/").data["results"] if r["id"] == hotel.pk)
+    assert row["media_url"] == f"/control/manage/hotel_media/new?hotel={hotel.pk}"
+    res = staff_api.post(
+        M + "hotel_media/",
+        {"hotel": hotel.pk, "image": SimpleUploadedFile("h.png", PNG), "is_cover": "true"},
+        format="multipart",
+    )
+    assert res.status_code == 201, res.data
+    assert HotelImage.objects.filter(hotel=hotel, is_cover=True).count() == 1

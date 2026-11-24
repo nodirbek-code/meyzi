@@ -9,12 +9,20 @@ export default async function ManageEdit({ params }: { params: Promise<{ res: st
   await requireStaff();
   const { res, id } = await params;
   const d = await controlGet<CrudDetail>(`/manage/${res}/${id}/`);
-  if (!d.editable) redirect(`/control/manage/${res}`); // hamkor kiritgan — faqat moderatsiya
+  // Hamkor kiritgan yozuv: faqat rasm maydoni (gid surati, logotip), qolgani — moderatsiya
+  const mediaOnly = !d.editable && !!d.media_fields?.length;
+  if (!d.editable && !mediaOnly) redirect(`/control/manage/${res}`);
+  const schema = mediaOnly ? d.schema.filter((f) => d.media_fields!.includes(f.name)) : d.schema;
   return (
     <div className="space-y-5">
       <Link href={`/control/manage/${res}`} className="text-sm text-ink-mute hover:text-forest-700">‹ {d.title}</Link>
       <h2 className="text-xl">{d.name}</h2>
-      <CrudForm res={res} schema={d.schema} data={d.data} id={d.id} canDelete={d.can_delete} />
+      {mediaOnly && (
+        <p className="rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-700">
+          Hamkorning o&apos;zi kiritgan yozuv — admin faqat rasmini o&apos;zgartira oladi.
+        </p>
+      )}
+      <CrudForm res={res} schema={schema} data={d.data} id={d.id} canDelete={d.can_delete && !mediaOnly} />
     </div>
   );
 }

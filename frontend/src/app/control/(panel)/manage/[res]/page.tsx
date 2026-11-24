@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ImportExcel } from "@/components/control/ImportExcel";
+import { PhotoLinks } from "@/components/control/PhotoLinks";
 import type { CrudList } from "@/lib/control";
 import { controlGet, requireStaff } from "@/lib/control-server";
 
@@ -35,6 +36,7 @@ export default async function ManageList({
       </div>
       {d.hint && <p className="rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-700">{d.hint}</p>}
       {d.can_import && <ImportExcel res={res} title={d.title} />}
+      {d.can_photo_links && <PhotoLinks res={res} title={d.title} />}
 
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
@@ -55,6 +57,9 @@ export default async function ManageList({
                     <td key={i} className={`px-4 py-2.5 ${i === 0 ? "font-semibold" : "text-ink-soft"}`}>{c}</td>
                   ))}
                   <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                    {!r.editable && r.media_url && (
+                      <Link href={r.media_url} className="mr-4 text-forest-700" title="Hamkor yozuvi — faqat rasm qo'shiladi">🖼 Rasm ›</Link>
+                    )}
                     {r.editable ? (
                       <Link href={href} className="text-forest-700">Tahrirlash ›</Link>
                     ) : href ? (
