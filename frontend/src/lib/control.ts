@@ -172,5 +172,13 @@ export type CrudDetail = CrudMeta & {
   name: string;
   editable: boolean;
   media_fields?: string[];
+  gallery?: CrudGallery | null;
   data: Record<string, unknown>;
+};
+
+export type CrudGallery = {
+  res: string;
+  parent: string;
+  file_field: string;
+  items: { id: number; kind: string; url: string; is_cover: boolean }[];
 };

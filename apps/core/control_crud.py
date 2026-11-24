@@ -100,8 +100,9 @@ class Resource:
     editable: Callable = field(default=lambda obj: True)
     # Hamkor yozuvida ham (editable=False) admin o'zgartira oladigan rasm maydonlari (gid surati, logotip)
     media_fields: list = field(default_factory=list)
-    # Hamkor yozuviga galereya qo'shish sahifasi (mehmonxona → rasm va videolari)
-    media_url: Callable | None = None
+    # Galereya (rasm va videolar) — tahrirlash sahifasida, hamkor yozuvlarida ham:
+    # (galereya bo'limi kaliti, ota maydon, fayl maydoni, related_name)
+    gallery: tuple | None = None
     scope: Callable | None = None  # ro'yxat (qs → qs)
     fk_scope: dict = field(default_factory=dict)  # maydon → () → queryset
     json_options: dict = field(default_factory=dict)  # JSON ro'yxat maydoni → {kod: nomi}
@@ -500,7 +501,7 @@ def resources() -> dict[str, Resource]:
             ["name", "destination", "status", "managed_by_platform"],
             ["name", "address", "phone"],
             editable=lambda o: o.managed_by_platform,
-            media_url=lambda o: f"/control/manage/hotel_media/new?hotel={o.pk}",
+            gallery=("hotel_media", "hotel", "image", "images"),
             json_options={"amenities": amen},
             extra=[owner_field],
             after_save=hotel_after,
@@ -644,6 +645,7 @@ def resources() -> dict[str, Resource]:
                 "hotels": lambda: Hotel.objects.filter(status=Hotel.Status.APPROVED),
             },
             after_save=tour_after,
+            gallery=("tour_media", "tour", "file", "media"),
             moderation_kind="tour",
             hint="Platforma yoki siz yaratgan agentlik turlari. Rasm va sanalar — quyidagi bo'limlarda.",
         ),
@@ -655,10 +657,8 @@ def resources() -> dict[str, Resource]:
             ["tour", "file", "caption", "is_cover", "sort_order"],
             ["tour", "kind", "is_cover"],
             ["tour__title"],
-            scope=lambda qs: qs.filter(
-                Q(tour__agency__is_platform=True) | Q(tour__agency__managed_by_platform=True)
-            ),
-            fk_scope={"tour": editable_tours},
+            # Admin istalgan turga (hamkornikiga ham) rasm qo'sha oladi
+            fk_scope={"tour": lambda: Tour.objects.order_by("title")},
             validate=lambda attrs, inst: _set_kind(attrs, inst, "file"),
             after_save=lambda obj, created, request: _single_cover(obj, "tour"),
             hint="Rasm — jpg/png/webp, 6 MB gacha (20 ta); video — mp4/mov/webm, 20 MB gacha (4 ta).",
@@ -710,12 +710,9 @@ def _res(key: str) -> Resource:
 
 def _row(res: Resource, obj) -> dict:
     editable = res.editable(obj)
-    media_url = ""
-    if not editable:
-        if res.media_fields:
-            media_url = f"/control/manage/{res.key}/{obj.pk}"
-        elif res.media_url:
-            media_url = res.media_url(obj)
+    media_url = (
+        f"/control/manage/{res.key}/{obj.pk}" if not editable and (res.media_fields or res.gallery) else ""
+    )
     return {
         "id": obj.pk,
         "cells": [_display(obj, c) for c in res.columns],
@@ -746,6 +743,22 @@ def _meta(res: Resource) -> dict:
             for c in res.columns
         ],
     }
+
+
+def _gallery(res: Resource, obj, request) -> dict | None:
+    if not res.gallery:
+        return None
+    key, parent, file_field, related = res.gallery
+    items = [
+        {
+            "id": m.pk,
+            "kind": m.kind,
+            "url": request.build_absolute_uri(getattr(m, file_field).url) if getattr(m, file_field) else "",
+            "is_cover": m.is_cover,
+        }
+        for m in getattr(obj, related).order_by("-is_cover", "sort_order", "pk")
+    ]
+    return {"res": key, "parent": parent, "file_field": file_field, "items": items}
 
 
 def _save(res: Resource, request, instance=None):
@@ -857,6 +870,7 @@ class CrudDetailView(_Staff):
                 "name": str(obj),
                 "editable": r.editable(obj),
                 "media_fields": r.media_fields,
+                "gallery": _gallery(r, obj, request),
                 "data": data,
             }
         )

@@ -257,7 +257,8 @@ def test_admin_adds_photos_to_partner_guide_agency_hotel(staff_api, hotel, agenc
 
     # Mehmonxona: galereya sahifasiga havola, hamkor mehmonxonasiga rasm qo'shiladi
     row = next(r for r in staff_api.get(M + "hotel/").data["results"] if r["id"] == hotel.pk)
-    assert row["media_url"] == f"/control/manage/hotel_media/new?hotel={hotel.pk}"
+    assert row["media_url"] == f"/control/manage/hotel/{hotel.pk}"
+    assert staff_api.get(M + f"hotel/{hotel.pk}/").data["gallery"]["res"] == "hotel_media"
     res = staff_api.post(
         M + "hotel_media/",
         {"hotel": hotel.pk, "image": SimpleUploadedFile("h.png", PNG), "is_cover": "true"},
@@ -265,3 +266,32 @@ def test_admin_adds_photos_to_partner_guide_agency_hotel(staff_api, hotel, agenc
     )
     assert res.status_code == 201, res.data
     assert HotelImage.objects.filter(hotel=hotel, is_cover=True).count() == 1
+
+
+def test_tour_edit_page_has_gallery_for_partner_tour(staff_api, tour):
+    from apps.tours.models import TourMedia
+
+    row = next(r for r in staff_api.get(M + "tour/").data["results"] if r["id"] == tour.pk)
+    assert row["editable"] is False and row["media_url"] == f"/control/manage/tour/{tour.pk}"
+    res = staff_api.post(
+        M + "tour_media/",
+        {"tour": tour.pk, "file": SimpleUploadedFile("t.png", PNG), "is_cover": "true"},
+        format="multipart",
+    )
+    assert res.status_code == 201, res.data
+    second = staff_api.post(
+        M + "tour_media/", {"tour": tour.pk, "file": SimpleUploadedFile("t2.png", PNG)}, format="multipart"
+    ).data["id"]
+    g = staff_api.get(M + f"tour/{tour.pk}/").data["gallery"]
+    assert g["res"] == "tour_media" and g["parent"] == "tour" and g["file_field"] == "file"
+    assert [m["is_cover"] for m in g["items"]] == [True, False] and g["items"][0]["url"]
+    # muqovani almashtirish va o'chirish
+    assert (
+        staff_api.patch(M + f"tour_media/{second}/", {"is_cover": "true"}, format="multipart").status_code
+        == 200
+    )
+    assert TourMedia.objects.get(pk=second).is_cover
+    assert TourMedia.objects.filter(tour=tour, is_cover=True).count() == 1
+    assert staff_api.delete(M + f"tour_media/{second}/").status_code == 204
+    # hamkor turi matni — baribir o'zgarmaydi
+    assert staff_api.patch(M + f"tour/{tour.pk}/", {"title": "X"}, format="json").status_code == 403
